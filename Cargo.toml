@@ -6,6 +6,7 @@ members = [
     "matio-sys",
     "scrfd-burn",
     "sixdrepnet360-burn",
+    "webcam",
 ]
 
 [workspace.dependencies]
@@ -13,6 +14,15 @@ burn = "0.21.0"
 resnet-burn = { git = "https://github.com/tracel-ai/models", package = "resnet-burn", default-features = false, features = ["pretrained"] }
 mobilenetv2-burn = { git = "https://github.com/tracel-ai/models", package = "mobilenetv2-burn", default-features = false }
 scrfd-burn.path = "scrfd-burn"
+sixdrepnet360-burn.path = "sixdrepnet360-burn"
+
+eyre = "0.6.12"
+nokhwa = "0.10.11"
+gtk = { package = "gtk4", version = "0.11.3" }
+gst-plugin-gtk4 = "0.15.2"
+gst = { package = "gstreamer", version = "0.25" }
+gst-app = { package = "gstreamer-app", version = "0.25" }
+gst-video = { package = "gstreamer-video", version = "0.25" }
 
 
 # Local dependencies

@@ -1,22 +1,18 @@
 use burn::backend::Rocm;
 use burn::backend::rocm::RocmDevice;
 use image::{Rgb, RgbImage};
-use imageproc::drawing::draw_hollow_rect_mut;
+use imageproc::drawing::{draw_filled_circle_mut, draw_hollow_rect_mut};
 use imageproc::rect::Rect;
-use scrfd_burn::Face;
-use scrfd_burn::scrfd_500m::Model;
+use scrfd_burn::{Face, Model, ModelType};
 
 fn main() {
     let image_path = std::env::args().nth(1).unwrap();
     let orig_image = image::open(&image_path).unwrap();
 
     let device = RocmDevice::default();
-    let model = Model::<Rocm>::from_embedded(&device);
+    let model = Model::<Rocm>::from_embedded(ModelType::Scrfd500mKps, &device);
 
-    for _ in 0..12 {
-        model.detect_image(orig_image.clone(), 0.5, 0.4);
-    }
-    let faces = model.detect_image(orig_image.clone(), 0.5, 0.4);
+    let faces = model.detect_image(orig_image.clone(), 0.3, 0.4, &device);
     let mut result = orig_image.into_rgb8();
     draw_detections(&mut result, &faces);
     result.save("output.png").unwrap();
@@ -48,13 +44,19 @@ fn draw_detections(img: &mut RgbImage, dets: &[Face]) {
         let w = (x2 - x1).max(1);
         let h = (y2 - y1).max(1);
 
-        let rect = Rect::at(x1, y1).of_size(w as u32, h as u32);
         // draw a few nested rects for thicker lines
         for t in 0..2 {
             let r = Rect::at(x1 + t, y1 + t)
                 .of_size((w - 2 * t).max(1) as u32, (h - 2 * t).max(1) as u32);
             draw_hollow_rect_mut(img, r, color);
         }
-        let _ = rect;
+
+        if let Some(landmarks) = d.landmarks {
+            for [lx, ly] in landmarks {
+                let cx = (lx.round() as i32).clamp(0, iw - 1);
+                let cy = (ly.round() as i32).clamp(0, ih - 1);
+                draw_filled_circle_mut(img, (cx, cy), 2, color);
+            }
+        }
     }
 }

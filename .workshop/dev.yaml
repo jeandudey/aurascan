@@ -1,0 +1,15 @@
+name: dev
+base: ubuntu@24.04
+sdks:
+  - name: claude-code
+    channel: latest/stable
+  - name: github-runner
+    channel: latest/stable
+  - name: rocm
+    channel: latest/stable
+  - name: rust
+    channel: latest/stable
+  - name: ssh-remote
+    channel: latest/stable
+  - name: zed-remote
+    channel: latest/stable

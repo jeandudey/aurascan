@@ -5,15 +5,26 @@ sdks:
     channel: latest/stable
 actions:
   clean: |
-    rm -rf ~/.venv ~/.gdown-venv
+    rm -rf ~/.venv ~/.modern-venv
+    rm ~/SCRFD_500M.pth ~/SCRFD_1G.pth ~/SCRFD_2_5G.pth ~/SCRFD_10G.pth \
+       ~/SCRFD_34G.pth ~/SCRFD_500M_KPS.pth ~/SCRFD_2_5G_KPS.pth \
+       ~/SCRFD_10G_KPS.pth
   scrfd2onnx: |
     sudo apt-get update
     sudo apt-get install -y libgl1 libglib2.0-0
 
-    uv venv ~/.gdown-venv --allow-existing
-    source ~/.gdown-venv/bin/activate
-    command -v gdown >/dev/null 2>&1 || uv pip install gdown
+    uv venv --python 3.11 ~/.modern-venv --allow-existing
+    source ~/.modern-venv/bin/activate
+    uv pip install onnx
+    command -v gdown >/dev/null 2>&1 || uv pip install "gdown>=6"
     [ -f ~/SCRFD_500M.pth ] || gdown 'https://drive.google.com/file/d/1OX0i_vWDp1Fp-ZynOUMZo-q1vB5g1pTN/view?usp=sharing' -O ~/SCRFD_500M.pth
+    [ -f ~/SCRFD_1G.pth ] || gdown 'https://drive.google.com/file/d/1OX0i_vWDp1Fp-ZynOUMZo-q1vB5g1pTN/view?usp=sharing' -O ~/SCRFD_1G.pth
+    [ -f ~/SCRFD_2_5G.pth ] || gdown 'https://drive.google.com/file/d/1wgg8GY2vyP3uUTaAKT0_MSpAPIhmDsCQ/view?usp=sharing' -O ~/SCRFD_2_5G.pth
+    [ -f ~/SCRFD_10G.pth ] || gdown 'https://drive.google.com/file/d/1kUYa0s1XxLW37ZFRGeIfKNr9L_4ScpOg/view?usp=sharing' -O ~/SCRFD_10G.pth
+    [ -f ~/SCRFD_34G.pth ] || gdown 'https://drive.google.com/file/d/1w9QOPilC9EhU0JgiVJoX0PLvfNSlm1XE/view?usp=sharing' -O ~/SCRFD_34G.pth
+    [ -f ~/SCRFD_500M_KPS.pth ] || gdown 'https://drive.google.com/file/d/1TXvKmfLTTxtk7tMd2fEf-iWtAljlWDud/view?usp=sharing' -O ~/SCRFD_500M_KPS.pth
+    [ -f ~/SCRFD_2_5G_KPS.pth ] || gdown 'https://drive.google.com/file/d/1KtOB9TocdPG9sk_S_-1QVG21y7OoLIIf/view?usp=sharing' -O ~/SCRFD_2_5G_KPS.pth
+    [ -f ~/SCRFD_10G_KPS.pth ] || gdown 'https://drive.google.com/file/d/1-2uy0tgkenw6ZLxfKV1qVhmkb5Ep_5yx/view?usp=sharing' -O ~/SCRFD_10G_KPS.pth
     deactivate
 
     uv venv --python 3.8 ~/.venv --allow-existing
@@ -28,6 +39,37 @@ actions:
     sed -i '/autotorch/d' requirements/*.txt requirements.txt 2>/dev/null || true
     uv pip install setuptools scipy==1.10.1 tqdm
     uv pip install -v -e . --no-deps --no-build-isolation
-    PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_500m.py ~/SCRFD_500M.pth
+    export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_500m.py ~/SCRFD_500M.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_1g.py ~/SCRFD_1G.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_2.5g.py ~/SCRFD_2_5G.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_10g.py ~/SCRFD_10G.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_34g.py ~/SCRFD_34G.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_500m_bnkps.py ~/SCRFD_500M_KPS.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_2.5g_bnkps.py ~/SCRFD_2_5G_KPS.pth
+    python3 tools/scrfd2onnx.py ./configs/scrfd/scrfd_10g_bnkps.py ~/SCRFD_10G_KPS.pth
+
+    deactivate
+    source ~/.modern-venv/bin/activate
+
     mkdir -p /project/scrfd-burn/model
-    cp onnx/scrfd_500m.onnx /project/scrfd-burn/model
+    models=(
+      "scrfd_500m.onnx" "scrfd_1g.onnx" "scrfd_2.5g.onnx" "scrfd_10g.onnx"
+      "scrfd_34g.onnx" "scrfd_500m_bnkps.onnx" "scrfd_2.5g_bnkps.onnx"
+      "scrfd_10g_bnkps.onnx"
+    )
+
+    for model in "${models[@]}"; do
+      python - "$model" <<'EOF'
+    import sys, onnx
+    from onnx import version_converter
+    p = "onnx/{}".format(sys.argv[1])
+    m = onnx.load(p)
+    m = version_converter.convert_version(m, 19)
+    onnx.checker.check_model(m)
+    onnx.save(m, p)
+    print(f"converted in place -> {p}")
+    EOF
+      cp "onnx/$model" /project/scrfd-burn/model/
+    done

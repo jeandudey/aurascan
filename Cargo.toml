@@ -2,6 +2,7 @@
 members = [
     "burn-3ddfa",
     "convnext-burn",
+    "crates/scrfd-burn",
     "matio",
     "matio-sys",
     "scrfd-burn",
@@ -13,7 +14,7 @@ members = [
 burn = "0.21.0"
 resnet-burn = { git = "https://github.com/tracel-ai/models", package = "resnet-burn", default-features = false, features = ["pretrained"] }
 mobilenetv2-burn = { git = "https://github.com/tracel-ai/models", package = "mobilenetv2-burn", default-features = false }
-scrfd-burn.path = "scrfd-burn"
+scrfd-burn.path = "crates/scrfd-burn"
 sixdrepnet360-burn.path = "sixdrepnet360-burn"
 
 eyre = "0.6.12"

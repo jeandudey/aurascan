@@ -1,0 +1,21 @@
+[package]
+name = "scrfd-burn"
+version = "0.1.0"
+edition = "2024"
+
+[[example]]
+name = "inference"
+required-features = ["example"]
+
+[features]
+example = ["burn/flex", "burn/vulkan", "burn/rocm", "imageproc"]
+
+[dependencies]
+burn = { version = "0.21.0", features = ["train", "vision"] }
+burn-store = "0.21.0"
+thiserror = "2.0.18"
+image = "0.25"
+imageproc = { version = "0.26", optional = true }
+
+[build-dependencies]
+burn-onnx = "0.21"

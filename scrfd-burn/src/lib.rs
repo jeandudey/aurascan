@@ -24,6 +24,14 @@ pub struct Face {
 }
 
 impl Face {
+    pub fn width(&self) -> f32 {
+        self.x2 - self.x1
+    }
+
+    pub fn height(&self) -> f32 {
+        self.y2 - self.y1
+    }
+
     fn rescale_to_original(&mut self, lb: &LetterboxInfo) {
         self.x1 = (self.x1 - lb.pad_x) / lb.scale;
         self.y1 = (self.y1 - lb.pad_y) / lb.scale;

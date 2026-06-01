@@ -4,5 +4,4 @@ datasets
 artifacts
 cubecl.toml
 .workshop.lock
-scrfd-burn/model
 *.png

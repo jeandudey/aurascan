@@ -2,10 +2,10 @@
 members = [
     "burn-3ddfa",
     "convnext-burn",
+    "crates/gst-plugin-burn-extra",
     "crates/scrfd-burn",
     "matio",
     "matio-sys",
-    "scrfd-burn",
     "sixdrepnet360-burn",
     "webcam",
 ]
@@ -20,9 +20,15 @@ sixdrepnet360-burn.path = "sixdrepnet360-burn"
 eyre = "0.6.12"
 nokhwa = "0.10.11"
 gtk = { package = "gtk4", version = "0.11.3" }
-gst-plugin-gtk4 = "0.15.2"
+byte-slice-cast = "1"
+
 gst = { package = "gstreamer", version = "0.25" }
+gst-analytics = { package = "gstreamer-analytics", version = "0.25" }
 gst-app = { package = "gstreamer-app", version = "0.25" }
+gst-base = { package = "gstreamer-base", version = "0.25" }
+gst-plugin-burn = "0.15.2"
+gst-plugin-gtk4 = "0.15.2"
+gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25" }
 
 

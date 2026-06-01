@@ -1,0 +1,46 @@
+[package]
+name = "gst-plugin-burn-extra"
+description = "Extra GStreamer plugins using burn"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/jeandudey/burn-experiment"
+
+[lib]
+name = "gstburnextra"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[features]
+default = ["ndarray"]
+ndarray = ["burn/ndarray", "gst-plugin-burn/ndarray"]
+cpu = ["burn/cpu", "gst-plugin-burn/cpu"]
+vulkan = ["burn/vulkan", "gst-plugin-burn/vulkan"]
+embedded = ["scrfd-burn/embedded"]
+
+[dependencies]
+burn = { workspace = true, features = ["autotune", "dispatch", "fusion"] }
+byte-slice-cast.workspace = true
+eyre.workspace = true
+gst = { workspace = true, features = ["v1_28"] }
+gst-analytics = { workspace = true, features = ["v1_28"] }
+gst-base = { workspace = true, features = ["v1_28"] }
+gst-plugin-burn.workspace = true
+gst-video = { workspace = true, features = ["v1_28"] }
+scrfd-burn.workspace = true
+
+[build-dependencies]
+gst-plugin-version-helper.workspace = true
+
+[package.metadata.capi]
+min_version = "0.9.21"
+
+[package.metadata.capi.header]
+enabled = false
+
+[package.metadata.capi.library]
+install_subdir = "gstreamer-1.0"
+versioning = false
+import_library = false
+
+[package.metadata.capi.pkg_config]
+requires_private = "gstreamer-1.0, gstreamer-base-1.0, gstreamer-video-1.0, gstreamer-analytics-1.0, gobject-2.0, glib-2.0, gmodule-2.0"

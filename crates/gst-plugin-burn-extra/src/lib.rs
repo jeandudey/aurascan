@@ -3,13 +3,19 @@ use gst::glib;
 pub mod scrfd;
 pub mod scrfdtensordec;
 pub mod sixdrepnet360;
+pub mod sixdrepnet360tensordec;
 
 pub use gstburn::BackendType;
 
 fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
+    if !gst::meta::CustomMeta::is_registered("EulerAnglesMeta") {
+        gst::meta::CustomMeta::register("EulerAnglesMeta", &[]);
+    }
+
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;
     sixdrepnet360::register(plugin)?;
+    sixdrepnet360tensordec::register(plugin)?;
     Ok(())
 }
 

@@ -357,7 +357,7 @@ impl BaseTransformImpl for ScrfdInference {
         let mut input_tensors_caps = self.input_tensors_caps.lock().unwrap();
         let restrictions = input_tensors_caps.make_mut();
 
-        let mut res = match direction {
+        let res = match direction {
             gst::PadDirection::Src => {
                 let mut res = caps.copy();
                 for s in res.get_mut().unwrap().iter_mut() {
@@ -378,9 +378,9 @@ impl BaseTransformImpl for ScrfdInference {
             }
         };
 
-        if let Some(filter) = filter {
-            res = res.intersect_with_mode(filter, gst::CapsIntersectMode::First);
-        }
+        let res = filter
+            .map(|filter| filter.intersect_with_mode(&res, gst::CapsIntersectMode::First))
+            .unwrap_or(res);
 
         Some(res)
     }
@@ -389,7 +389,6 @@ impl BaseTransformImpl for ScrfdInference {
         &self,
         buffer: &mut gst::BufferRef,
     ) -> Result<gst::FlowSuccess, gst::FlowError> {
-        let t0 = std::time::Instant::now();
         let mut state_guard = self.state.lock().unwrap();
         let Some(state) = &mut *state_guard else {
             gst::error!(CAT, imp = self, "Wrong state");
@@ -421,14 +420,7 @@ impl BaseTransformImpl for ScrfdInference {
         }
         drop(frame);
 
-        let t = std::time::Instant::now();
         let output = state.model.forward(input, width, height);
-        gst::debug!(
-            CAT,
-            imp = self,
-            "inference time {} ms",
-            t.elapsed().as_millis()
-        );
 
         let into_gst_tensor = |name: &'static glib::GStr, burn_tensor: Tensor<Dispatch, 3>| {
             let dims = burn_tensor.dims();
@@ -467,12 +459,6 @@ impl BaseTransformImpl for ScrfdInference {
 
         let mut meta = gst_analytics::TensorMeta::add(buffer);
         meta.set(glib::Slice::from_iter(tensors));
-        gst::debug!(
-            CAT,
-            imp = self,
-            "total transform time {} ms",
-            t0.elapsed().as_millis()
-        );
 
         Ok(gst::FlowSuccess::Ok)
     }

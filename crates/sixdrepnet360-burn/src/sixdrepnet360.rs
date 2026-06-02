@@ -1,15 +1,14 @@
 use crate::block::{LayerBlock, LayerBlockConfig};
+#[cfg(feature = "pretrained")]
+use crate::weights;
 use burn::nn::{
     BatchNorm, BatchNormConfig, Linear, LinearConfig, PaddingConfig2d, Relu,
     conv::{Conv2d, Conv2dConfig},
     pool::{AvgPool2d, AvgPool2dConfig, MaxPool2d, MaxPool2dConfig},
 };
 use burn::prelude::*;
-
-#[cfg(feature = "pretrained")]
-use crate::weights;
-#[cfg(feature = "pretrained")]
 use burn_store::{ModuleSnapshot, PytorchStore, PytorchStoreError};
+use std::path::PathBuf;
 
 /// 6DRepNet360 model.
 #[derive(Debug, Module)]
@@ -62,6 +61,32 @@ impl<B: Backend> SixDRepNet360<B> {
     }
 }
 
+impl<B: Backend> SixDRepNet360<B> {
+    pub fn from_file(
+        torch_weights: impl Into<PathBuf>,
+        device: &B::Device,
+    ) -> Result<Self, PytorchStoreError> {
+        let mut model = Self::new([3, 4, 6, 3], device);
+        Self::load_weights(&mut model, torch_weights)?;
+        Ok(model)
+    }
+
+    pub fn load_weights(
+        model: &mut Self,
+        torch_weights: impl Into<PathBuf>,
+    ) -> Result<(), PytorchStoreError> {
+        let mut store = PytorchStore::from_file(torch_weights.into())
+            // Map *.downsample.0.* -> *.downsample.conv.*
+            .with_key_remapping("(.+)\\.downsample\\.0\\.(.+)", "$1.downsample.conv.$2")
+            // Map *.downsample.1.* -> *.downsample.bn.*
+            .with_key_remapping("(.+)\\.downsample\\.1\\.(.+)", "$1.downsample.bn.$2")
+            // Map layer[i].[j].* -> layer[i].blocks.[j].*
+            .with_key_remapping("(layer[1-4])\\.([0-9]+)\\.(.+)", "$1.blocks.$2.$3");
+        model.load_from(&mut store)?;
+        Ok(())
+    }
+}
+
 #[cfg(feature = "pretrained")]
 impl<B: Backend> SixDRepNet360<B> {
     /// Download a pretrained 6DRepNet360 model from a PyTorch weights file.
@@ -77,16 +102,7 @@ impl<B: Backend> SixDRepNet360<B> {
         let torch_weights = weights::download().map_err(|err| {
             PytorchStoreError::Other(format!("Could not download weights.\nError: {err}"))
         })?;
-
-        let mut store = PytorchStore::from_file(torch_weights)
-            // Map *.downsample.0.* -> *.downsample.conv.*
-            .with_key_remapping("(.+)\\.downsample\\.0\\.(.+)", "$1.downsample.conv.$2")
-            // Map *.downsample.1.* -> *.downsample.bn.*
-            .with_key_remapping("(.+)\\.downsample\\.1\\.(.+)", "$1.downsample.bn.$2")
-            // Map layer[i].[j].* -> layer[i].blocks.[j].*
-            .with_key_remapping("(layer[1-4])\\.([0-9]+)\\.(.+)", "$1.blocks.$2.$3");
-        model.load_from(&mut store)?;
-        Ok(())
+        Self::load_weights(model, torch_weights)
     }
 }
 

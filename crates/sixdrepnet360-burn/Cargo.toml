@@ -10,4 +10,3 @@ pretrained = ["dirs", "burn-store", "burn/network"]
 burn = { version = "0.21.0", features = ["train", "vision"] }
 burn-store = { version = "0.21.0", features = ["std", "pytorch"], optional = true }
 dirs = { version = "6.0.0", optional = true }
-resnet-burn = { git = "https://github.com/tracel-ai/models", package = "resnet-burn", default-features = false }

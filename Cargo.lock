@@ -8597,7 +8597,6 @@ dependencies = [
  "burn 0.21.0",
  "burn-store 0.21.0",
  "dirs",
- "resnet-burn",
 ]
 
 [[package]]
@@ -10096,14 +10095,14 @@ dependencies = [
  "burn 0.21.0",
  "crossbeam-channel",
  "eyre",
+ "gst-plugin-burn-extra",
  "gst-plugin-gtk4",
  "gstreamer",
+ "gstreamer-analytics",
  "gstreamer-app",
  "gstreamer-video",
  "gtk4",
  "image",
- "scrfd-burn",
- "sixdrepnet360-burn",
  "thiserror 2.0.18",
 ]
 

@@ -15,7 +15,7 @@ default = ["ndarray"]
 ndarray = ["burn/ndarray", "gst-plugin-burn/ndarray"]
 cpu = ["burn/cpu", "gst-plugin-burn/cpu"]
 vulkan = ["burn/vulkan", "gst-plugin-burn/vulkan"]
-embedded = ["scrfd-burn/embedded"]
+scrfd-embedded = ["scrfd-burn/embedded"]
 
 [dependencies]
 burn = { workspace = true, features = ["autotune", "dispatch", "fusion"] }

@@ -3,6 +3,8 @@ use gst::glib;
 pub mod scrfd;
 pub mod scrfdtensordec;
 
+pub use gstburn::BackendType;
+
 fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;

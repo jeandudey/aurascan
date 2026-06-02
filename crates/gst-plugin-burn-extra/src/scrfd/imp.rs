@@ -521,7 +521,7 @@ impl Model {
         match settings.weights_path {
             Some(_) => unimplemented!(),
             None => {
-                #[cfg(feature = "embedded")]
+                #[cfg(feature = "scrfd-embedded")]
                 {
                     Ok(Box::new(Self {
                         model: scrfd_burn::Model::from_embedded(
@@ -531,7 +531,7 @@ impl Model {
                         device,
                     }))
                 }
-                #[cfg(not(feature = "embedded"))]
+                #[cfg(not(feature = "scrfd-embedded"))]
                 {
                     eyre::bail!("Compiled without support for embedded weights")
                 }

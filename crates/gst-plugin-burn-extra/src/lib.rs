@@ -2,12 +2,14 @@ use gst::glib;
 
 pub mod scrfd;
 pub mod scrfdtensordec;
+pub mod sixdrepnet360;
 
 pub use gstburn::BackendType;
 
 fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;
+    sixdrepnet360::register(plugin)?;
     Ok(())
 }
 

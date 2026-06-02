@@ -6,10 +6,10 @@ edition = "2024"
 [dependencies]
 eyre.workspace = true
 burn = { workspace = true, features = ["dispatch", "flex", "rocm", "vulkan", "wgpu"] }
-sixdrepnet360-burn = { workspace = true, features = ["pretrained"] }
-scrfd-burn = { workspace = true }
 gtk = { workspace = true, features = ["v4_8"] }
+gst-analytics = { workspace = true, features = ["v1_28"] }
 gst-plugin-gtk4.workspace = true
+gst-plugin-burn-extra = { workspace = true, features = ["scrfd-embedded", "sixdrepnet360-pretrained", "vulkan"] }
 gst.workspace = true
 gst-app.workspace = true
 gst-video.workspace = true

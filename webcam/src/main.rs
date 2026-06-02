@@ -1,30 +1,24 @@
-use burn::{Dispatch, DispatchDevice};
+use crate::face_tracker::FaceTracker;
 use gst::prelude::*;
-use gst_video::prelude::*;
-use gst_video::{VideoFrameRef, VideoInfo};
+use gst_analytics::AnalyticsMetaRefExt;
+use gst_analytics::prelude::*;
+use gstburnextra::BackendType;
+use gstburnextra::scrfd::ModelType;
 use gtk::Application;
 use gtk::glib;
 use gtk::prelude::*;
-use image::{DynamicImage, RgbImage};
-use scrfd_burn::Face;
-use scrfd_burn::scrfd_500m::Model as Scrfd500M;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::thread;
+use std::sync::Mutex;
 
-//mod face_analysis;
+mod face_tracker;
 
-struct DetectionInfo {
-    pub source_width: u32,
-    pub source_height: u32,
-    pub faces: Vec<Face>,
-}
+const FACE_CLASS_LABEL: &glib::GStr = glib::gstr!("face");
 
 fn main() -> glib::ExitCode {
     gst::init().unwrap();
     gtk::init().unwrap();
 
     gstgtk4::plugin_register_static().unwrap();
+    gstburnextra::plugin_register_static().unwrap();
 
     let app = Application::builder()
         .application_id("tech.jeandudey.PoseKit")
@@ -39,168 +33,190 @@ fn main() -> glib::ExitCode {
 fn activate(app: &gtk::Application) {
     let pipeline = gst::Pipeline::new();
 
-    let src = gst::ElementFactory::make("v4l2src")
-        .name("camera")
+    let caps0 = gst::Caps::builder("video/x-raw")
+        .field("format", "RGB")
+        .field("width", 640)
+        .field("height", 640)
+        .build();
+    let caps1 = gst::Caps::builder("video/x-raw")
+        .field("format", "RGB")
+        .field("width", 224)
+        .field("height", 224)
+        .build();
+
+    let src = gst::ElementFactory::make("v4l2src").build().unwrap();
+    let videoconvert0 = gst::ElementFactory::make("videoconvert").build().unwrap();
+    let videoscale0 = gst::ElementFactory::make("videoscale").build().unwrap();
+    let videoscale1 = gst::ElementFactory::make("videoscale").build().unwrap();
+    let capsfilter0 = gst::ElementFactory::make("capsfilter")
+        .property("caps", &caps0)
         .build()
         .unwrap();
-
-    let videoconvert = gst::ElementFactory::make("videoconvert").build().unwrap();
-
+    let capsfilter1 = gst::ElementFactory::make("capsfilter")
+        .property("caps", &caps1)
+        .build()
+        .unwrap();
     let tee = gst::ElementFactory::make("tee").build().unwrap();
-    let queue_display = gst::ElementFactory::make("queue").build().unwrap();
-    let queue_cv = gst::ElementFactory::make("queue")
-        .property("max-size-buffers", 1u32)
-        .property("max-size-bytes", 0u32)
-        .property("max-size-time", 0u64)
-        .property_from_str("leaky", "downstream")
+    let queue0 = gst::ElementFactory::make("queue").build().unwrap();
+    let queue1 = gst::ElementFactory::make("queue").build().unwrap();
+    let scrfdinference = gst::ElementFactory::make("burnextra-scrfdinference")
+        .property("model-type", ModelType::Scrfd500m)
+        .property("backend-type", BackendType::Vulkan)
         .build()
         .unwrap();
-
-    let sink = gst::ElementFactory::make("gtk4paintablesink")
+    let scrfdtensordec = gst::ElementFactory::make("scrfdtensordec").build().unwrap();
+    let sixdrepnet360inference = gst::ElementFactory::make("burnextra-sixdrepnet360inference")
+        .property("backend-type", BackendType::Vulkan)
         .build()
         .unwrap();
-
-    let appsink = gst::ElementFactory::make("appsink").build().unwrap();
+    let sixdrepnet360tensordec = gst::ElementFactory::make("sixdrepnet360tensordec")
+        .build()
+        .unwrap();
+    let videocrop = gst::ElementFactory::make("videocrop").build().unwrap();
+    let sink0 = gst::ElementFactory::make("gtk4paintablesink")
+        .build()
+        .unwrap();
+    let sink1 = gst::ElementFactory::make("gtk4paintablesink")
+        .build()
+        .unwrap();
 
     pipeline
         .add_many([
             &src,
-            &videoconvert,
+            &videoconvert0,
+            &videoscale0,
+            &videoscale1,
+            &capsfilter0,
+            &capsfilter1,
             &tee,
-            &queue_display,
-            &sink,
-            &queue_cv,
-            &appsink,
+            &queue0,
+            &queue1,
+            &scrfdinference,
+            &scrfdtensordec,
+            &sixdrepnet360inference,
+            &sixdrepnet360tensordec,
+            &videocrop,
+            &sink0,
+            &sink1,
         ])
         .unwrap();
 
-    gst::Element::link_many([&src, &videoconvert, &tee]).unwrap();
+    gst::Element::link_many([
+        &src,
+        &videoconvert0,
+        &videoscale0,
+        &capsfilter0,
+        &scrfdinference,
+        &scrfdtensordec,
+        &tee,
+    ])
+    .unwrap();
 
     let t_display = tee.request_pad_simple("src_%u").unwrap();
-    let q_display = queue_display.static_pad("sink").unwrap();
+    let q_display = queue0.static_pad("sink").unwrap();
     t_display.link(&q_display).unwrap();
+    gst::Element::link_many([&queue0, &sink0]).unwrap();
 
-    let t_cv = tee.request_pad_simple("src_%u").unwrap();
-    let q_cv = queue_cv.static_pad("sink").unwrap();
-    t_cv.link(&q_cv).unwrap();
+    let t_crop = tee.request_pad_simple("src_%u").unwrap();
+    let q_crop = queue1.static_pad("sink").unwrap();
+    t_crop.link(&q_crop).unwrap();
 
-    gst::Element::link_many([&queue_display, &sink]).unwrap();
-    gst::Element::link_many([&queue_cv, &appsink]).unwrap();
+    gst::Element::link_many([
+        &queue1,
+        &videocrop,
+        &videoscale1,
+        &capsfilter1,
+        &sixdrepnet360inference,
+        &sixdrepnet360tensordec,
+        &sink1,
+    ])
+    .unwrap();
 
-    let appsink = appsink.downcast::<gst_app::AppSink>().unwrap();
+    let tracker = Mutex::new(FaceTracker::new());
+    let last_ts = Mutex::new(None::<gst::ClockTime>);
 
-    appsink.set_drop(true);
-    appsink.set_max_buffers(1);
+    let videocrop_sink = videocrop.static_pad("sink").unwrap();
+    videocrop_sink.add_probe(
+        gst::PadProbeType::BUFFER,
+        glib::clone!(
+            #[strong]
+            videocrop,
+            move |pad, info| {
+                let Some(buffer) = info.buffer() else {
+                    return gst::PadProbeReturn::Ok;
+                };
 
-    let (sample_tx, sample_rx) = crossbeam_channel::bounded::<gst::Sample>(1);
-    let (det_tx, det_rx) = async_channel::unbounded::<DetectionInfo>();
-    appsink.set_callbacks(
-        gst_app::AppSinkCallbacks::builder()
-            .new_sample(move |sink| {
-                let sample = sink.pull_sample().unwrap();
-                sample_tx.try_send(sample).ok();
-                Ok(gst::FlowSuccess::Ok)
-            })
-            .build(),
-    );
-    appsink.set_sync(false);
-    appsink.set_drop(true);
-    appsink.set_max_buffers(1);
+                let dt = {
+                    let mut lt = last_ts.lock().unwrap();
+                    let pts = buffer.pts();
+                    let dt = match (*lt, pts) {
+                        (Some(prev), Some(now)) => now.saturating_sub(prev).seconds_f32(),
+                        _ => 1.0 / 30.0,
+                    };
+                    *lt = pts;
+                    dt.max(1e-3)
+                };
 
-    thread::Builder::new()
-        .name("model".to_string())
-        .spawn(move || {
-            let device = DispatchDevice::Rocm(Default::default());
-            let scrfd_500m = Scrfd500M::<Dispatch>::from_embedded(&device);
+                let class = glib::Quark::from_static_str(FACE_CLASS_LABEL);
 
-            while let Ok(sample) = sample_rx.recv() {
-                let buffer = sample.buffer().unwrap();
-                let caps = sample.caps().unwrap();
-                let info = VideoInfo::from_caps(caps).unwrap();
-                let frame = VideoFrameRef::from_buffer_ref_readable(buffer, &info).unwrap();
+                let mut detections = Vec::new();
+                for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
+                    for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
+                        if let Some(ty) = od.obj_type() {
+                            if ty != class {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
 
-                let width = frame.width();
-                let height = frame.height();
-                let stride = info.stride()[0] as usize;
-                let data = frame.plane_data(0).unwrap();
-                let pixel_stride = info.format_info().pixel_stride()[0] as usize;
+                        let location = od.location().unwrap();
+                        detections.push((
+                            location.x as f32 + location.w as f32 / 2.0,
+                            location.y as f32 + location.h as f32 / 2.0,
+                            location.w as f32,
+                            location.h as f32,
+                        ));
+                    }
+                }
 
-                let pixels: Vec<u8> = (0..height as usize)
-                    .flat_map(|y| {
-                        let row = &data[y * stride..y * stride + width as usize * pixel_stride];
-                        (0..width as usize).flat_map(move |x| {
-                            let p = x * pixel_stride;
-                            [row[p], row[p + 1], row[p + 2]]
-                        })
-                    })
-                    .collect();
+                let (frame_w, frame_h) = match pad
+                    .current_caps()
+                    .and_then(|caps| gst_video::VideoInfo::from_caps(&caps).ok())
+                {
+                    Some(info) => (info.width() as i32, info.height() as i32),
+                    None => return gst::PadProbeReturn::Ok, // not negotiated yet
+                };
 
-                let image: DynamicImage = RgbImage::from_raw(width, height, pixels).unwrap().into();
-                let faces = scrfd_500m.detect_image(image, 0.5, 0.4);
-                println!("{faces:?}");
-                det_tx
-                    .send_blocking(DetectionInfo {
-                        source_width: width,
-                        source_height: height,
-                        faces,
-                    })
-                    .ok();
+                // cx,cy is the stable tracked center.
+                if let Some((cx, cy, w, h)) = tracker.lock().unwrap().step(&detections, dt) {
+                    let (top, bottom, left, right) =
+                        crop_props(cx, cy, w, h, frame_w as f32, frame_h as f32);
+                    videocrop.set_property("top", top);
+                    videocrop.set_property("bottom", bottom);
+                    videocrop.set_property("left", left);
+                    videocrop.set_property("right", right);
+                }
+
+                gst::PadProbeReturn::Ok
             }
-        })
-        .unwrap();
+        ),
+    );
 
     let vbox = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .build();
 
-    let overlay = gtk::Overlay::builder().hexpand(true).vexpand(true).build();
-    vbox.append(&overlay);
+    let hbox = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .build();
+    vbox.append(&hbox);
 
-    let picture = gstgtk4::RenderWidget::new(&sink);
-    overlay.set_child(Some(&picture));
+    let sink0_picture = gstgtk4::RenderWidget::new(&sink0);
+    hbox.append(&sink0_picture);
 
-    let draw_area = gtk::DrawingArea::builder().can_target(false).build();
-    overlay.add_overlay(&draw_area);
-
-    let faces = Rc::new(RefCell::new(DetectionInfo {
-        source_width: 0,
-        source_height: 0,
-        faces: Vec::new(),
-    }));
-    draw_area.set_draw_func({
-        let faces = Rc::clone(&faces);
-        move |_, cr, w, h| {
-            let info = faces.borrow();
-            if info.faces.is_empty() {
-                return;
-            }
-
-            let (w, h) = (w as f64, h as f64);
-            let (sx, sy) = (w / info.source_width as f64, h / info.source_height as f64);
-
-            cr.set_source_rgb(1.0, 0.0, 0.0);
-            cr.set_line_width(2.0);
-            for face in info.faces.iter() {
-                cr.rectangle(
-                    face.x1 as f64 * sx,
-                    face.y1 as f64 * sy,
-                    face.width() as f64 * sx,
-                    face.height() as f64 * sy,
-                );
-                cr.stroke().unwrap();
-            }
-        }
-    });
-
-    glib::spawn_future_local(async move {
-        while let Ok(mut latest_faces) = det_rx.recv().await {
-            while let Ok(new_faces) = det_rx.try_recv() {
-                latest_faces = new_faces;
-            }
-            *faces.borrow_mut() = latest_faces;
-            draw_area.queue_draw();
-        }
-    });
+    let sink1_picture = gstgtk4::RenderWidget::new(&sink1);
+    hbox.append(&sink1_picture);
 
     let button = gtk::Button::builder().label("Start").build();
     vbox.append(&button);
@@ -223,4 +239,69 @@ fn activate(app: &gtk::Application) {
     pipeline.set_state(gst::State::Playing).unwrap();
 
     window.present();
+}
+
+fn crop_props(
+    cx: f32,
+    cy: f32,
+    w: f32,
+    h: f32, // tracked face box center + size
+    frame_w: f32,
+    frame_h: f32,
+) -> (i32, i32, i32, i32) {
+    // asymmetric expansion
+    let exp_top = 0.45;
+    let exp_bottom = 0.15;
+    let exp_side = 0.25;
+
+    let x0 = cx - w / 2.0;
+    let y0 = cy - h / 2.0;
+
+    let left = x0 - w * exp_side;
+    let right = x0 + w + w * exp_side;
+    let top = y0 - h * exp_top;
+    let bottom = y0 + h + h * exp_bottom;
+
+    // square it: take larger side, recenter both dims
+    let bw = right - left;
+    let bh = bottom - top;
+    let side = bw.max(bh);
+    let ccx = (left + right) / 2.0;
+    let ccy = (top + bottom) / 2.0;
+
+    let mut left = ccx - side / 2.0;
+    let mut right = ccx + side / 2.0;
+    let mut top = ccy - side / 2.0;
+    let mut bottom = ccy + side / 2.0;
+
+    // shift inward instead of truncating, to preserve square-ness near edges
+    if left < 0.0 {
+        right -= left;
+        left = 0.0;
+    }
+    if top < 0.0 {
+        bottom -= top;
+        top = 0.0;
+    }
+    if right > frame_w {
+        left -= right - frame_w;
+        right = frame_w;
+    }
+    if bottom > frame_h {
+        top -= bottom - frame_h;
+        bottom = frame_h;
+    }
+
+    // final clamp in case the box is larger than the frame in some dim
+    let left = left.max(0.0);
+    let top = top.max(0.0);
+    let right = right.min(frame_w);
+    let bottom = bottom.min(frame_h);
+
+    (
+        top.round() as i32,                // top
+        (frame_h - bottom).round() as i32, // bottom
+        left.round() as i32,               // left
+        (frame_w - right).round() as i32,  // right
+    )
 }

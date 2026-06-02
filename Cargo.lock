@@ -4805,6 +4805,7 @@ dependencies = [
  "gstreamer-base",
  "gstreamer-video",
  "scrfd-burn",
+ "sixdrepnet360-burn",
 ]
 
 [[package]]

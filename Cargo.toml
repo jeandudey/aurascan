@@ -1,12 +1,11 @@
 [workspace]
 members = [
-    "burn-3ddfa",
-    "convnext-burn",
+    "crates/burn-3ddfa",
     "crates/gst-plugin-burnextra",
+    "crates/matio",
+    "crates/matio-sys",
     "crates/scrfd-burn",
     "crates/sixdrepnet360-burn",
-    "matio",
-    "matio-sys",
     "webcam",
 ]
 
@@ -27,16 +26,16 @@ gst-analytics = { package = "gstreamer-analytics", version = "0.25" }
 gst-app = { package = "gstreamer-app", version = "0.25" }
 gst-base = { package = "gstreamer-base", version = "0.25" }
 gst-plugin-burn = "0.15.2"
-gst-plugin-burnextra.path = "crates/gst-plugin-burn-extra"
+gst-plugin-burnextra.path = "crates/gst-plugin-burnextra"
 gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25" }
 
 
 # Local dependencies
-burn-3ddfa.path = "burn-3ddfa"
-matio.path = "matio"
-matio-sys.path = "matio-sys"
+burn-3ddfa.path = "crates/burn-3ddfa"
+matio.path = "crates/matio"
+matio-sys.path = "crates/matio-sys"
 
 [package]
 name = "burn-experiments"

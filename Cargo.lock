@@ -1986,13 +1986,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "convnext-burn"
-version = "0.1.0"
-dependencies = [
- "burn 0.21.0",
-]
-
-[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4792,7 +4785,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gst-plugin-burn-extra"
+name = "gst-plugin-burnextra"
 version = "0.1.0"
 dependencies = [
  "burn 0.21.0",
@@ -10096,7 +10089,7 @@ dependencies = [
  "burn 0.21.0",
  "crossbeam-channel",
  "eyre",
- "gst-plugin-burn-extra",
+ "gst-plugin-burnextra",
  "gst-plugin-gtk4",
  "gstreamer",
  "gstreamer-analytics",

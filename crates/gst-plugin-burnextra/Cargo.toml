@@ -1,5 +1,5 @@
 [package]
-name = "gst-plugin-burn-extra"
+name = "gst-plugin-burnextra"
 description = "Extra GStreamer plugins using burn"
 version = "0.1.0"
 edition = "2024"

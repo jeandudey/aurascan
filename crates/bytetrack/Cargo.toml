@@ -1,0 +1,8 @@
+[package]
+name = "bytetrack"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nalgebra.workspace = true
+lapjv.workspace = true

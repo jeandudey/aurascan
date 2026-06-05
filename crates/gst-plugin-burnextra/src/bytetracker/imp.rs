@@ -1,9 +1,11 @@
+use edgefirst_tracker::Tracker;
 use gst::glib::{self, ParamSpecBuilderExt};
 use gst::prelude::GstParamSpecBuilderExt;
 use gst::subclass::prelude::*;
 use gst_analytics::AnalyticsMetaRefExt;
 use gst_analytics::ffi::gst_analytics_relation_meta_add_tracking_mtd;
 use gst_base::subclass::prelude::BaseTransformImpl;
+use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
@@ -16,39 +18,76 @@ static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
 
 // TODO: Update settings.
 struct Settings {
-    high_threshold: f32,
-    low_threshold: f32,
-    match_threshold: f32,
-    max_time_lost: u32,
+    track_high_conf: f32,
+    track_iou: f32,
+    track_update: f32,
+    track_extra_lifespan: u64,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            high_threshold: 0.6,
-            low_threshold: 0.1,
-            match_threshold: 0.2,
-            max_time_lost: 30,
+            track_high_conf: 0.7,
+            track_iou: 0.25,
+            track_update: 0.25,
+            track_extra_lifespan: 500_000_000, // 0.5 seconds
         }
     }
 }
 
-impl<'a> From<&'a Settings> for bytetrack::Settings {
-    fn from(settings: &'a Settings) -> Self {
+#[derive(Debug, Clone)]
+struct DetectionBox {
+    bbox: [f32; 4],
+    score: f32,
+}
+
+impl edgefirst_tracker::DetectionBox for DetectionBox {
+    fn bbox(&self) -> [f32; 4] {
+        self.bbox
+    }
+
+    fn score(&self) -> f32 {
+        self.score
+    }
+
+    fn label(&self) -> usize {
+        0
+    }
+}
+
+struct State {
+    tracker: edgefirst_tracker::ByteTrack<DetectionBox>,
+    uuid_map: HashMap<edgefirst_tracker::Uuid, u64>,
+    next_id: u64,
+}
+
+impl State {
+    fn new(settings: &Settings) -> Self {
         Self {
-            track_threshold: settings.high_threshold,
-            low_threshold: settings.low_threshold,
-            det_threshold: 0.1, // TODO
-            match_threshold: settings.match_threshold,
-            max_time_lost: settings.max_time_lost as usize,
+            tracker: edgefirst_tracker::ByteTrackBuilder::new()
+                .track_extra_lifespan(settings.track_extra_lifespan)
+                .track_high_conf(settings.track_high_conf)
+                .track_iou(settings.track_iou)
+                .track_update(settings.track_update)
+                .build(),
+            uuid_map: HashMap::new(),
+            next_id: 0,
         }
+    }
+    fn id_for(&mut self, uuid: edgefirst_tracker::Uuid) -> u64 {
+        let next = &mut self.next_id;
+        *self.uuid_map.entry(uuid).or_insert_with(|| {
+            let id = *next;
+            *next += 1;
+            id
+        })
     }
 }
 
 #[derive(Default)]
 pub struct ByteTracker {
     settings: Mutex<Settings>,
-    bytetrack: Mutex<Option<bytetrack::ByteTrack>>,
+    state: Mutex<Option<State>>,
 }
 
 #[glib::object_subclass]
@@ -63,34 +102,31 @@ impl ObjectImpl for ByteTracker {
     fn properties() -> &'static [glib::ParamSpec] {
         static PROPERTIES: LazyLock<Vec<glib::ParamSpec>> = LazyLock::new(|| {
             vec![
-                glib::ParamSpecFloat::builder("high-threshold")
-                    .nick("High Threshold")
-                    .blurb("TODO")
+                glib::ParamSpecFloat::builder("track-high-conf")
+                    .nick("High Confidence Threshold")
                     .minimum(0.0)
                     .maximum(1.0)
-                    .default_value(Settings::default().high_threshold)
+                    .default_value(Settings::default().track_high_conf)
                     .mutable_ready()
                     .build(),
-                glib::ParamSpecFloat::builder("low-threshold")
-                    .nick("Low Threshold")
-                    .blurb("TODO")
+                glib::ParamSpecFloat::builder("track-iou")
+                    .nick("IoU Treshold for Tracking")
                     .minimum(0.0)
                     .maximum(1.0)
-                    .default_value(Settings::default().low_threshold)
+                    .default_value(Settings::default().track_iou)
                     .mutable_ready()
                     .build(),
-                glib::ParamSpecFloat::builder("match-threshold")
-                    .nick("Match Threshold")
-                    .blurb("TODO")
+                glib::ParamSpecFloat::builder("track-update")
+                    .nick("Track Update Rate")
+                    .blurb("Set the update rate for the kalman filter")
                     .minimum(0.0)
-                    .maximum(1.0)
-                    .default_value(Settings::default().match_threshold)
+                    .default_value(Settings::default().track_update)
                     .mutable_ready()
                     .build(),
-                glib::ParamSpecUInt::builder("max-lost")
-                    .nick("Maximum Lost")
-                    .blurb("TODO")
-                    .default_value(Settings::default().max_time_lost)
+                glib::ParamSpecULong::builder("track-extra-lifespan")
+                    .nick("Extra Lifespan for Tracks")
+                    .blurb("Set the extra lifespan for tracks in nanoseconds")
+                    .default_value(Settings::default().track_extra_lifespan)
                     .mutable_ready()
                     .build(),
             ]
@@ -154,9 +190,9 @@ impl BaseTransformImpl for ByteTracker {
     const TRANSFORM_IP_ON_PASSTHROUGH: bool = true;
 
     fn start(&self) -> Result<(), gst::ErrorMessage> {
-        let settings = bytetrack::Settings::from(&*self.settings.lock().unwrap());
-        let mut bytetrack = self.bytetrack.lock().unwrap();
-        *bytetrack = Some(bytetrack::ByteTrack::new(settings));
+        let settings = self.settings.lock().unwrap();
+        let mut state = self.state.lock().unwrap();
+        *state = Some(State::new(&settings));
 
         gst::info!(CAT, imp = self, "Started");
 
@@ -164,7 +200,7 @@ impl BaseTransformImpl for ByteTracker {
     }
 
     fn stop(&self) -> Result<(), gst::ErrorMessage> {
-        *self.bytetrack.lock().unwrap() = None;
+        *self.state.lock().unwrap() = None;
 
         gst::info!(CAT, imp = self, "Stopped");
 
@@ -175,15 +211,27 @@ impl BaseTransformImpl for ByteTracker {
         &self,
         buffer: &mut gst::BufferRef,
     ) -> Result<gst::FlowSuccess, gst::FlowError> {
-        let mut bytetrack_guard = self.bytetrack.lock().unwrap();
-        let Some(bytetrack) = &mut *bytetrack_guard else {
+        let mut state_guard = self.state.lock().unwrap();
+        let Some(state) = &mut *state_guard else {
             gst::error!(CAT, imp = self, "Wrong state");
             return Err(gst::FlowError::Flushing);
         };
 
+        let timestamp = buffer.pts().unwrap();
         let detections = detections(buffer);
-        for track in bytetrack.update(&detections) {
-            set_track_id(buffer, &track, buffer.pts().unwrap());
+        for (detection_index, track_info) in state
+            .tracker
+            .update(&detections, timestamp.nseconds())
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, track_info)| Some((i, track_info?)))
+        {
+            set_track_id(
+                buffer,
+                detection_index,
+                &track_info,
+                state.id_for(track_info.uuid.clone()),
+            );
         }
 
         Ok(gst::FlowSuccess::Ok)
@@ -192,17 +240,10 @@ impl BaseTransformImpl for ByteTracker {
 
 fn set_track_id(
     buffer: &mut gst::BufferRef,
-    track: &bytetrack::STrack,
-    first_seen: gst::ClockTime,
+    detection_index: usize,
+    track_info: &edgefirst_tracker::TrackInfo,
+    track_id: u64,
 ) {
-    let Some(idx) = track.det_idx() else {
-        gst::debug!(CAT, "No track index for strack");
-        return;
-    };
-
-    // TODO: Replace this with generics over Detection in bytetrack
-    // to keep the meta index and the od index inside the meta, instead
-    // of just the absolute index in the strack.
     let mut total_idx = 0;
     let mut meta_idx = 0;
     let mut od_id = None;
@@ -213,7 +254,7 @@ fn set_track_id(
                 continue;
             }
 
-            if total_idx == idx {
+            if total_idx == detection_index {
                 od_id = Some(od.id());
                 break 'meta;
             } else {
@@ -221,7 +262,7 @@ fn set_track_id(
             }
         }
 
-        if total_idx >= idx {
+        if total_idx >= detection_index {
             break 'meta;
         } else {
             meta_idx += 1;
@@ -244,8 +285,8 @@ fn set_track_id(
         let mut mtd = std::mem::MaybeUninit::uninit();
         gst_analytics_relation_meta_add_tracking_mtd(
             meta.as_mut_ptr(),
-            track.track_id() as u64,
-            first_seen.nseconds(),
+            track_id,
+            track_info.created,
             mtd.as_mut_ptr(),
         );
         let mtd = mtd.assume_init();
@@ -255,7 +296,7 @@ fn set_track_id(
         .unwrap()
 }
 
-fn detections(buffer: &gst::BufferRef) -> Vec<bytetrack::Detection> {
+fn detections(buffer: &gst::BufferRef) -> Vec<DetectionBox> {
     let mut detections = Vec::new();
     for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
         for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
@@ -269,14 +310,14 @@ fn detections(buffer: &gst::BufferRef) -> Vec<bytetrack::Detection> {
     detections
 }
 
-fn location_to_detection(location: &gst_analytics::AnalyticsODLocation) -> bytetrack::Detection {
+fn location_to_detection(location: &gst_analytics::AnalyticsODLocation) -> DetectionBox {
     let score = location.loc_conf_lvl;
     let x = location.x as f32;
     let y = location.y as f32;
     let w = location.w as f32;
     let h = location.h as f32;
-    bytetrack::Detection {
+    DetectionBox {
         score,
-        bbox: bytetrack::BoundingBox::from_tlwh(x, y, w, h),
+        bbox: [x, y, x + w, y + h],
     }
 }

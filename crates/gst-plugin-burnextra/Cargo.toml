@@ -21,7 +21,7 @@ sixdrepnet360-pretrained = ["sixdrepnet360-burn/pretrained"]
 [dependencies]
 burn = { workspace = true, features = ["autotune", "dispatch", "fusion"] }
 byte-slice-cast.workspace = true
-bytetrack.workspace = true
+edgefirst-tracker.workspace = true
 eyre.workspace = true
 gst = { workspace = true, features = ["v1_28"] }
 gst-analytics = { workspace = true, features = ["v1_28"] }

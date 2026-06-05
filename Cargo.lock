@@ -3478,6 +3478,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1d926b4d407d372f141f93bb444696142c29d32962ccbd3531117cf3aa0bfa9"
 
 [[package]]
+name = "edgefirst-tracker"
+version = "0.24.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "362cb7123366779088c12f31c111a785f5488a24c65cabfe376fae17fba0c503"
+dependencies = [
+ "enum_dispatch",
+ "lapjv",
+ "log",
+ "nalgebra 0.34.2",
+ "ndarray 0.17.2",
+ "num-traits",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "ego-tree"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,6 +3605,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1e6a265c649f3f5979b601d26f1d05ada116434c87741c9493cb56218f76cbc"
 dependencies = [
  "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "enum_dispatch"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa18ce2bc66555b3218614519ac839ddb759a7d6720732f979ef8d13be147ecd"
+dependencies = [
+ "once_cell",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -4804,7 +4832,7 @@ version = "0.1.0"
 dependencies = [
  "burn 0.21.0",
  "byte-slice-cast",
- "bytetrack",
+ "edgefirst-tracker",
  "eyre",
  "gst-plugin-burn",
  "gst-plugin-version-helper",
@@ -6354,6 +6382,7 @@ dependencies = [
  "glam 0.31.1",
  "glam 0.32.1",
  "matrixmultiply",
+ "nalgebra-macros",
  "num-complex",
  "num-rational",
  "num-traits",

@@ -17,6 +17,8 @@ mobilenetv2-burn = { git = "https://github.com/tracel-ai/models", package = "mob
 scrfd-burn.path = "crates/scrfd-burn"
 sixdrepnet360-burn.path = "crates/sixdrepnet360-burn"
 
+edgefirst-tracker = "0.24"
+
 eyre = "0.6.12"
 nokhwa = "0.10.11"
 gtk = { package = "gtk4", version = "0.11.3" }

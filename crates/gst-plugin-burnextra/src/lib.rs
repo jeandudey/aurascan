@@ -1,5 +1,7 @@
 use gst::glib;
 
+pub mod bytetracker;
+//pub mod headposeinferencebin;
 pub mod scrfd;
 pub mod scrfdtensordec;
 pub mod sixdrepnet360;
@@ -12,6 +14,7 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
         gst::meta::CustomMeta::register("EulerAnglesMeta", &[]);
     }
 
+    bytetracker::register(plugin)?;
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;
     sixdrepnet360::register(plugin)?;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#cargo build --release --features scrfd-embedded,vulkan || exit 1
+cargo build --release --features scrfd-embedded,vulkan || exit 1
 #GST_DEBUG=scrfdtensordec:9 \
 #GST_DEBUG="GST_TRACER:7" GST_TRACERS="latency(flags=element)" \
 #GST_DEBUG=burnextra-scrfdinference:9 \
@@ -14,6 +14,7 @@ GST_PLUGIN_PATH=../../target/release \
     ! queue \
     ! burnextra-scrfdinference backend-type=vulkan \
     ! scrfdtensordec \
+    ! bytetracker \
     ! objectdetectionoverlay \
     ! videoconvert \
     ! fpsdisplaysink sync=false

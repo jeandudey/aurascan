@@ -65,6 +65,7 @@ fn activate(app: &gtk::Application) {
         .build()
         .unwrap();
     let scrfdtensordec = gst::ElementFactory::make("scrfdtensordec").build().unwrap();
+    let tracker = gst::ElementFactory::make("bytetracker").build().unwrap();
     let sixdrepnet360inference = gst::ElementFactory::make("burnextra-sixdrepnet360inference")
         .property("backend-type", BackendType::Vulkan)
         .build()
@@ -93,6 +94,7 @@ fn activate(app: &gtk::Application) {
             &queue1,
             &scrfdinference,
             &scrfdtensordec,
+            &tracker,
             &sixdrepnet360inference,
             &sixdrepnet360tensordec,
             &videocrop,
@@ -108,6 +110,7 @@ fn activate(app: &gtk::Application) {
         &capsfilter0,
         &scrfdinference,
         &scrfdtensordec,
+        &tracker,
         &tee,
     ])
     .unwrap();

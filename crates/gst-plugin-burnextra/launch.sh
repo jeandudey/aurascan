@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cargo build --release --features scrfd-embedded,vulkan || exit 1
+cargo build --release --features sixdrepnet360-pretrained,scrfd-embedded,vulkan || exit 1
 #GST_DEBUG=scrfdtensordec:9 \
 #GST_DEBUG="GST_TRACER:7" GST_TRACERS="latency(flags=element)" \
 #GST_DEBUG=burnextra-scrfdinference:9 \
@@ -12,10 +12,7 @@ GST_PLUGIN_PATH=../../target/release \
     ! videoscale \
     ! video/x-raw,format=RGB,width=640,height=640 \
     ! queue \
-    ! burnextra-scrfdinference backend-type=vulkan \
-    ! scrfdtensordec \
-    ! bytetracker \
-    ! objectdetectionoverlay \
+    ! headposeinferencebin \
     ! videoconvert \
     ! fpsdisplaysink sync=false
 #GST_PLUGIN_PATH=../../target/release \

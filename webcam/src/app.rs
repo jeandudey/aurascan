@@ -51,8 +51,17 @@ impl SimpleComponent for AppModel {
                                     set_content = &gtk::Box {
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_vexpand: true,
+                                        set_spacing: 32,
+                                        set_margin_start: 8,
+                                        set_margin_end: 8,
+                                        set_margin_top: 4,
+                                        set_margin_bottom: 4,
 
                                         model.source_selector.widget(),
+
+                                        gtk::Box {
+                                            set_vexpand: true,
+                                        },
 
                                         gtk::Separator {},
 

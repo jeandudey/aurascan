@@ -1,14 +1,6 @@
 use crate::app::AppModel;
 use relm4::RelmApp;
 
-//use crate::face_tracker::FaceTracker;
-//use gst::prelude::*;
-//use gst_analytics::AnalyticsMetaRefExt;
-//use gst_analytics::prelude::*;
-//use gstburnextra::BackendType;
-//use gstburnextra::scrfd::ModelType;
-//use std::sync::Mutex;
-
 mod app;
 mod pipeline;
 

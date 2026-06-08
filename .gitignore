@@ -6,3 +6,5 @@ cubecl.toml
 .workshop.lock
 *.png
 crates/gst-plugin-burnextra/target
+**/*/dot
+*.dot

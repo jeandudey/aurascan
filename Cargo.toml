@@ -21,12 +21,12 @@ edgefirst-tracker = "0.24"
 
 eyre = "0.6.12"
 nokhwa = "0.10.11"
-gtk = { package = "gtk4", version = "0.11.3" }
 byte-slice-cast = "1"
 
 nalgebra = "0.35"
 lapjv = "0.3"
 
+adw = { package = "libadwaita", version = "0.9.1" }
 gst = { package = "gstreamer", version = "0.25" }
 gst-analytics = { package = "gstreamer-analytics", version = "0.25" }
 gst-app = { package = "gstreamer-app", version = "0.25" }
@@ -36,6 +36,8 @@ gst-plugin-burnextra.path = "crates/gst-plugin-burnextra"
 gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25" }
+gtk = { package = "gtk4", version = "0.11.3" }
+relm4 = "0.11"
 
 
 # Local dependencies

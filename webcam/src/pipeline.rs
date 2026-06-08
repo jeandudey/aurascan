@@ -1,10 +1,21 @@
 use gst::glib;
 use gst::prelude::*;
 
+#[derive(Debug, Clone)]
+pub struct InferenceMeasurements {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub roll: f32,
+}
+
 pub struct Pipeline {
     pipeline: gst::Pipeline,
     source: Option<gst::Element>,
     after_source: gst::Element,
+    inferencebin: gst::Element,
     fpsdisplaysink: gst::Element,
     sink: gst::Element,
 }
@@ -57,6 +68,7 @@ impl Pipeline {
             pipeline,
             source: None,
             after_source: videoconvertscale,
+            inferencebin,
             fpsdisplaysink,
             sink,
         })
@@ -93,6 +105,45 @@ impl Pipeline {
                 callback(fps, droprate, avgfps);
                 None
             })
+    }
+
+    pub fn connect_inference_measurements<F>(&self, callback: F)
+    where
+        F: Fn(InferenceMeasurements) + Send + Sync + 'static,
+    {
+        let pad = self.inferencebin.static_pad("src").unwrap();
+        pad.add_probe(gst::PadProbeType::BUFFER, move |_pad, info| {
+            let Some(buffer) = info.buffer() else {
+                return gst::PadProbeReturn::Ok;
+            };
+
+            let Some(meta) = gst::meta::CustomMeta::from_buffer(buffer, "EulerAnglesMeta").ok()
+            else {
+                return gst::PadProbeReturn::Ok;
+            };
+
+            let structure = meta.structure();
+            let Some((yaw, pitch, roll)) = structure.get("yaw").ok().and_then(|y| {
+                structure
+                    .get("pitch")
+                    .ok()
+                    .and_then(|p| structure.get("roll").ok().map(|r| (y, p, r)))
+            }) else {
+                return gst::PadProbeReturn::Ok;
+            };
+
+            let measurements = InferenceMeasurements {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                yaw,
+                pitch,
+                roll,
+            };
+            callback(measurements);
+
+            gst::PadProbeReturn::Ok
+        });
     }
 
     pub fn set_source(&mut self, device: Option<gst::Device>) -> Result<(), glib::BoolError> {

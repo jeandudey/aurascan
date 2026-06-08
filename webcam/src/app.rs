@@ -106,6 +106,7 @@ impl SimpleComponent for AppModel {
         let status = Status::builder().launch(()).detach();
 
         let pipeline = Pipeline::new().unwrap();
+
         pipeline.connect_fps_measurements({
             let status_sender = status.sender().clone();
             move |fps, droprate, avgfps| {
@@ -115,6 +116,15 @@ impl SimpleComponent for AppModel {
                         droprate,
                         avgfps,
                     })
+                    .unwrap();
+            }
+        });
+
+        pipeline.connect_inference_measurements({
+            let status_sender = status.sender().clone();
+            move |measurements| {
+                status_sender
+                    .send(StatusInput::UpdateInference(measurements))
                     .unwrap();
             }
         });

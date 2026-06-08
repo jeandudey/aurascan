@@ -1,7 +1,7 @@
 use crate::app::msg::AppMsg;
 use crate::app::source_selector::SourceSelector;
 use crate::app::status::{Status, StatusInput};
-use crate::pipeline::Pipeline;
+use crate::pipeline::{Pipeline, PipelineState};
 use adw::prelude::*;
 use relm4::SimpleComponent;
 use relm4::prelude::*;
@@ -14,6 +14,8 @@ pub struct AppModel {
     source_selector: relm4::Controller<SourceSelector>,
     status: relm4::Controller<Status>,
     pipeline: Pipeline,
+    toggle_label: &'static str,
+    start_requested: bool,
 }
 
 #[relm4::component(pub)]
@@ -85,10 +87,9 @@ impl SimpleComponent for AppModel {
 
                                         gtk::Separator {},
 
-                                        #[name(start)]
                                         gtk::Button {
                                             #[watch]
-                                            set_label: if model.pipeline.is_playing() { "Stop" } else { "Start" },
+                                            set_label: model.toggle_label,
                                             set_width_request: 150,
                                             connect_clicked => AppMsg::TogglePipeline,
                                         },
@@ -134,7 +135,19 @@ impl SimpleComponent for AppModel {
 
         let status = Status::builder().launch(()).detach();
 
-        let pipeline = Pipeline::new().unwrap();
+        let mut pipeline = Pipeline::new().unwrap();
+
+        pipeline.connect_state_changed({
+            let status_sender = sender.input_sender().clone();
+            move |state| {
+                if matches!(state, PipelineState::Stopped) {
+                    println!("Stopped");
+                }
+                status_sender
+                    .send(AppMsg::PipelineStateChanged(state))
+                    .unwrap();
+            }
+        });
 
         pipeline.connect_fps_measurements({
             let status_sender = status.sender().clone();
@@ -162,6 +175,8 @@ impl SimpleComponent for AppModel {
             source_selector,
             status,
             pipeline,
+            toggle_label: "Start",
+            start_requested: false,
         };
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -174,11 +189,22 @@ impl SimpleComponent for AppModel {
             }
             AppMsg::TogglePipeline => {
                 if self.pipeline.is_playing() {
+                    self.start_requested = false;
                     self.pipeline.stop().unwrap();
+                    self.toggle_label = "Start";
+                    self.status.sender().send(StatusInput::Clear).unwrap();
                 } else {
+                    self.start_requested = true;
                     self.pipeline.play().unwrap();
                 }
             }
+            AppMsg::PipelineStateChanged(state) => match (state, self.start_requested) {
+                (PipelineState::Started, true) => {
+                    self.toggle_label = "Stop";
+                    self.start_requested = false;
+                }
+                _ => (),
+            },
             AppMsg::BackendSelected(backend_type) => {
                 self.pipeline
                     .set_backend_type(match backend_type {

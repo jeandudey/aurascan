@@ -1,6 +1,12 @@
 use gst::glib;
 use gst::prelude::*;
 
+#[derive(Debug)]
+pub enum PipelineState {
+    Started,
+    Stopped,
+}
+
 #[derive(Debug, Clone)]
 pub struct InferenceMeasurements {
     pub x: f32,
@@ -13,6 +19,7 @@ pub struct InferenceMeasurements {
 
 pub struct Pipeline {
     pipeline: gst::Pipeline,
+    pipeline_state_guard: Option<gst::bus::BusWatchGuard>,
     source: Option<gst::Element>,
     after_source: gst::Element,
     inferencebin: gst::Element,
@@ -66,6 +73,7 @@ impl Pipeline {
 
         Ok(Self {
             pipeline,
+            pipeline_state_guard: None,
             source: None,
             after_source: videoconvertscale,
             inferencebin,
@@ -170,6 +178,29 @@ impl Pipeline {
 
             gst::PadProbeReturn::Ok
         });
+    }
+
+    pub fn connect_state_changed<F>(&mut self, callback: F)
+    where
+        F: Fn(PipelineState) + Send + Sync + 'static,
+    {
+        let bus = self.pipeline.bus().unwrap();
+        let pipeline_state_guard = bus
+            .add_watch(move |_, message| {
+                match message.view() {
+                    gst::MessageView::StateChanged(s) => match s.current() {
+                        gst::State::Playing => callback(PipelineState::Started),
+                        gst::State::Null => callback(PipelineState::Stopped),
+                        _ => (),
+                    },
+                    gst::MessageView::Eos(_) => callback(PipelineState::Stopped),
+                    _ => (),
+                }
+
+                glib::ControlFlow::Continue
+            })
+            .unwrap();
+        self.pipeline_state_guard = Some(pipeline_state_guard);
     }
 
     pub fn set_source(&mut self, device: Option<gst::Device>) -> Result<(), glib::BoolError> {

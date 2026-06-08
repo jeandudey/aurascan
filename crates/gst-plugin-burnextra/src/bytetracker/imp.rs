@@ -149,8 +149,6 @@ impl ElementImpl for ByteTracker {
             )
         });
 
-        println!("Getting metadata");
-
         Some(&*METADATA)
     }
 
@@ -176,8 +174,6 @@ impl ElementImpl for ByteTracker {
 
             vec![sink_pad_template, src_pad_template]
         });
-
-        println!("Getting pad templates");
 
         PAD_TEMPLATES.as_ref()
     }

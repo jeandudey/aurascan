@@ -31,97 +31,97 @@ impl SimpleComponent for AppModel {
             .default_height(720)
             .title("Aura Scan")
             .build() {
-                adw::ToastOverlay {
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
+            adw::ToastOverlay {
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
 
-                        adw::NavigationSplitView {
-                            set_expand: true,
-                            set_max_sidebar_width: 230.0,
+                    adw::NavigationSplitView {
+                        set_expand: true,
+                        set_max_sidebar_width: 230.0,
+
+                        #[wrap(Some)]
+                        set_sidebar = &adw::NavigationPage {
+                            set_title: "Aura Scan",
 
                             #[wrap(Some)]
-                            set_sidebar = &adw::NavigationPage {
-                                set_title: "Aura Scan",
+                            set_child = &adw::ToolbarView {
+                                add_top_bar = &adw::HeaderBar {
+                                    set_show_end_title_buttons: false,
+                                },
 
                                 #[wrap(Some)]
-                                set_child = &adw::ToolbarView {
-                                    add_top_bar = &adw::HeaderBar {
-                                        set_show_end_title_buttons: false,
+                                set_content = &gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_vexpand: true,
+                                    set_spacing: 32,
+                                    set_margin_start: 8,
+                                    set_margin_end: 8,
+                                    set_margin_top: 4,
+                                    set_margin_bottom: 4,
+
+                                    model.source_selector.widget(),
+
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Vertical,
+
+                                        gtk::Label {
+                                            set_label: "Backend",
+                                            set_halign: gtk::Align::Start,
+                                            set_margin_horizontal: 4,
+                                        },
+
+                                        gtk::DropDown {
+                                            set_hexpand: true,
+                                            set_model: Some(&gtk::StringList::new(&["Flex (CPU)", "Vulkan", "ROCm"])),
+                                            connect_selected_notify[sender] => move |dropdown| {
+                                                sender.input(AppMsg::BackendSelected(dropdown.selected()));
+                                            }
+                                        },
                                     },
 
-                                    #[wrap(Some)]
-                                    set_content = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Vertical,
+                                    gtk::Separator {},
+
+                                    gtk::Box {
                                         set_vexpand: true,
-                                        set_spacing: 32,
-                                        set_margin_start: 8,
-                                        set_margin_end: 8,
-                                        set_margin_top: 4,
-                                        set_margin_bottom: 4,
+                                    },
 
-                                        model.source_selector.widget(),
+                                    gtk::Separator {},
 
-                                        gtk::Box {
-                                            set_orientation: gtk::Orientation::Vertical,
-
-                                            gtk::Label {
-                                                set_label: "Backend",
-                                                set_halign: gtk::Align::Start,
-                                                set_margin_horizontal: 4,
-                                            },
-
-                                            gtk::DropDown {
-                                                set_hexpand: true,
-                                                set_model: Some(&gtk::StringList::new(&["Flex (CPU)", "Vulkan", "ROCm"])),
-                                                connect_selected_notify[sender] => move |dropdown| {
-                                                    sender.input(AppMsg::BackendSelected(dropdown.selected()));
-                                                }
-                                            },
-                                        },
-
-                                        gtk::Separator {},
-
-                                        gtk::Box {
-                                            set_vexpand: true,
-                                        },
-
-                                        gtk::Separator {},
-
-                                        gtk::Button {
-                                            #[watch]
-                                            set_label: model.toggle_label,
-                                            set_width_request: 150,
-                                            connect_clicked => AppMsg::TogglePipeline,
-                                        },
+                                    gtk::Button {
+                                        #[watch]
+                                        set_label: model.toggle_label,
+                                        set_width_request: 150,
+                                        connect_clicked => AppMsg::TogglePipeline,
                                     },
                                 },
                             },
+                        },
+
+                        #[wrap(Some)]
+                        set_content = &adw::NavigationPage {
+                            set_title: "Live Feed",
 
                             #[wrap(Some)]
-                            set_content = &adw::NavigationPage {
-                                set_title: "Live Feed",
+                            set_child = &adw::ToolbarView {
+                                add_top_bar = &adw::HeaderBar {},
 
                                 #[wrap(Some)]
-                                set_child = &adw::ToolbarView {
-                                    add_top_bar = &adw::HeaderBar {},
+                                set_content = &gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
 
-                                    #[wrap(Some)]
-                                    set_content = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Vertical,
+                                    gstgtk4::RenderWidget::new(&model.pipeline.sink()) {
+                                        set_hexpand: true,
+                                        set_vexpand: true,
+                                    },
 
-                                        gstgtk4::RenderWidget::new(&model.pipeline.sink()) {
-                                            set_hexpand: true,
-                                            set_vexpand: true,
-                                        },
-
-                                        model.status.widget(),
-                                    }
-                                },
+                                    model.status.widget(),
+                                }
                             },
                         },
                     },
                 },
-            }
+            },
+        }
     }
 
     fn init(

@@ -1,5 +1,6 @@
 use crate::app::msg::AppMsg;
 use crate::app::source_selector::SourceSelector;
+use crate::app::status::{Status, StatusInput};
 use crate::pipeline::Pipeline;
 use adw::prelude::*;
 use relm4::SimpleComponent;
@@ -7,9 +8,11 @@ use relm4::prelude::*;
 
 mod msg;
 mod source_selector;
+mod status;
 
 pub struct AppModel {
     source_selector: relm4::Controller<SourceSelector>,
+    status: relm4::Controller<Status>,
     pipeline: Pipeline,
 }
 
@@ -36,7 +39,7 @@ impl SimpleComponent for AppModel {
 
                             #[wrap(Some)]
                             set_sidebar = &adw::NavigationPage {
-                                set_title: "Configuration",
+                                set_title: "Aura Scan",
 
                                 #[wrap(Some)]
                                 set_child = &adw::ToolbarView {
@@ -66,14 +69,23 @@ impl SimpleComponent for AppModel {
 
                             #[wrap(Some)]
                             set_content = &adw::NavigationPage {
-                                set_title: "Aura Scan",
+                                set_title: "Live Feed",
 
                                 #[wrap(Some)]
                                 set_child = &adw::ToolbarView {
                                     add_top_bar = &adw::HeaderBar {},
 
                                     #[wrap(Some)]
-                                    set_content = &gstgtk4::RenderWidget::new(&model.pipeline.sink()),
+                                    set_content = &gtk::Box {
+                                        set_orientation: gtk::Orientation::Vertical,
+
+                                        gstgtk4::RenderWidget::new(&model.pipeline.sink()) {
+                                            set_hexpand: true,
+                                            set_vexpand: true,
+                                        },
+
+                                        model.status.widget(),
+                                    }
                                 },
                             },
                         },
@@ -90,9 +102,27 @@ impl SimpleComponent for AppModel {
         let source_selector = SourceSelector::builder()
             .launch(())
             .forward(sender.input_sender(), AppMsg::SourceChanged);
+
+        let status = Status::builder().launch(()).detach();
+
+        let pipeline = Pipeline::new().unwrap();
+        pipeline.connect_fps_measurements({
+            let status_sender = status.sender().clone();
+            move |fps, droprate, avgfps| {
+                status_sender
+                    .send(StatusInput::UpdateFps {
+                        fps,
+                        droprate,
+                        avgfps,
+                    })
+                    .unwrap();
+            }
+        });
+
         let model = AppModel {
             source_selector,
-            pipeline: Pipeline::new().unwrap(),
+            status,
+            pipeline,
         };
         let widgets = view_output!();
         ComponentParts { model, widgets }

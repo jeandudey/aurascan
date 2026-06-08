@@ -5,6 +5,7 @@ pub struct Pipeline {
     pipeline: gst::Pipeline,
     source: Option<gst::Element>,
     after_source: gst::Element,
+    fpsdisplaysink: gst::Element,
     sink: gst::Element,
 }
 
@@ -28,7 +29,12 @@ impl Pipeline {
         let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;
         let videoconvert1 = gst::ElementFactory::make("videoconvert").build()?;
 
-        let sink = gst::ElementFactory::make("gtk4paintablesink")
+        let sink = gst::ElementFactory::make("gtk4paintablesink").build()?;
+
+        let fpsdisplaysink = gst::ElementFactory::make("fpsdisplaysink")
+            .property("text-overlay", false)
+            .property("signal-fps-measurements", true)
+            .property("video-sink", &sink)
             .property("sync", false)
             .build()?;
 
@@ -37,20 +43,21 @@ impl Pipeline {
             &capsfilter,
             &inferencebin,
             &videoconvert1,
-            &sink,
+            &fpsdisplaysink,
         ])?;
         gst::Element::link_many([
             &videoconvertscale,
             &capsfilter,
             &inferencebin,
             &videoconvert1,
-            &sink,
+            &fpsdisplaysink,
         ])?;
 
         Ok(Self {
             pipeline,
             source: None,
             after_source: videoconvertscale,
+            fpsdisplaysink,
             sink,
         })
     }
@@ -72,6 +79,20 @@ impl Pipeline {
     pub fn stop(&self) -> Result<(), gst::StateChangeError> {
         self.pipeline.set_state(gst::State::Null)?;
         Ok(())
+    }
+
+    pub fn connect_fps_measurements<F>(&self, callback: F) -> glib::SignalHandlerId
+    where
+        F: Fn(f64, f64, f64) + Send + Sync + 'static,
+    {
+        self.fpsdisplaysink
+            .connect("fps-measurements", false, move |args| {
+                let fps = args[1].get().unwrap();
+                let droprate = args[2].get().unwrap();
+                let avgfps = args[3].get().unwrap();
+                callback(fps, droprate, avgfps);
+                None
+            })
     }
 
     pub fn set_source(&mut self, device: Option<gst::Device>) -> Result<(), glib::BoolError> {

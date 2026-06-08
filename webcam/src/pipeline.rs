@@ -64,13 +64,8 @@ impl Pipeline {
             return Ok(());
         }
 
-        //self.pipeline
-        //    .debug_to_dot_file(gst::DebugGraphDetails::all(), "pipeline0");
-
         self.pipeline.set_state(gst::State::Playing)?;
 
-        //self.pipeline
-        //    .debug_to_dot_file(gst::DebugGraphDetails::all(), "pipeline1");
         Ok(())
     }
 

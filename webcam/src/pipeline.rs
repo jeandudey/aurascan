@@ -74,6 +74,27 @@ impl Pipeline {
         })
     }
 
+    pub fn set_backend_type(
+        &self,
+        backend_type: gstburnextra::BackendType,
+    ) -> Result<(), gst::StateChangeError> {
+        let was_playing = self.is_playing();
+        if was_playing {
+            self.stop()?;
+        }
+
+        self.inferencebin
+            .dynamic_cast_ref::<gst::ChildProxy>()
+            .unwrap()
+            .set_child_property("scrfdinference::backend-type", backend_type);
+
+        if was_playing {
+            self.play()?;
+        }
+
+        Ok(())
+    }
+
     pub fn is_playing(&self) -> bool {
         self.pipeline.current_state() == gst::State::Playing
     }

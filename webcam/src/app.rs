@@ -60,6 +60,26 @@ impl SimpleComponent for AppModel {
                                         model.source_selector.widget(),
 
                                         gtk::Box {
+                                            set_orientation: gtk::Orientation::Vertical,
+
+                                            gtk::Label {
+                                                set_label: "Backend",
+                                                set_halign: gtk::Align::Start,
+                                                set_margin_horizontal: 4,
+                                            },
+
+                                            gtk::DropDown {
+                                                set_hexpand: true,
+                                                set_model: Some(&gtk::StringList::new(&["Vulkan", "NdArray"])),
+                                                connect_selected_notify[sender] => move |dropdown| {
+                                                    sender.input(AppMsg::BackendSelected(dropdown.selected()));
+                                                }
+                                            },
+                                        },
+
+                                        gtk::Separator {},
+
+                                        gtk::Box {
                                             set_vexpand: true,
                                         },
 
@@ -158,6 +178,15 @@ impl SimpleComponent for AppModel {
                 } else {
                     self.pipeline.play().unwrap();
                 }
+            }
+            AppMsg::BackendSelected(backend_type) => {
+                self.pipeline
+                    .set_backend_type(match backend_type {
+                        0 => gstburnextra::BackendType::Vulkan,
+                        1 => gstburnextra::BackendType::NdArray,
+                        _ => unreachable!(),
+                    })
+                    .unwrap();
             }
         }
     }

@@ -1,3 +1,4 @@
+use crate::BackendType;
 use burn::tensor::TensorData;
 use burn::{Dispatch, DispatchDevice, Tensor};
 use byte_slice_cast::*;
@@ -8,7 +9,6 @@ use gst::prelude::GstParamSpecBuilderExt;
 use gst::subclass::prelude::*;
 use gst_base::subclass::prelude::*;
 use gst_video::prelude::*;
-use gstburn::BackendType;
 use sixdrepnet360_burn::sixdrepnet360;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
@@ -404,15 +404,23 @@ struct Model {
 impl Model {
     fn load_model(settings: &Settings) -> eyre::Result<Box<Self>> {
         let device = match settings.backend_type {
-            #[cfg(feature = "ndarray")]
-            BackendType::NdArray => DispatchDevice::NdArray(Default::default()),
-            #[cfg(feature = "cpu")]
-            BackendType::Cpu => DispatchDevice::Cpu(Default::default()),
+            BackendType::Flex => DispatchDevice::Flex(Default::default()),
             #[cfg(feature = "vulkan")]
             BackendType::Vulkan => {
                 use burn::tensor::backend::{Device, DeviceId};
                 match (settings.cubecl_type_id, settings.cubecl_index_id) {
                     (u32::MAX, _) => DispatchDevice::Vulkan(Default::default()),
+                    (type_id, index_id) => DispatchDevice::from_id(DeviceId {
+                        type_id: type_id as u16,
+                        index_id: index_id as u16,
+                    }),
+                }
+            }
+            #[cfg(feature = "rocm")]
+            BackendType::Rocm => {
+                use burn::tensor::backend::{Device, DeviceId};
+                match (settings.cubecl_type_id, settings.cubecl_index_id) {
+                    (u32::MAX, _) => DispatchDevice::Rocm(Default::default()),
                     (type_id, index_id) => DispatchDevice::from_id(DeviceId {
                         type_id: type_id as u16,
                         index_id: index_id as u16,

@@ -11,22 +11,20 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [features]
-default = ["ndarray"]
-ndarray = ["burn/ndarray", "gst-plugin-burn/ndarray"]
-cpu = ["burn/cpu", "gst-plugin-burn/cpu"]
-vulkan = ["burn/vulkan", "gst-plugin-burn/vulkan"]
+default = []
+vulkan = ["burn/vulkan"]
+rocm = ["burn/rocm"]
 scrfd-embedded = ["scrfd-burn/embedded"]
 sixdrepnet360-pretrained = ["sixdrepnet360-burn/pretrained"]
 
 [dependencies]
-burn = { workspace = true, features = ["autotune", "dispatch", "fusion"] }
+burn = { workspace = true, features = ["autotune", "dispatch", "flex", "fusion"] }
 byte-slice-cast.workspace = true
 edgefirst-tracker.workspace = true
 eyre.workspace = true
 gst = { workspace = true, features = ["v1_28"] }
 gst-analytics = { workspace = true, features = ["v1_28"] }
 gst-base = { workspace = true, features = ["v1_28"] }
-gst-plugin-burn.workspace = true
 gst-video = { workspace = true, features = ["v1_28"] }
 scrfd-burn.workspace = true
 sixdrepnet360-burn.workspace = true

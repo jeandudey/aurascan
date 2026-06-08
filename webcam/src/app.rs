@@ -70,7 +70,7 @@ impl SimpleComponent for AppModel {
 
                                             gtk::DropDown {
                                                 set_hexpand: true,
-                                                set_model: Some(&gtk::StringList::new(&["Vulkan", "NdArray"])),
+                                                set_model: Some(&gtk::StringList::new(&["Flex (CPU)", "Vulkan", "ROCm"])),
                                                 connect_selected_notify[sender] => move |dropdown| {
                                                     sender.input(AppMsg::BackendSelected(dropdown.selected()));
                                                 }
@@ -182,8 +182,9 @@ impl SimpleComponent for AppModel {
             AppMsg::BackendSelected(backend_type) => {
                 self.pipeline
                     .set_backend_type(match backend_type {
-                        0 => gstburnextra::BackendType::Vulkan,
-                        1 => gstburnextra::BackendType::NdArray,
+                        0 => gstburnextra::BackendType::Flex,
+                        1 => gstburnextra::BackendType::Vulkan,
+                        2 => gstburnextra::BackendType::Rocm,
                         _ => unreachable!(),
                     })
                     .unwrap();

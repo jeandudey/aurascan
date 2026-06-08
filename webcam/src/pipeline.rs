@@ -88,6 +88,11 @@ impl Pipeline {
             .unwrap()
             .set_child_property("scrfdinference::backend-type", backend_type);
 
+        self.inferencebin
+            .dynamic_cast_ref::<gst::ChildProxy>()
+            .unwrap()
+            .set_child_property("sixdrepnet360inference::backend-type", backend_type);
+
         if was_playing {
             self.play()?;
         }

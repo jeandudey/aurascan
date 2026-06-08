@@ -7,7 +7,17 @@ pub mod scrfdtensordec;
 pub mod sixdrepnet360;
 pub mod sixdrepnet360tensordec;
 
-pub use gstburn::BackendType;
+#[derive(Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
+#[repr(C)]
+#[enum_type(name = "GstBurnExtraBackendType")]
+pub enum BackendType {
+    #[default]
+    Flex = 0,
+    #[cfg(feature = "vulkan")]
+    Vulkan = 1,
+    #[cfg(feature = "rocm")]
+    Rocm = 2,
+}
 
 fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     if !gst::meta::CustomMeta::is_registered("EulerAnglesMeta") {

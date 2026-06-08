@@ -205,6 +205,7 @@ impl ObjectSubclass for HeadPoseInferenceBin {
 
     type Type = super::HeadPoseInferenceBin;
     type ParentType = gst::Bin;
+    type Interfaces = (gst::ChildProxy,);
 }
 
 impl ObjectImpl for HeadPoseInferenceBin {
@@ -225,21 +226,33 @@ impl ObjectImpl for HeadPoseInferenceBin {
         });
 
         let facedetectorinfernce = gst::ElementFactory::make("burnextra-scrfdinference")
+            .name("scrfdinference")
             .property("backend-type", gstburn::BackendType::Vulkan)
             .build()
             .unwrap();
-        let facedetectortensordec = gst::ElementFactory::make("scrfdtensordec").build().unwrap();
-        let tracker = gst::ElementFactory::make("bytetracker").build().unwrap();
-        let videocrop = gst::ElementFactory::make("videocrop").build().unwrap();
-
-        let videoscale = gst::ElementFactory::make("videoscale").build().unwrap();
-
+        let facedetectortensordec = gst::ElementFactory::make("scrfdtensordec")
+            .name("scrfdtensordec")
+            .build()
+            .unwrap();
+        let tracker = gst::ElementFactory::make("bytetracker")
+            .name("bytetracker")
+            .build()
+            .unwrap();
+        let videocrop = gst::ElementFactory::make("videocrop")
+            .name("videocrop")
+            .build()
+            .unwrap();
+        let videoscale = gst::ElementFactory::make("videoscale")
+            .name("videoscale")
+            .build()
+            .unwrap();
         let headposeinference = gst::ElementFactory::make("burnextra-sixdrepnet360inference")
+            .name("sixdrepnet360inference")
             .property("backend-type", gstburn::BackendType::Vulkan)
             .build()
             .unwrap();
-
         let headposetensordec = gst::ElementFactory::make("sixdrepnet360tensordec")
+            .name("sixdrepnet360tensordec")
             .build()
             .unwrap();
 
@@ -433,3 +446,25 @@ impl ElementImpl for HeadPoseInferenceBin {
 }
 
 impl BinImpl for HeadPoseInferenceBin {}
+
+impl ChildProxyImpl for HeadPoseInferenceBin {
+    fn children_count(&self) -> u32 {
+        self.obj().children().len() as u32
+    }
+
+    fn child_by_name(&self, name: &str) -> Option<glib::Object> {
+        self.obj()
+            .children()
+            .iter()
+            .find(|c| c.name() == name)
+            .map(|c| c.clone().upcast())
+    }
+
+    fn child_by_index(&self, index: u32) -> Option<glib::Object> {
+        self.obj()
+            .children()
+            .into_iter()
+            .nth(index as usize)
+            .map(|c| c.upcast())
+    }
+}

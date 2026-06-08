@@ -9342,9 +9342,6 @@ dependencies = [
 name = "webcam"
 version = "0.1.0"
 dependencies = [
- "async-channel",
- "crossbeam-channel",
- "eyre",
  "gst-plugin-burnextra",
  "gst-plugin-gtk4",
  "gstreamer",
@@ -9352,10 +9349,8 @@ dependencies = [
  "gstreamer-app",
  "gstreamer-video",
  "gtk4",
- "image",
  "libadwaita",
  "relm4",
- "thiserror 2.0.18",
 ]
 
 [[package]]

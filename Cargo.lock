@@ -911,20 +911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "burn-experiments"
-version = "0.1.0"
-dependencies = [
- "burn",
- "burn-3ddfa",
- "clap",
- "eyre",
- "image",
- "mobilenetv2-burn",
- "resnet-burn",
- "tokio",
-]
-
-[[package]]
 name = "burn-flex"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5487,15 +5473,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mobilenetv2-burn"
-version = "0.1.0"
-source = "git+https://github.com/tracel-ai/models#ec1b9e42e6692ef2b95f85c4ba783e07cd3d19af"
-dependencies = [
- "burn",
- "serde",
-]
-
-[[package]]
 name = "moddef"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7218,17 +7195,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "resnet-burn"
-version = "0.2.0"
-source = "git+https://github.com/tracel-ai/models#ec1b9e42e6692ef2b95f85c4ba783e07cd3d19af"
-dependencies = [
- "burn",
- "burn-store",
- "dirs",
- "serde",
 ]
 
 [[package]]

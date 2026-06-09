@@ -1,4 +1,5 @@
 [workspace]
+resolver = "3"
 members = [
     "app/aurascan",
     "crates/burn-3ddfa",
@@ -40,27 +41,11 @@ gtk = { package = "gtk4", version = "0.11.3" }
 relm4 = "0.11"
 relm4-components = "0.11"
 
-
 # Local dependencies
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
-
-[package]
-name = "burn-experiments"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-burn-3ddfa.workspace = true
-resnet-burn.workspace = true
-mobilenetv2-burn.workspace = true
-burn = { version = "0.21.0", features = ["autotune", "autodiff", "fusion", "rocm", "train", "vision", "wgpu"] }
-image = "0.25.10"
-tokio = "1.52.3"
-eyre = "0.6.12"
-clap = "4.6.1"
 
 [patch.crates-io]
 cubecl-hip-sys.path = "../cubecl-hip-sys/crates/cubecl-hip-sys"

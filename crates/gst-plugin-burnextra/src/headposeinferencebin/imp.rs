@@ -228,7 +228,6 @@ impl ObjectImpl for HeadPoseInferenceBin {
 
         let facedetectorinfernce = gst::ElementFactory::make("burnextra-scrfdinference")
             .name("scrfdinference")
-            .property("backend-type", BackendType::Vulkan)
             .build()
             .unwrap();
         let facedetectortensordec = gst::ElementFactory::make("scrfdtensordec")
@@ -249,7 +248,6 @@ impl ObjectImpl for HeadPoseInferenceBin {
             .unwrap();
         let headposeinference = gst::ElementFactory::make("burnextra-sixdrepnet360inference")
             .name("sixdrepnet360inference")
-            .property("backend-type", BackendType::Vulkan)
             .build()
             .unwrap();
         let headposetensordec = gst::ElementFactory::make("sixdrepnet360tensordec")

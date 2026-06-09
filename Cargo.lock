@@ -7087,6 +7087,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "relm4-components"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62088215be530760481537aa8add43fdbe4b3794bf6cb4673a39083eb993307b"
+dependencies = [
+ "once_cell",
+ "relm4",
+ "tracker",
+]
+
+[[package]]
 name = "relm4-css"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8878,6 +8889,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracker"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce5c98457ff700aaeefcd4a4a492096e78a2af1dd8523c66e94a3adb0fdbd415"
+dependencies = [
+ "tracker-macros",
+]
+
+[[package]]
+name = "tracker-macros"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc19eb2373ccf3d1999967c26c3d44534ff71ae5d8b9dacf78f4b13132229e48"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "transpose"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9342,6 +9373,7 @@ dependencies = [
 name = "webcam"
 version = "0.1.0"
 dependencies = [
+ "eyre",
  "gst-plugin-burnextra",
  "gst-plugin-gtk4",
  "gstreamer",
@@ -9351,6 +9383,7 @@ dependencies = [
  "gtk4",
  "libadwaita",
  "relm4",
+ "relm4-components",
 ]
 
 [[package]]

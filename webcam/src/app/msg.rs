@@ -7,4 +7,6 @@ pub enum AppMsg {
     PipelineStateChanged(PipelineState),
     BackendSelected(u32),
     ResolutionSelected(Option<Resolution>),
+    Error(String),
+    HideError,
 }

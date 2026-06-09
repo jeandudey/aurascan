@@ -6,6 +6,7 @@ use crate::pipeline::{Pipeline, PipelineState};
 use adw::prelude::*;
 use relm4::SimpleComponent;
 use relm4::prelude::*;
+use relm4_components::alert::{Alert, AlertMsg, AlertSettings};
 use std::sync::{Arc, Mutex};
 
 pub(crate) mod msg;
@@ -17,6 +18,7 @@ pub struct AppModel {
     resolution_selector: relm4::Controller<ResolutionSelector>,
     source_selector: relm4::Controller<SourceSelector>,
     status: relm4::Controller<Status>,
+    alert: Controller<Alert>,
     pipeline: Arc<Mutex<Pipeline>>,
     toggle_label: &'static str,
     start_requested: bool,
@@ -57,7 +59,7 @@ impl SimpleComponent for AppModel {
                                 set_content = &gtk::Box {
                                     set_orientation: gtk::Orientation::Vertical,
                                     set_vexpand: true,
-                                    set_spacing: 32,
+                                    set_spacing: 16,
                                     set_margin_start: 8,
                                     set_margin_end: 8,
                                     set_margin_top: 4,
@@ -78,7 +80,7 @@ impl SimpleComponent for AppModel {
 
                                         gtk::DropDown {
                                             set_hexpand: true,
-                                            set_model: Some(&gtk::StringList::new(&["Flex (CPU)", "Vulkan", "ROCm"])),
+                                            set_model: Some(&gtk::StringList::new(&["ROCm", "Vulkan", "Flex (CPU)"])),
                                             connect_selected_notify[sender] => move |dropdown| {
                                                 sender.input(AppMsg::BackendSelected(dropdown.selected()));
                                             }
@@ -97,6 +99,7 @@ impl SimpleComponent for AppModel {
                                         #[watch]
                                         set_label: model.toggle_label,
                                         set_width_request: 150,
+                                        add_css_class: "suggested-action",
                                         connect_clicked => AppMsg::TogglePipeline,
                                     },
                                 },
@@ -201,10 +204,20 @@ impl SimpleComponent for AppModel {
             }
         });
 
+        let alert = Alert::builder()
+            .transient_for(&root)
+            .launch(AlertSettings {
+                text: Some(String::from("Error")),
+                confirm_label: Some(String::from("Ok")),
+                ..Default::default()
+            })
+            .forward(sender.input_sender(), |_| AppMsg::HideError);
+
         let model = AppModel {
             resolution_selector,
             source_selector,
             status,
+            alert,
             pipeline: Arc::new(Mutex::new(pipeline)),
             toggle_label: "Start",
             start_requested: false,
@@ -240,8 +253,11 @@ impl SimpleComponent for AppModel {
                     self.start_requested = true;
                     sender.oneshot_command({
                         let pipeline = self.pipeline.clone();
+                        let sender = sender.input_sender().clone();
                         async move {
-                            pipeline.lock().unwrap().play().unwrap();
+                            if let Err(e) = pipeline.lock().unwrap().play() {
+                                sender.send(AppMsg::Error(e.to_string())).unwrap();
+                            }
                         }
                     });
                 }
@@ -261,9 +277,9 @@ impl SimpleComponent for AppModel {
                             .lock()
                             .unwrap()
                             .set_backend_type(match backend_type {
-                                0 => gstburnextra::BackendType::Flex,
+                                0 => gstburnextra::BackendType::Rocm,
                                 1 => gstburnextra::BackendType::Vulkan,
-                                2 => gstburnextra::BackendType::Rocm,
+                                2 => gstburnextra::BackendType::Flex,
                                 _ => unreachable!(),
                             })
                             .unwrap();
@@ -281,6 +297,17 @@ impl SimpleComponent for AppModel {
                         pipeline.lock().unwrap().set_resolution(resolution).unwrap();
                     }
                 });
+            }
+            AppMsg::Error(error) => {
+                if self.start_requested {
+                    self.start_requested = false;
+                }
+
+                self.alert.state().get_mut().model.settings.secondary_text = Some(error);
+                self.alert.emit(AlertMsg::Show);
+            }
+            AppMsg::HideError => {
+                self.alert.emit(AlertMsg::Hide);
             }
         }
     }

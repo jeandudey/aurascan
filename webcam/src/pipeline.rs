@@ -1,3 +1,4 @@
+use crate::app::resolution_selector::Resolution;
 use gst::glib;
 use gst::prelude::*;
 
@@ -21,6 +22,7 @@ pub struct Pipeline {
     pipeline: gst::Pipeline,
     pipeline_state_guard: Option<gst::bus::BusWatchGuard>,
     source: Option<gst::Element>,
+    input_capsfilter: gst::Element,
     after_source: gst::Element,
     inferencebin: gst::Element,
     fpsdisplaysink: gst::Element,
@@ -31,14 +33,20 @@ impl Pipeline {
     pub fn new() -> Result<Self, glib::BoolError> {
         let pipeline = gst::Pipeline::new();
 
-        let caps = gst_video::VideoCapsBuilder::new()
+        let input_caps = gst_video::VideoCapsBuilder::new().build();
+
+        let input_capsfilter = gst::ElementFactory::make("capsfilter")
+            .property("caps", &input_caps)
+            .build()?;
+
+        let inference_caps = gst_video::VideoCapsBuilder::new()
             .format(gst_video::VideoFormat::Rgb)
             .width(640)
             .height(640)
             .build();
 
-        let capsfilter = gst::ElementFactory::make("capsfilter")
-            .property("caps", &caps)
+        let inference_capsfilter = gst::ElementFactory::make("capsfilter")
+            .property("caps", &inference_caps)
             .build()?;
 
         let videoconvertscale = gst::ElementFactory::make("videoconvertscale")
@@ -57,15 +65,17 @@ impl Pipeline {
             .build()?;
 
         pipeline.add_many([
+            &input_capsfilter,
             &videoconvertscale,
-            &capsfilter,
+            &inference_capsfilter,
             &inferencebin,
             &videoconvert1,
             &fpsdisplaysink,
         ])?;
         gst::Element::link_many([
+            &input_capsfilter,
             &videoconvertscale,
-            &capsfilter,
+            &inference_capsfilter,
             &inferencebin,
             &videoconvert1,
             &fpsdisplaysink,
@@ -75,7 +85,8 @@ impl Pipeline {
             pipeline,
             pipeline_state_guard: None,
             source: None,
-            after_source: videoconvertscale,
+            input_capsfilter: input_capsfilter.clone(),
+            after_source: input_capsfilter,
             inferencebin,
             fpsdisplaysink,
             sink,
@@ -100,6 +111,25 @@ impl Pipeline {
             .dynamic_cast_ref::<gst::ChildProxy>()
             .unwrap()
             .set_child_property("sixdrepnet360inference::backend-type", backend_type);
+
+        if was_playing {
+            self.play()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn set_resolution(&self, resolution: Resolution) -> Result<(), gst::StateChangeError> {
+        let was_playing = self.is_playing();
+        if was_playing {
+            self.stop()?;
+        }
+
+        let caps = gst_video::VideoCapsBuilder::new()
+            .width(resolution.width)
+            .height(resolution.height)
+            .build();
+        self.input_capsfilter.set_property("caps", &caps);
 
         if was_playing {
             self.play()?;

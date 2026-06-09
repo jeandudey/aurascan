@@ -1,4 +1,5 @@
 use crate::app::msg::AppMsg;
+use crate::app::resolution_selector::{ResolutionSelector, ResolutionSelectorInput};
 use crate::app::source_selector::SourceSelector;
 use crate::app::status::{Status, StatusInput};
 use crate::pipeline::{Pipeline, PipelineState};
@@ -7,11 +8,13 @@ use relm4::SimpleComponent;
 use relm4::prelude::*;
 use std::sync::{Arc, Mutex};
 
-mod msg;
-mod source_selector;
-mod status;
+pub(crate) mod msg;
+pub(crate) mod resolution_selector;
+pub(crate) mod source_selector;
+pub(crate) mod status;
 
 pub struct AppModel {
+    resolution_selector: relm4::Controller<ResolutionSelector>,
     source_selector: relm4::Controller<SourceSelector>,
     status: relm4::Controller<Status>,
     pipeline: Arc<Mutex<Pipeline>>,
@@ -61,6 +64,8 @@ impl SimpleComponent for AppModel {
                                     set_margin_bottom: 4,
 
                                     model.source_selector.widget(),
+
+                                    model.resolution_selector.widget(),
 
                                     gtk::Box {
                                         set_orientation: gtk::Orientation::Vertical,
@@ -144,9 +149,22 @@ impl SimpleComponent for AppModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let source_selector = SourceSelector::builder()
+        let resolution_selector = ResolutionSelector::builder()
             .launch(())
-            .forward(sender.input_sender(), AppMsg::SourceChanged);
+            .forward(sender.input_sender(), AppMsg::ResolutionSelected);
+
+        let source_selector =
+            SourceSelector::builder()
+                .launch(())
+                .forward(sender.input_sender(), {
+                    let resolutions_sender = resolution_selector.sender().clone();
+                    move |device| {
+                        resolutions_sender
+                            .send(ResolutionSelectorInput::DeviceChanged(device.clone()))
+                            .unwrap();
+                        AppMsg::SourceChanged(device)
+                    }
+                });
 
         let status = Status::builder().launch(()).detach();
 
@@ -184,6 +202,7 @@ impl SimpleComponent for AppModel {
         });
 
         let model = AppModel {
+            resolution_selector,
             source_selector,
             status,
             pipeline: Arc::new(Mutex::new(pipeline)),
@@ -248,6 +267,21 @@ impl SimpleComponent for AppModel {
                                 _ => unreachable!(),
                             })
                             .unwrap();
+                    }
+                });
+            }
+            AppMsg::ResolutionSelected(resolution) => {
+                let Some(resolution) = resolution else {
+                    println!("No change");
+                    return;
+                };
+
+                println!("Resolution change");
+
+                sender.oneshot_command({
+                    let pipeline = self.pipeline.clone();
+                    async move {
+                        pipeline.lock().unwrap().set_resolution(resolution).unwrap();
                     }
                 });
             }

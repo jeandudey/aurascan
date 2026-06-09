@@ -1,4 +1,4 @@
-use crate::pipeline::PipelineState;
+use crate::{app::resolution_selector::Resolution, pipeline::PipelineState};
 
 #[derive(Debug)]
 pub enum AppMsg {
@@ -6,4 +6,5 @@ pub enum AppMsg {
     TogglePipeline,
     PipelineStateChanged(PipelineState),
     BackendSelected(u32),
+    ResolutionSelected(Option<Resolution>),
 }

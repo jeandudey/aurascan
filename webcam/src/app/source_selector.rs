@@ -37,6 +37,7 @@ impl SimpleComponent for SourceSelector {
 
             gtk::DropDown {
                 set_hexpand: true,
+                #[watch]
                 set_model: Some(&model.string_list),
                 connect_selected_notify[sender] => move |dropdown| {
                     sender.input(SourceSelectorInput::DeviceSelected(dropdown.selected()));

@@ -34,7 +34,9 @@ impl Pipeline {
     pub fn new() -> Result<Self, glib::BoolError> {
         let pipeline = gst::Pipeline::new();
 
-        let input_caps = gst_video::VideoCapsBuilder::new().build();
+        let input_caps = gst_video::VideoCapsBuilder::new()
+            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
+            .build();
 
         let input_capsfilter = gst::ElementFactory::make("capsfilter")
             .property("caps", &input_caps)
@@ -44,6 +46,7 @@ impl Pipeline {
             .format(gst_video::VideoFormat::Rgb)
             .width(640)
             .height(640)
+            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
             .build();
 
         let inference_capsfilter = gst::ElementFactory::make("capsfilter")
@@ -147,6 +150,7 @@ impl Pipeline {
         let caps = gst_video::VideoCapsBuilder::new()
             .width(resolution.width)
             .height(resolution.height)
+            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
             .build();
         self.input_capsfilter.set_property("caps", &caps);
 

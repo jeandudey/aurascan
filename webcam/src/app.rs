@@ -235,16 +235,21 @@ impl SimpleComponent for AppModel {
                 _ => (),
             },
             AppMsg::BackendSelected(backend_type) => {
-                self.pipeline
-                    .lock()
-                    .unwrap()
-                    .set_backend_type(match backend_type {
-                        0 => gstburnextra::BackendType::Flex,
-                        1 => gstburnextra::BackendType::Vulkan,
-                        2 => gstburnextra::BackendType::Rocm,
-                        _ => unreachable!(),
-                    })
-                    .unwrap();
+                sender.oneshot_command({
+                    let pipeline = self.pipeline.clone();
+                    async move {
+                        pipeline
+                            .lock()
+                            .unwrap()
+                            .set_backend_type(match backend_type {
+                                0 => gstburnextra::BackendType::Flex,
+                                1 => gstburnextra::BackendType::Vulkan,
+                                2 => gstburnextra::BackendType::Rocm,
+                                _ => unreachable!(),
+                            })
+                            .unwrap();
+                    }
+                });
             }
         }
     }

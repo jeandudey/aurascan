@@ -272,11 +272,8 @@ impl SimpleComponent for AppModel {
             }
             AppMsg::ResolutionSelected(resolution) => {
                 let Some(resolution) = resolution else {
-                    println!("No change");
                     return;
                 };
-
-                println!("Resolution change");
 
                 sender.oneshot_command({
                     let pipeline = self.pipeline.clone();

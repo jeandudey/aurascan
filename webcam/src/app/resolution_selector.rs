@@ -105,7 +105,6 @@ impl SimpleComponent for ResolutionSelector {
                 let idx = idx as usize;
                 if self.selected != Some(idx) {
                     self.selected = Some(idx);
-                    println!("Resolution change: {:?}", self.resolutions.get(idx));
                     sender.output(self.resolutions.get(idx).cloned()).ok();
                 }
             }

@@ -127,11 +127,16 @@ impl SimpleComponent for AppModel {
                                                 set_vexpand: true,
                                             },
 
-                                            add_overlay = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().inferencesink()) {
+                                            add_overlay = &gtk::Frame {
+                                                add_css_class: "pip",
+                                                set_overflow: gtk::Overflow::Hidden,
                                                 set_halign: gtk::Align::End,
                                                 set_valign: gtk::Align::Start,
                                                 set_margin_all: 16,
                                                 set_size_request: (224, 224),
+
+                                                #[wrap(Some)]
+                                                set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().inferencesink()),
                                             },
                                         },
 

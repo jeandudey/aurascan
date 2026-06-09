@@ -1,5 +1,5 @@
 /target
-webcam/target
+app/aurascan/target
 datasets
 artifacts
 cubecl.toml

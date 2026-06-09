@@ -257,6 +257,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21e4227379beff4205943696e6c3e0cd809bacdf3f0edd6e3dd153e2269571a4"
 
 [[package]]
+name = "aurascan"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "gst-plugin-burnextra",
+ "gst-plugin-gtk4",
+ "gstreamer",
+ "gstreamer-analytics",
+ "gstreamer-app",
+ "gstreamer-video",
+ "gtk4",
+ "libadwaita",
+ "relm4",
+ "relm4-components",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9367,23 +9384,6 @@ dependencies = [
  "phf_codegen 0.13.1",
  "string_cache",
  "string_cache_codegen",
-]
-
-[[package]]
-name = "webcam"
-version = "0.1.0"
-dependencies = [
- "eyre",
- "gst-plugin-burnextra",
- "gst-plugin-gtk4",
- "gstreamer",
- "gstreamer-analytics",
- "gstreamer-app",
- "gstreamer-video",
- "gtk4",
- "libadwaita",
- "relm4",
- "relm4-components",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "app/aurascan",
     "crates/burn-3ddfa",
     "crates/bytetrack",
     "crates/gst-plugin-burnextra",
@@ -7,7 +8,6 @@ members = [
     "crates/matio-sys",
     "crates/scrfd-burn",
     "crates/sixdrepnet360-burn",
-    "webcam",
 ]
 
 [workspace.dependencies]

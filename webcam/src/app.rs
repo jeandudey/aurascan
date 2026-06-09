@@ -5,6 +5,7 @@ use crate::pipeline::{Pipeline, PipelineState};
 use adw::prelude::*;
 use relm4::SimpleComponent;
 use relm4::prelude::*;
+use std::sync::{Arc, Mutex};
 
 mod msg;
 mod source_selector;
@@ -13,7 +14,7 @@ mod status;
 pub struct AppModel {
     source_selector: relm4::Controller<SourceSelector>,
     status: relm4::Controller<Status>,
-    pipeline: Pipeline,
+    pipeline: Arc<Mutex<Pipeline>>,
     toggle_label: &'static str,
     start_requested: bool,
 }
@@ -109,9 +110,23 @@ impl SimpleComponent for AppModel {
                                 set_content = &gtk::Box {
                                     set_orientation: gtk::Orientation::Vertical,
 
-                                    gstgtk4::RenderWidget::new(&model.pipeline.sink()) {
-                                        set_hexpand: true,
-                                        set_vexpand: true,
+                                    gtk::Overlay {
+                                        #[wrap(Some)]
+                                        set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().sink()) {
+                                            set_hexpand: true,
+                                            set_vexpand: true,
+                                        },
+
+                                        add_overlay = &gtk::Spinner {
+                                            set_halign: gtk::Align::Center,
+                                            set_valign: gtk::Align::Center,
+                                            set_width_request: 48,
+                                            set_height_request: 48,
+                                            #[watch]
+                                            set_visible: model.start_requested,
+                                            #[watch]
+                                            set_spinning: model.start_requested,
+                                        },
                                     },
 
                                     model.status.widget(),
@@ -140,9 +155,6 @@ impl SimpleComponent for AppModel {
         pipeline.connect_state_changed({
             let status_sender = sender.input_sender().clone();
             move |state| {
-                if matches!(state, PipelineState::Stopped) {
-                    println!("Stopped");
-                }
                 status_sender
                     .send(AppMsg::PipelineStateChanged(state))
                     .unwrap();
@@ -174,7 +186,7 @@ impl SimpleComponent for AppModel {
         let model = AppModel {
             source_selector,
             status,
-            pipeline,
+            pipeline: Arc::new(Mutex::new(pipeline)),
             toggle_label: "Start",
             start_requested: false,
         };
@@ -182,20 +194,37 @@ impl SimpleComponent for AppModel {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match message {
             AppMsg::SourceChanged(device) => {
-                self.pipeline.set_source(device).unwrap();
+                sender.oneshot_command({
+                    let pipeline = self.pipeline.clone();
+                    async move {
+                        pipeline.lock().unwrap().set_source(device).unwrap();
+                    }
+                });
             }
             AppMsg::TogglePipeline => {
-                if self.pipeline.is_playing() {
+                let pipeline = self.pipeline.lock().unwrap();
+                if pipeline.is_playing() {
                     self.start_requested = false;
-                    self.pipeline.stop().unwrap();
                     self.toggle_label = "Start";
                     self.status.sender().send(StatusInput::Clear).unwrap();
+
+                    sender.oneshot_command({
+                        let pipeline = self.pipeline.clone();
+                        async move {
+                            pipeline.lock().unwrap().stop().unwrap();
+                        }
+                    });
                 } else {
                     self.start_requested = true;
-                    self.pipeline.play().unwrap();
+                    sender.oneshot_command({
+                        let pipeline = self.pipeline.clone();
+                        async move {
+                            pipeline.lock().unwrap().play().unwrap();
+                        }
+                    });
                 }
             }
             AppMsg::PipelineStateChanged(state) => match (state, self.start_requested) {
@@ -207,6 +236,8 @@ impl SimpleComponent for AppModel {
             },
             AppMsg::BackendSelected(backend_type) => {
                 self.pipeline
+                    .lock()
+                    .unwrap()
                     .set_backend_type(match backend_type {
                         0 => gstburnextra::BackendType::Flex,
                         1 => gstburnextra::BackendType::Vulkan,
@@ -219,6 +250,6 @@ impl SimpleComponent for AppModel {
     }
 
     fn shutdown(&mut self, _widgets: &mut Self::Widgets, _output: relm4::Sender<Self::Output>) {
-        self.pipeline.stop().unwrap();
+        self.pipeline.lock().unwrap().stop().unwrap();
     }
 }

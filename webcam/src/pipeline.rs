@@ -26,7 +26,8 @@ pub struct Pipeline {
     after_source: gst::Element,
     inferencebin: gst::Element,
     fpsdisplaysink: gst::Element,
-    sink: gst::Element,
+    inferencesink: gst::Element,
+    livefeedsink: gst::Element,
 }
 
 impl Pipeline {
@@ -52,15 +53,20 @@ impl Pipeline {
         let videoconvertscale = gst::ElementFactory::make("videoconvertscale")
             .property("add-borders", true)
             .build()?;
-        let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;
-        let videoconvert1 = gst::ElementFactory::make("videoconvert").build()?;
 
-        let sink = gst::ElementFactory::make("gtk4paintablesink").build()?;
+        let tee = gst::ElementFactory::make("tee").build()?;
+        let queue0 = gst::ElementFactory::make("queue").build()?;
+        let queue1 = gst::ElementFactory::make("queue").build()?;
+
+        let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;
+
+        let inferencesink = gst::ElementFactory::make("gtk4paintablesink").build()?;
+        let livefeedsink = gst::ElementFactory::make("gtk4paintablesink").build()?;
 
         let fpsdisplaysink = gst::ElementFactory::make("fpsdisplaysink")
             .property("text-overlay", false)
             .property("signal-fps-measurements", true)
-            .property("video-sink", &sink)
+            .property("video-sink", &inferencesink)
             .property("sync", false)
             .build()?;
 
@@ -68,18 +74,30 @@ impl Pipeline {
             &input_capsfilter,
             &videoconvertscale,
             &inference_capsfilter,
+            &tee,
+            &queue0,
+            &queue1,
             &inferencebin,
-            &videoconvert1,
             &fpsdisplaysink,
+            &livefeedsink,
         ])?;
         gst::Element::link_many([
             &input_capsfilter,
             &videoconvertscale,
             &inference_capsfilter,
-            &inferencebin,
-            &videoconvert1,
-            &fpsdisplaysink,
+            &tee,
         ])?;
+
+        gst::Element::link_many([&queue0, &inferencebin, &fpsdisplaysink])?;
+        gst::Element::link_many([&queue1, &livefeedsink])?;
+
+        let tee_src0 = tee.request_pad_simple("src_%u").unwrap();
+        let queue0_sink = queue0.static_pad("sink").unwrap();
+        tee_src0.link(&queue0_sink).unwrap();
+
+        let tee_src1 = tee.request_pad_simple("src_%u").unwrap();
+        let queue1_sink = queue1.static_pad("sink").unwrap();
+        tee_src1.link(&queue1_sink).unwrap();
 
         Ok(Self {
             pipeline,
@@ -89,7 +107,8 @@ impl Pipeline {
             after_source: input_capsfilter,
             inferencebin,
             fpsdisplaysink,
-            sink,
+            inferencesink,
+            livefeedsink,
         })
     }
 
@@ -271,7 +290,11 @@ impl Pipeline {
         return Ok(());
     }
 
-    pub fn sink(&self) -> &gst::Element {
-        &self.sink
+    pub fn livefeedsink(&self) -> &gst::Element {
+        &self.livefeedsink
+    }
+
+    pub fn inferencesink(&self) -> &gst::Element {
+        &self.inferencesink
     }
 }

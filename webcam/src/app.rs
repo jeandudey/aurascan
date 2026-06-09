@@ -120,9 +120,19 @@ impl SimpleComponent for AppModel {
 
                                     gtk::Overlay {
                                         #[wrap(Some)]
-                                        set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().sink()) {
-                                            set_hexpand: true,
-                                            set_vexpand: true,
+                                        set_child = &gtk::Overlay {
+                                            #[wrap(Some)]
+                                            set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().livefeedsink()) {
+                                                set_hexpand: true,
+                                                set_vexpand: true,
+                                            },
+
+                                            add_overlay = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().inferencesink()) {
+                                                set_halign: gtk::Align::End,
+                                                set_valign: gtk::Align::Start,
+                                                set_margin_all: 16,
+                                                set_size_request: (224, 224),
+                                            },
                                         },
 
                                         add_overlay = &gtk::Spinner {

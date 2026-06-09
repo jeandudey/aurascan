@@ -50,8 +50,17 @@ impl SimpleComponent for SourceSelector {
         _root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        // NOTE: Avoid gray formats, for some reason the pipeline breaks, the
+        // models expect RGB8 anyway but it'd be a good idea to debug why this
+        // fails.
+        let formats = gst_video::VideoFormat::iter_any()
+            .filter(|&f| !gst_video::VideoFormatInfo::from_format(f).is_gray());
+
+        let caps = gst_video::VideoCapsBuilder::new()
+            .format_list(formats)
+            .build();
         let monitor = gst::DeviceMonitor::new();
-        monitor.add_filter(Some("Video/Source"), None);
+        monitor.add_filter(Some("Video/Source"), Some(&caps));
 
         let bus = monitor.bus();
         let watch_guard = bus

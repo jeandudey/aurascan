@@ -1,4 +1,5 @@
 use edgefirst_tracker::Tracker;
+use gst::glib::value::ToValue;
 use gst::glib::{self, ParamSpecBuilderExt};
 use gst::prelude::GstParamSpecBuilderExt;
 use gst::subclass::prelude::*;
@@ -133,6 +134,50 @@ impl ObjectImpl for ByteTracker {
         });
 
         &*PROPERTIES
+    }
+
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        match pspec.name() {
+            "track-high-conf" => {
+                let mut settings = self.settings.lock().unwrap();
+                settings.track_high_conf = value.get().unwrap();
+            }
+            "track-iou" => {
+                let mut settings = self.settings.lock().unwrap();
+                settings.track_iou = value.get().unwrap();
+            }
+            "track-update" => {
+                let mut settings = self.settings.lock().unwrap();
+                settings.track_update = value.get().unwrap();
+            }
+            "track-extra-lifespan" => {
+                let mut settings = self.settings.lock().unwrap();
+                settings.track_extra_lifespan = value.get().unwrap();
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "track-high-conf" => {
+                let settings = self.settings.lock().unwrap();
+                settings.track_high_conf.to_value()
+            }
+            "track-iou" => {
+                let settings = self.settings.lock().unwrap();
+                settings.track_iou.to_value()
+            }
+            "track-update" => {
+                let settings = self.settings.lock().unwrap();
+                settings.track_update.to_value()
+            }
+            "track-extra-lifespan" => {
+                let settings = self.settings.lock().unwrap();
+                settings.track_extra_lifespan.to_value()
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 

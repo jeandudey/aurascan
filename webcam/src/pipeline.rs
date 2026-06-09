@@ -64,7 +64,9 @@ impl Pipeline {
         let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;
 
         let inferencesink = gst::ElementFactory::make("gtk4paintablesink").build()?;
-        let livefeedsink = gst::ElementFactory::make("gtk4paintablesink").build()?;
+        let livefeedsink = gst::ElementFactory::make("gtk4paintablesink")
+            .property("sync", false)
+            .build()?;
 
         let fpsdisplaysink = gst::ElementFactory::make("fpsdisplaysink")
             .property("text-overlay", false)

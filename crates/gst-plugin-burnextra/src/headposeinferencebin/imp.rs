@@ -1,4 +1,3 @@
-use crate::BackendType;
 use gst::glib;
 use gst::glib::object::Cast;
 use gst::prelude::*;

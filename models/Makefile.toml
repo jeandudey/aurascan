@@ -1,4 +1,39 @@
-[tasks.sixdrepnet360]
+[tasks.sixdrepnet360export]
 cwd = "sixdrepnet360"
 command = "uv"
 args = ["run", "export"]
+
+[tasks.scrfdenv]
+condition = { files_not_exist = [".venvscrfd", ".venvtools"] }
+command = "bash"
+args = ["scrfdenv.sh"]
+
+[tasks.scrfdfetch]
+dependencies = ["scrfdenv"]
+command = "bash"
+args = ["scrfdfetch.sh"]
+
+[tasks.scrfdexport]
+dependencies = ["scrfdfetch"]
+command = "bash"
+args = ["scrfdexport.sh"]
+
+[tasks.export]
+dependencies = ["sixdrepnet360export", "scrfdexport"]
+
+[tasks.clean]
+command = "rm"
+args = [
+    "-rf",
+    ".venvscrfd",
+    ".venvtools",
+    "onnx/sixdrepnet360.onnx",
+    "onnx/scrfd_10g.onnx",
+    "onnx/scrfd_1g.onnx",
+    "onnx/scrfd_2.5g_bnkps.onnx",
+    "onnx/scrfd_500m_bnkps.onnx",
+    "onnx/scrfd_10g_bnkps.onnx",
+    "onnx/scrfd_2.5g.onnx",
+    "onnx/scrfd_34g.onnx",
+    "onnx/sixdrepnet360.onnx",
+]

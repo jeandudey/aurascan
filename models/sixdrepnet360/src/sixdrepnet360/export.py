@@ -10,7 +10,7 @@ from sixdrepnet360.model import SixDRepNet360
 
 def export(
     weights: str = "6DRepNet360_Full-Rotation_300W_LP+Panoptic.pth",
-    out: str = "sixdrepnet360.onnx",
+    out: str = "../onnx/sixdrepnet360.onnx",
 ):
     model = SixDRepNet360()
     _ = model.load_state_dict(torch.load(weights))  # pyright: ignore[reportAny]
@@ -25,7 +25,6 @@ def export(
         input_names=["input"],
         output_names=["output"],
         dynamic_axes={"input": {0: "batch"}, "output": {0: "batch_size"}},
-        dynamo=True,
     )
     print(f"exported -> {out}")
 

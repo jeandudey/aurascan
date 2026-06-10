@@ -12,4 +12,4 @@ crates/gst-plugin-burnextra/target
 *.pth
 *.onnx
 *.onnx.data
-.venv
+.venv*

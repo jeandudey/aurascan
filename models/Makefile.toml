@@ -1,0 +1,4 @@
+[tasks.sixdrepnet360]
+cwd = "sixdrepnet360"
+command = "uv"
+args = ["run", "export"]

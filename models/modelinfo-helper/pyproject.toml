@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+# SPDX-License-Identifier: LGPL-2.1-only
+
+[project]
+name = "modelinfo-helper"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "onnx>=1.21.0",
+    "tensorflow>=2.21.0",
+]

@@ -8,3 +8,8 @@ cubecl.toml
 crates/gst-plugin-burnextra/target
 **/*/dot
 *.dot
+**/*/__pycache__
+*.pth
+*.onnx
+*.onnx.data
+.venv

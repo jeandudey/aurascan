@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2024 Thorsten Hempel <tho.hemp@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+#
+# SPDX-License-Identifier: MIT

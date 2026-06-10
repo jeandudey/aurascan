@@ -6,7 +6,6 @@
 name = "sixdrepnet360"
 version = "0.1.0"
 description = "6DRepNet360"
-readme = "README.md"
 authors = [
     { name = "Jean-Pierre De Jesus DIAZ", email = "me@jeandudey.tech" }
 ]

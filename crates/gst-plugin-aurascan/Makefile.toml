@@ -1,3 +1,20 @@
 [tasks.build]
 command = "cargo"
 args = ["build", "--release", "--features", "vulkan,rocm,scrfd-embedded,sixdrepnet360-burn/pretrained"]
+
+[tasks.launch-detectioncropmeta]
+dependencies = ["build"]
+env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "detectioncropmeta:6" }
+command = "gst-launch-1.0"
+args = [
+    "autovideosrc",
+    "!", "video/x-raw,pixel-aspect-ratio=1/1",
+    "!", "videoconvertscale",
+    "!", "video/x-raw,format=RGB,width=640,height=640,pixel-aspect-ratio=1/1",
+    "!", "onnxinference", "execution-provider=cpu", "model-file=../../models/onnx/scrfd_500m.onnx",
+    "!", "scrfdtensordec",
+    "!", "bytetracker",
+    "!", "detectioncropmeta",
+    "!", "videoconvert",
+    "!", "fpsdisplaysink", "sync=false",
+]

@@ -1,6 +1,7 @@
 use gst::glib;
 
 pub mod bytetracker;
+pub mod detectioncropmeta;
 pub mod headposeinferencebin;
 pub mod scrfd;
 pub mod scrfdtensordec;
@@ -25,6 +26,7 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     }
 
     bytetracker::register(plugin)?;
+    detectioncropmeta::register(plugin)?;
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;
     sixdrepnet360::register(plugin)?;

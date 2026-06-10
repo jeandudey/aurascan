@@ -9,7 +9,7 @@ eyre.workspace = true
 gtk = { workspace = true, features = ["v4_8"] }
 gst-analytics = { workspace = true, features = ["v1_28"] }
 gst-plugin-gtk4.workspace = true
-gst-plugin-burnextra = { workspace = true, features = ["scrfd-embedded", "sixdrepnet360-pretrained", "vulkan", "rocm"] }
+gst-plugin-aurascan = { workspace = true, features = ["scrfd-embedded", "sixdrepnet360-pretrained", "vulkan", "rocm"] }
 gst.workspace = true
 gst-app.workspace = true
 gst-video.workspace = true

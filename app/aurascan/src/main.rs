@@ -12,7 +12,7 @@ fn main() {
     adw::init().unwrap();
 
     gstgtk4::plugin_register_static().unwrap();
-    gstburnextra::plugin_register_static().unwrap();
+    gstaurascan::plugin_register_static().unwrap();
 
     let app = RelmApp::new("tech.jeandudey.AuraScan");
     relm4::set_global_css(CSS);

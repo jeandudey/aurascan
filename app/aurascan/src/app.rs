@@ -292,9 +292,9 @@ impl SimpleComponent for AppModel {
                             .lock()
                             .unwrap()
                             .set_backend_type(match backend_type {
-                                0 => gstburnextra::BackendType::Rocm,
-                                1 => gstburnextra::BackendType::Vulkan,
-                                2 => gstburnextra::BackendType::Flex,
+                                0 => gstaurascan::BackendType::Rocm,
+                                1 => gstaurascan::BackendType::Vulkan,
+                                2 => gstaurascan::BackendType::Flex,
                                 _ => unreachable!(),
                             })
                             .unwrap();

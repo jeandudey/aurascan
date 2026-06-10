@@ -10,7 +10,7 @@ glib::wrapper! {
 pub fn register(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     gst::Element::register(
         Some(plugin),
-        "burnextra-sixdrepnet360inference",
+        "burn-sixdrepnet360inference",
         gst::Rank::NONE,
         SixDRepNet360Inference::static_type(),
     )

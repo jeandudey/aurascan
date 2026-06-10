@@ -1,12 +1,12 @@
 [package]
-name = "gst-plugin-burnextra"
-description = "Extra GStreamer plugins using burn"
+name = "gst-plugin-aurascan"
+description = "Extra GStreamer plugins"
 version = "0.1.0"
 edition = "2024"
-repository = "https://github.com/jeandudey/burn-experiment"
+repository = "https://github.com/jeandudey/aurascan"
 
 [lib]
-name = "gstburnextra"
+name = "gstaurascan"
 crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 

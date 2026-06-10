@@ -1,27 +1,26 @@
 use crate::BackendType;
-use crate::scrfd::ModelType;
 use burn::tensor::TensorData;
 use burn::{Dispatch, DispatchDevice, Tensor};
 use byte_slice_cast::*;
-use core::f32;
-use gst::glib;
+use eyre::Context;
+use gst::glib::value::{ToSendValue, ToValue};
+use gst::glib::{self, ParamSpecBuilderExt};
+use gst::prelude::GstParamSpecBuilderExt;
 use gst::subclass::prelude::*;
+use gst_base::subclass::prelude::*;
 use gst_video::prelude::*;
-use gst_video::subclass::prelude::*;
+use sixdrepnet360_burn::sixdrepnet360;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
 
-const GROUP_ID: &glib::GStr = glib::gstr!("scrfd");
-const GROUP_ID_KPS: &glib::GStr = glib::gstr!("scrfd-kps");
-const SCRFD_SCORE: &glib::GStr = glib::gstr!("scrfd-score-out");
-const SCRFD_BBOX: &glib::GStr = glib::gstr!("scrfd-bbox-out");
-const SCRFD_KPS: &glib::GStr = glib::gstr!("scrfd-kps-out");
+const GROUP_ID: &glib::GStr = glib::gstr!("sixdrepnet360");
+const SIXDREPNET360_TENSOR_ID: &glib::GStr = glib::gstr!("sixdrepnet360-out");
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
-        "burnextra-scrfdinference",
+        "burn-sixdrepnet360inference",
         gst::DebugColorFlags::empty(),
-        Some("Burn SCRFD Inference Element"),
+        Some("Burn 6DRepNet360 Inference Element"),
     )
 });
 
@@ -45,7 +44,6 @@ struct State {
 
 struct Settings {
     backend_type: BackendType,
-    model_type: ModelType,
     weights_path: Option<PathBuf>,
     cubecl_type_id: u32,
     cubecl_index_id: u32,
@@ -55,54 +53,36 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             backend_type: Default::default(),
-            model_type: Default::default(),
-            weights_path: Default::default(),
+            weights_path: None,
             cubecl_type_id: u32::MAX,
             cubecl_index_id: u32::MAX,
         }
     }
 }
 
-pub struct ScrfdInference {
+pub struct SixDRepNet360Inference {
     state: Mutex<Option<State>>,
     settings: Mutex<Settings>,
-    input_tensors_caps: Mutex<gst::Caps>,
-    output_tensors_caps: Mutex<gst::Caps>,
 }
 
-impl Default for ScrfdInference {
+impl Default for SixDRepNet360Inference {
     fn default() -> Self {
-        let mut input_tensors_caps = gst_video::VideoCapsBuilder::new()
-            .format(gst_video::VideoFormat::Rgb)
-            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
-            .build();
-
-        let mut output_tensor_caps = gst_video::VideoCapsBuilder::new()
-            .format(gst_video::VideoFormat::Rgb)
-            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
-            .build();
-
-        set_width_and_height_caps(&mut input_tensors_caps);
-        set_width_and_height_caps(&mut output_tensor_caps);
-
         Self {
-            state: Default::default(),
-            settings: Default::default(),
-            input_tensors_caps: Mutex::new(input_tensors_caps),
-            output_tensors_caps: Mutex::new(output_tensor_caps),
+            state: Mutex::new(None),
+            settings: Mutex::new(Settings::default()),
         }
     }
 }
 
 #[glib::object_subclass]
-impl ObjectSubclass for ScrfdInference {
-    const NAME: &'static str = "GstBurnExtraScrfdInference";
+impl ObjectSubclass for SixDRepNet360Inference {
+    const NAME: &'static str = "GstBurnExtraSixDRepNet360Inference";
 
-    type Type = super::ScrfdInference;
+    type Type = super::SixDRepNet360Inference;
     type ParentType = gst_base::BaseTransform;
 }
 
-impl ObjectImpl for ScrfdInference {
+impl ObjectImpl for SixDRepNet360Inference {
     fn properties() -> &'static [glib::ParamSpec] {
         static PROPERTIES: LazyLock<Vec<glib::ParamSpec>> = LazyLock::new(|| {
             vec![
@@ -110,12 +90,6 @@ impl ObjectImpl for ScrfdInference {
                     .nick("Backend Type")
                     .blurb("Burn backend to use")
                     .default_value(Settings::default().backend_type)
-                    .mutable_ready()
-                    .build(),
-                glib::ParamSpecEnum::builder("model-type")
-                    .nick("Model Type")
-                    .blurb("SCRFD model type to use")
-                    .default_value(Settings::default().model_type)
                     .mutable_ready()
                     .build(),
                 glib::ParamSpecString::builder("weights-path")
@@ -148,10 +122,6 @@ impl ObjectImpl for ScrfdInference {
                 let mut settings = self.settings.lock().unwrap();
                 settings.backend_type = value.get().unwrap();
             }
-            "model-type" => {
-                let mut settings = self.settings.lock().unwrap();
-                settings.model_type = value.get().unwrap();
-            }
             "weights-path" => {
                 let mut settings = self.settings.lock().unwrap();
                 settings.weights_path = value.get().unwrap();
@@ -174,10 +144,6 @@ impl ObjectImpl for ScrfdInference {
                 let settings = self.settings.lock().unwrap();
                 settings.backend_type.to_value()
             }
-            "model-type" => {
-                let settings = self.settings.lock().unwrap();
-                settings.model_type.to_value()
-            }
             "weights-path" => {
                 let settings = self.settings.lock().unwrap();
                 settings.weights_path.to_value()
@@ -195,28 +161,29 @@ impl ObjectImpl for ScrfdInference {
     }
 }
 
-impl GstObjectImpl for ScrfdInference {}
+impl GstObjectImpl for SixDRepNet360Inference {}
 
-impl ElementImpl for ScrfdInference {
+impl ElementImpl for SixDRepNet360Inference {
     fn metadata() -> Option<&'static gst::subclass::ElementMetadata> {
         static ELEMENT_METADATA: LazyLock<gst::subclass::ElementMetadata> = LazyLock::new(|| {
             gst::subclass::ElementMetadata::new(
-                "Burn SCRFD Inference Element",
+                "Burn 6DRepNet360 Inference Element",
                 "Filter/Video",
-                "Runs inference on video frames via the SCRFD model",
+                "Runs inference on video frames via the 6DRepNet360 model",
                 "Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>",
             )
         });
+
         Some(&*ELEMENT_METADATA)
     }
 
     fn pad_templates() -> &'static [gst::PadTemplate] {
         static PAD_TEMPLATES: LazyLock<Vec<gst::PadTemplate>> = LazyLock::new(|| {
-            let mut sink_caps = gst_video::VideoCapsBuilder::new()
+            let sink_caps = gst_video::VideoCapsBuilder::new()
                 .format(gst_video::VideoFormat::Rgb)
-                .pixel_aspect_ratio(gst::Fraction::new(1, 1))
+                .width(224)
+                .height(224)
                 .build();
-            set_width_and_height_caps(&mut sink_caps);
 
             let sink_pad_template = gst::PadTemplate::new(
                 "sink",
@@ -226,11 +193,32 @@ impl ElementImpl for ScrfdInference {
             )
             .unwrap();
 
-            let mut src_caps = gst_video::VideoCapsBuilder::new()
+            let src_caps = gst_video::VideoCapsBuilder::new()
                 .format(gst_video::VideoFormat::Rgb)
-                .pixel_aspect_ratio(gst::Fraction::new(1, 1))
+                .width(224)
+                .height(224)
+                .field(
+                    "tensors",
+                    gst::Structure::builder("tensorgroups")
+                        .field(
+                            GROUP_ID,
+                            gst::UniqueList::new([gst::Caps::builder("tensor/strided")
+                                .field("field-id", SIXDREPNET360_TENSOR_ID)
+                                .field(
+                                    "dims",
+                                    gst::Array::from_values([
+                                        1i32.to_send_value(),
+                                        3i32.to_send_value(),
+                                        3i32.to_send_value(),
+                                    ]),
+                                )
+                                .field("dims-order", "row-major")
+                                .field("type", "float32")
+                                .build()]),
+                        )
+                        .build(),
+                )
                 .build();
-            set_width_and_height_caps(&mut src_caps);
 
             let src_pad_template = gst::PadTemplate::new(
                 "src",
@@ -247,7 +235,7 @@ impl ElementImpl for ScrfdInference {
     }
 }
 
-impl BaseTransformImpl for ScrfdInference {
+impl BaseTransformImpl for SixDRepNet360Inference {
     const MODE: gst_base::subclass::BaseTransformMode =
         gst_base::subclass::BaseTransformMode::AlwaysInPlace;
     const PASSTHROUGH_ON_SAME_CAPS: bool = false;
@@ -268,57 +256,6 @@ impl BaseTransformImpl for ScrfdInference {
             }
         };
         *state = Some(State { model, info: None });
-
-        let state = state.as_mut().unwrap();
-
-        let strided = |field_id: &str, channels: i32| {
-            gst::Caps::builder("tensor/strided")
-                .field("field-id", field_id)
-                .field(
-                    "dims",
-                    gst::Array::from_values([
-                        1i32.to_send_value(),
-                        0i32.to_send_value(),
-                        channels.to_send_value(),
-                    ]),
-                )
-                .build()
-        };
-
-        let v_tensor_s = if state.model.is_kps() {
-            gst::UniqueList::new([
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-kps-out", 10),
-                strided("scrfd-kps-out", 10),
-                strided("scrfd-kps-out", 10),
-            ])
-        } else {
-            gst::UniqueList::new([
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-            ])
-        };
-
-        let group_id = if state.model.is_kps() {
-            GROUP_ID_KPS
-        } else {
-            GROUP_ID
-        };
-
-        let mut tensor_s = gst::Structure::new_empty("tensorgroups");
-        tensor_s.set(group_id, v_tensor_s);
-
-        let mut output_tensors_caps = self.output_tensors_caps.lock().unwrap();
-        output_tensors_caps.make_mut().set("tensors", tensor_s);
 
         gst::info!(CAT, imp = self, "Started");
 
@@ -354,28 +291,45 @@ impl BaseTransformImpl for ScrfdInference {
         caps: &gst::Caps,
         filter: Option<&gst::Caps>,
     ) -> Option<gst::Caps> {
-        let mut input_tensors_caps = self.input_tensors_caps.lock().unwrap();
-        let restrictions = input_tensors_caps.make_mut();
-
-        let res = match direction {
-            gst::PadDirection::Src => {
-                let mut res = caps.copy();
-                for s in res.get_mut().unwrap().iter_mut() {
-                    // Remove tensors from caps to prevent upstream propagation.
-                    if let Ok(_) = s.get::<gst::Structure>("tensors") {
-                        s.remove_field("tensors");
-                    }
+        let res = if direction == gst::PadDirection::Src {
+            let mut res = caps.copy();
+            for s in res.get_mut().unwrap().iter_mut() {
+                if let Ok(mut tensors) = s.get::<gst::Structure>("tensors") {
+                    tensors.remove_field(GROUP_ID);
+                    s.set("tensors", tensors);
                 }
-                res.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
             }
-            _ => {
-                let tensor_caps = {
-                    let tmp = self.output_tensors_caps.lock().unwrap();
-                    tmp.copy()
-                };
-                restrictions.intersect_with_mode(&tensor_caps, gst::CapsIntersectMode::First);
-                caps.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
+
+            res
+        } else {
+            let mut res = caps.copy();
+            for s in res.get_mut().unwrap().iter_mut() {
+                let mut tensors = s
+                    .get::<gst::Structure>("tensors")
+                    .ok()
+                    .unwrap_or_else(|| gst::Structure::new_empty("tensorgroups"));
+
+                tensors.set(
+                    GROUP_ID,
+                    gst::UniqueList::new([gst::Caps::builder("tensor/strided")
+                        .field("tensor-id", SIXDREPNET360_TENSOR_ID)
+                        .field(
+                            "dims",
+                            gst::Array::from_values([
+                                1i32.to_send_value(),
+                                3i32.to_send_value(),
+                                3i32.to_send_value(),
+                            ]),
+                        )
+                        .field("dims-order", "row-major")
+                        .field("type", "float32")
+                        .build()]),
+                );
+
+                s.set("tensors", tensors);
             }
+
+            res
         };
 
         let res = filter
@@ -422,64 +376,32 @@ impl BaseTransformImpl for ScrfdInference {
 
         let output = state.model.forward(input, width, height);
 
-        let into_gst_tensor = |name: &'static glib::GStr, burn_tensor: Tensor<Dispatch, 3>| {
-            let dims = burn_tensor.dims();
-            let tensor_data = burn_tensor.into_data().into_vec::<f32>().unwrap();
-            let tensor_data = gst::Buffer::from_slice(VecWrapper(tensor_data));
-            gst_analytics::Tensor::new_simple(
-                glib::Quark::from_static_str(name),
-                gst_analytics::TensorDataType::Float32,
-                tensor_data,
-                gst_analytics::TensorDimOrder::RowMajor,
-                &dims,
-            )
-        };
-
-        let mut tensors = Vec::new();
-        if state.model.is_kps() {
-            let mut output = output.into_iter();
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-        } else {
-            let mut output = output.into_iter();
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-        };
+        let dims = output.dims();
+        let tensor_data = output.into_data().into_vec::<f32>().unwrap();
+        let tensor_data = gst::Buffer::from_slice(VecWrapper(tensor_data));
+        let tensor = gst_analytics::Tensor::new_simple(
+            glib::Quark::from_static_str(SIXDREPNET360_TENSOR_ID),
+            gst_analytics::TensorDataType::Float32,
+            tensor_data,
+            gst_analytics::TensorDimOrder::RowMajor,
+            &dims,
+        );
 
         let mut meta = gst_analytics::TensorMeta::add(buffer);
-        meta.set(glib::Slice::from_iter(tensors));
+        meta.set(glib::Slice::from_iter([tensor]));
 
         Ok(gst::FlowSuccess::Ok)
     }
 }
 
-fn set_width_and_height_caps(caps: &mut gst::Caps) {
-    let caps = caps.get_mut().unwrap();
-    caps.set("width", gst::IntRange::with_step(32, i32::MAX - 31, 32));
-    caps.set("height", gst::IntRange::with_step(32, i32::MAX - 31, 32));
-}
-
 struct Model {
-    model: scrfd_burn::Model<Dispatch>,
+    model: sixdrepnet360::SixDRepNet360<Dispatch>,
+    std: Tensor<Dispatch, 4>,
+    mean: Tensor<Dispatch, 4>,
     device: DispatchDevice,
 }
 
 impl Model {
-    fn is_kps(&self) -> bool {
-        self.model.is_kps()
-    }
-
     fn load_model(settings: &Settings) -> eyre::Result<Box<Self>> {
         let device = match settings.backend_type {
             BackendType::Flex => DispatchDevice::Flex(Default::default()),
@@ -512,33 +434,44 @@ impl Model {
 
     #[allow(unused_variables)]
     fn load_model_internal(settings: &Settings, device: DispatchDevice) -> eyre::Result<Box<Self>> {
-        match settings.weights_path {
-            Some(_) => unimplemented!(),
+        let mean =
+            Tensor::<Dispatch, 1>::from_data([0.485, 0.485, 0.406], &device).reshape([1, 3, 1, 1]);
+        let std =
+            Tensor::<Dispatch, 1>::from_data([0.229, 0.224, 0.225], &device).reshape([1, 3, 1, 1]);
+        match &settings.weights_path {
+            Some(torch_weights) => Ok(Box::new(Self {
+                model: sixdrepnet360::SixDRepNet360::from_file(&torch_weights, &device)
+                    .wrap_err("Failed to load PyTorch weights for 6DRepNet360")?,
+                mean,
+                std,
+                device,
+            })),
             None => {
-                #[cfg(feature = "scrfd-embedded")]
+                #[cfg(feature = "sixdrepnet360-pretrained")]
                 {
                     Ok(Box::new(Self {
-                        model: scrfd_burn::Model::from_embedded(
-                            settings.model_type.into(),
-                            &device,
-                        ),
+                        model: sixdrepnet360::SixDRepNet360::pretrained(&device)
+                            .wrap_err("Failed to load pretrained weights for 6DRepNet360")?,
+                        mean,
+                        std,
                         device,
                     }))
                 }
-                #[cfg(not(feature = "scrfd-embedded"))]
+                #[cfg(not(feature = "sixdrepnet360-pretrained"))]
                 {
-                    eyre::bail!("Compiled without support for embedded weights")
+                    eyre::bail!("Compiled without support for pretrained weights")
                 }
             }
         }
     }
 
-    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Vec<Tensor<Dispatch, 3>> {
+    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Tensor<Dispatch, 3> {
         let data = TensorData::new(input, [1, height, width, 3]).convert::<f32>();
-        let tensor = Tensor::<Dispatch, 4>::from_data(data, &self.device)
+        let tensor = Tensor::from_data(data, &self.device)
             .permute([0, 3, 1, 2])
-            .sub_scalar(127.5f32)
-            .div_scalar(128.0f32);
+            .div_scalar(255.0)
+            .sub(self.mean.clone())
+            .div(self.std.clone());
         self.model.forward(tensor)
     }
 }

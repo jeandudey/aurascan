@@ -5,7 +5,7 @@ artifacts
 cubecl.toml
 .workshop.lock
 *.png
-crates/gst-plugin-burnextra/target
+crates/gst-plugin-aurascan/target
 **/*/dot
 *.dot
 **/*/__pycache__

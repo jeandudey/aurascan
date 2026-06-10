@@ -4,7 +4,7 @@ members = [
     "app/aurascan",
     "crates/burn-3ddfa",
     "crates/bytetrack",
-    "crates/gst-plugin-burnextra",
+    "crates/gst-plugin-aurascan",
     "crates/matio",
     "crates/matio-sys",
     "crates/scrfd-burn",
@@ -32,8 +32,7 @@ gst = { package = "gstreamer", version = "0.25" }
 gst-analytics = { package = "gstreamer-analytics", version = "0.25" }
 gst-app = { package = "gstreamer-app", version = "0.25" }
 gst-base = { package = "gstreamer-base", version = "0.25" }
-gst-plugin-burn = "0.15.2"
-gst-plugin-burnextra.path = "crates/gst-plugin-burnextra"
+gst-plugin-aurascan.path = "crates/gst-plugin-aurascan"
 gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25" }

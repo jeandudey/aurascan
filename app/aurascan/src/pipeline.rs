@@ -119,7 +119,7 @@ impl Pipeline {
 
     pub fn set_backend_type(
         &self,
-        backend_type: gstburnextra::BackendType,
+        backend_type: gstaurascan::BackendType,
     ) -> Result<(), gst::StateChangeError> {
         let was_playing = self.is_playing();
         if was_playing {

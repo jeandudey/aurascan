@@ -201,7 +201,7 @@ impl Cropper {
 
 #[glib::object_subclass]
 impl ObjectSubclass for HeadPoseInferenceBin {
-    const NAME: &'static str = "GstBurnExtraHeadPoseInferenceBin";
+    const NAME: &'static str = "GstAuraScanHeadPoseInferenceBin";
 
     type Type = super::HeadPoseInferenceBin;
     type ParentType = gst::Bin;
@@ -225,7 +225,7 @@ impl ObjectImpl for HeadPoseInferenceBin {
             cropper: Cropper::new(),
         });
 
-        let facedetectorinfernce = gst::ElementFactory::make("burnextra-scrfdinference")
+        let facedetectorinfernce = gst::ElementFactory::make("burn-scrfdinference")
             .name("scrfdinference")
             .build()
             .unwrap();
@@ -245,7 +245,7 @@ impl ObjectImpl for HeadPoseInferenceBin {
             .name("videoscale")
             .build()
             .unwrap();
-        let headposeinference = gst::ElementFactory::make("burnextra-sixdrepnet360inference")
+        let headposeinference = gst::ElementFactory::make("burn-sixdrepnet360inference")
             .name("sixdrepnet360inference")
             .build()
             .unwrap();

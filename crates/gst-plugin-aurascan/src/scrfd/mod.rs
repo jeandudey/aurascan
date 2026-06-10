@@ -5,7 +5,7 @@ pub mod imp;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
 #[repr(C)]
-#[enum_type(name = "GstBurnExtraScrfdModelType")]
+#[enum_type(name = "GstAurascanScrfdModelType")]
 pub enum ModelType {
     #[default]
     Scrfd500m,
@@ -42,7 +42,7 @@ pub fn register(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
 
     gst::Element::register(
         Some(plugin),
-        "burnextra-scrfdinference",
+        "burn-scrfdinference",
         gst::Rank::NONE,
         ScrfdInference::static_type(),
     )

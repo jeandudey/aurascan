@@ -261,7 +261,7 @@ name = "aurascan"
 version = "0.1.0"
 dependencies = [
  "eyre",
- "gst-plugin-burnextra",
+ "gst-plugin-aurascan",
  "gst-plugin-gtk4",
  "gstreamer",
  "gstreamer-analytics",
@@ -4054,7 +4054,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gst-plugin-burnextra"
+name = "gst-plugin-aurascan"
 version = "0.1.0"
 dependencies = [
  "burn",

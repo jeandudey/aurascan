@@ -2,7 +2,7 @@
 cargo build --release --features sixdrepnet360-pretrained,scrfd-embedded,vulkan || exit 1
 #GST_DEBUG=scrfdtensordec:9 \
 #GST_DEBUG="GST_TRACER:7" GST_TRACERS="latency(flags=element)" \
-#GST_DEBUG=burnextra-scrfdinference:9 \
+#GST_DEBUG=burn-scrfdinference:9 \
 GST_PLUGIN_PATH=../../target/release \
   gst-launch-1.0 \
       v4l2src \
@@ -22,7 +22,7 @@ GST_PLUGIN_PATH=../../target/release \
 #    ! videoconvert \
 #    ! videoscale \
 #    ! video/x-raw,format=RGB,width=320,height=320 \
-#    ! burnextra-scrfdinference backend-type=vulkan model-type=scrfd34g \
+#    ! burn-scrfdinference backend-type=vulkan model-type=scrfd34g \
 #    ! scrfdtensordec \
 #    ! objectdetectionoverlay \
 #    ! videoconvert \

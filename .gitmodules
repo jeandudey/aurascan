@@ -1,0 +1,3 @@
+[submodule "models/insightface"]
+	path = models/insightface
+	url = https://github.com/deepinsight/insightface

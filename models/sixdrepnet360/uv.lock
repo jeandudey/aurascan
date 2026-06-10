@@ -10,11 +10,6 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 's390x'",
 ]
 
-[manifest]
-members = [
-    "sixdrepnet360",
-]
-
 [[package]]
 name = "cuda-bindings"
 version = "13.3.1"
@@ -669,7 +664,7 @@ wheels = [
 [[package]]
 name = "sixdrepnet360"
 version = "0.1.0"
-source = { editable = "models/sixdrepnet360" }
+source = { editable = "." }
 dependencies = [
     { name = "onnx" },
     { name = "onnxscript" },

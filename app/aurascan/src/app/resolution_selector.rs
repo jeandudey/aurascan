@@ -122,6 +122,10 @@ fn device_resolutions(device: &gst::Device) -> Vec<Resolution> {
         return Vec::new();
     };
 
+    // NOTE: Exclude non-video/x-raw formats, ideally this shouldn't be done
+    // and instead handle this using decodebin perhaps.
+    let caps = gst::Caps::builder("video/x-raw").build().intersect(&caps);
+
     let mut resolutions = caps
         .iter()
         .filter_map(|structure| {

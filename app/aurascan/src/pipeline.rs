@@ -58,8 +58,8 @@ impl Pipeline {
             .build()?;
 
         let tee = gst::ElementFactory::make("tee").build()?;
-        let queue0 = gst::ElementFactory::make("queue").build()?;
-        let queue1 = gst::ElementFactory::make("queue").build()?;
+        let queue_inference = gst::ElementFactory::make("queue").build()?;
+        let queue_livefeed = gst::ElementFactory::make("queue").build()?;
 
         let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;
 
@@ -80,8 +80,8 @@ impl Pipeline {
             &videoconvertscale,
             &inference_capsfilter,
             &tee,
-            &queue0,
-            &queue1,
+            &queue_inference,
+            &queue_livefeed,
             &inferencebin,
             &fpsdisplaysink,
             &livefeedsink,
@@ -93,15 +93,15 @@ impl Pipeline {
             &tee,
         ])?;
 
-        gst::Element::link_many([&queue0, &inferencebin, &fpsdisplaysink])?;
-        gst::Element::link_many([&queue1, &livefeedsink])?;
+        gst::Element::link_many([&queue_inference, &inferencebin, &fpsdisplaysink])?;
+        gst::Element::link_many([&queue_livefeed, &livefeedsink])?;
 
         let tee_src0 = tee.request_pad_simple("src_%u").unwrap();
-        let queue0_sink = queue0.static_pad("sink").unwrap();
+        let queue0_sink = queue_inference.static_pad("sink").unwrap();
         tee_src0.link(&queue0_sink).unwrap();
 
         let tee_src1 = tee.request_pad_simple("src_%u").unwrap();
-        let queue1_sink = queue1.static_pad("sink").unwrap();
+        let queue1_sink = queue_livefeed.static_pad("sink").unwrap();
         tee_src1.link(&queue1_sink).unwrap();
 
         Ok(Self {

@@ -7,6 +7,7 @@ pub mod scrfd;
 pub mod scrfdtensordec;
 pub mod sixdrepnet360;
 pub mod sixdrepnet360tensordec;
+pub mod videocropscale;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
 #[repr(C)]
@@ -31,6 +32,7 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     scrfdtensordec::register(plugin)?;
     sixdrepnet360::register(plugin)?;
     sixdrepnet360tensordec::register(plugin)?;
+    videocropscale::register(plugin)?;
 
     headposeinferencebin::register(plugin)?;
 

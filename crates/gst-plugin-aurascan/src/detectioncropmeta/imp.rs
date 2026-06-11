@@ -1,6 +1,6 @@
 use gst::glib::value::ToValue;
 use gst::glib::{self, ParamSpecBuilderExt};
-use gst::prelude::GstParamSpecBuilderExt;
+use gst::prelude::*;
 use gst::subclass::prelude::*;
 use gst_analytics::AnalyticsMetaRefExt;
 use gst_base::subclass::prelude::BaseTransformImpl;
@@ -107,11 +107,7 @@ impl Cropper {
         }
     }
 
-    fn advance(
-        &mut self,
-        location: &gst_analytics::AnalyticsODLocation,
-        alpha: f32,
-    ) {
+    fn advance(&mut self, location: &gst_analytics::AnalyticsODLocation, alpha: f32) {
         let w = location.w as f32;
         let h = location.h as f32;
         let x = location.x as f32;
@@ -318,11 +314,7 @@ impl BaseTransformImpl for DetectionCropMeta {
         Ok(())
     }
 
-    fn set_caps(
-        &self,
-        incaps: &gst::Caps,
-        _outcaps: &gst::Caps,
-    ) -> Result<(), gst::LoggableError> {
+    fn set_caps(&self, incaps: &gst::Caps, _outcaps: &gst::Caps) -> Result<(), gst::LoggableError> {
         let video_info = gst_video::VideoInfo::from_caps(incaps)
             .map_err(|_| gst::loggable_error!(CAT, "Failed to parse input caps"))?;
         *self.video_info.lock().unwrap() = Some(video_info);
@@ -380,30 +372,10 @@ impl BaseTransformImpl for DetectionCropMeta {
         let chosen_id = tracker_state.selector.pick(&detections, frame_w, frame_h);
 
         // When a detection is selected, advance the EMA toward its location.
-        if let Some(chosen_id) = chosen_id {
-            'outer: for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
-                'od: for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
-                    let Ok(location) = od.location() else {
-                        continue 'od;
-                    };
-                    let Some(tr) = meta
-                        .iter_direct_related::<gst_analytics::AnalyticsTrackingMtd>(
-                            od.id(),
-                            gst_analytics::RelTypes::RELATE_TO,
-                        )
-                        .next()
-                    else {
-                        continue 'od;
-                    };
-                    if tr.info().0 != chosen_id {
-                        continue 'od;
-                    }
-                    tracker_state.cropper.advance(&location, smoothing);
-                    break 'outer;
-                }
-            }
+        let location = chosen_id.and_then(|chosen_id| find_location(chosen_id, buffer));
+        if let Some(location) = location.as_ref() {
+            tracker_state.cropper.advance(&location, smoothing);
         }
-        // Immutable borrow of buffer ends here.
 
         // Always emit a rect: last known smoothed position, or full frame when
         // no detection has ever been seen.
@@ -419,6 +391,56 @@ impl BaseTransformImpl for DetectionCropMeta {
 
         gst_video::VideoCropMeta::add(buffer, (x, y, width, height));
 
+        if let Some(location) = location {
+            let mut structure = gst::Structure::builder("selected-detection")
+                .field("x", location.x)
+                .field("y", location.y)
+                .field("w", location.w)
+                .field("h", location.h)
+                .field("loc-conf-lvl", location.loc_conf_lvl);
+
+            if let Some(id) = chosen_id {
+                structure = structure.field("id", id);
+            }
+
+            if let Some(pts) = buffer.pts() {
+                structure = structure.field("pts", pts);
+            }
+
+            self.obj()
+                .post_message(gst::message::Application::new(structure.build()))
+                .unwrap();
+        }
+
         Ok(gst::FlowSuccess::Ok)
     }
+}
+
+fn find_location(
+    needed_id: u64,
+    buffer: &gst::BufferRef,
+) -> Option<gst_analytics::AnalyticsODLocation> {
+    for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
+        'od: for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
+            let Ok(location) = od.location() else {
+                continue 'od;
+            };
+            let Some(tr) = meta
+                .iter_direct_related::<gst_analytics::AnalyticsTrackingMtd>(
+                    od.id(),
+                    gst_analytics::RelTypes::RELATE_TO,
+                )
+                .next()
+            else {
+                continue 'od;
+            };
+            let od_id = tr.info().0;
+            if od_id != needed_id {
+                continue 'od;
+            }
+            return Some(location);
+        }
+    }
+
+    None
 }

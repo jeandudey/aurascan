@@ -58,7 +58,12 @@ impl Pipeline {
             .build()?;
 
         let tee = gst::ElementFactory::make("tee").build()?;
-        let queue_inference = gst::ElementFactory::make("queue").build()?;
+        let queue_inference = gst::ElementFactory::make("queue")
+            .property_from_str("leaky", "downstream")
+            .property("max-size-buffers", 1u32)
+            .property("max-size-bytes", 0u32)
+            .property("max-size-time", 0u64)
+            .build()?;
         let queue_livefeed = gst::ElementFactory::make("queue").build()?;
 
         let inferencebin = gst::ElementFactory::make("headposeinferencebin").build()?;

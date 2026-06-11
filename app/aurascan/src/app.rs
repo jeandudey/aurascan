@@ -219,6 +219,10 @@ impl SimpleComponent for AppModel {
             }
         });
 
+        pipeline
+            .set_backend_type(gstaurascan::BackendType::Rocm)
+            .unwrap();
+
         let alert = Alert::builder()
             .transient_for(&root)
             .launch(AlertSettings {
@@ -287,17 +291,21 @@ impl SimpleComponent for AppModel {
             AppMsg::BackendSelected(backend_type) => {
                 sender.oneshot_command({
                     let pipeline = self.pipeline.clone();
+                    let sender = sender.input_sender().clone();
                     async move {
-                        pipeline
-                            .lock()
-                            .unwrap()
-                            .set_backend_type(match backend_type {
-                                0 => gstaurascan::BackendType::Rocm,
-                                1 => gstaurascan::BackendType::Vulkan,
-                                2 => gstaurascan::BackendType::Flex,
-                                _ => unreachable!(),
-                            })
-                            .unwrap();
+                        if let Err(e) =
+                            pipeline
+                                .lock()
+                                .unwrap()
+                                .set_backend_type(match backend_type {
+                                    0 => gstaurascan::BackendType::Rocm,
+                                    1 => gstaurascan::BackendType::Vulkan,
+                                    2 => gstaurascan::BackendType::Flex,
+                                    _ => unreachable!(),
+                                })
+                        {
+                            sender.send(AppMsg::Error(e.to_string())).unwrap();
+                        }
                     }
                 });
             }

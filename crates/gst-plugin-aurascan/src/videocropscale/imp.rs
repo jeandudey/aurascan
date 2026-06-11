@@ -138,6 +138,11 @@ impl BaseTransformImpl for VideoCropScale {
         Ok(())
     }
 
+    fn unit_size(&self, caps: &gst::Caps) -> Option<usize> {
+        let info = gst_video::VideoInfo::from_caps(caps).ok()?;
+        Some(info.size())
+    }
+
     fn transform(
         &self,
         inbuf: &gst::Buffer,

@@ -82,7 +82,7 @@ impl SimpleComponent for AppModel {
                                             set_hexpand: true,
                                             set_model: Some(&gtk::StringList::new(&["ROCm", "Vulkan", "Flex (CPU)"])),
                                             connect_selected_notify[sender] => move |dropdown| {
-                                                sender.input(AppMsg::BackendSelected(dropdown.selected()));
+                                                sender.input(AppMsg::SetBackend(dropdown.selected()));
                                             }
                                         },
                                     },
@@ -169,7 +169,7 @@ impl SimpleComponent for AppModel {
     ) -> ComponentParts<Self> {
         let resolution_selector = ResolutionSelector::builder()
             .launch(())
-            .forward(sender.input_sender(), AppMsg::ResolutionSelected);
+            .forward(sender.input_sender(), AppMsg::SetCaps);
 
         let source_selector =
             SourceSelector::builder()
@@ -288,7 +288,7 @@ impl SimpleComponent for AppModel {
                 }
                 _ => (),
             },
-            AppMsg::BackendSelected(backend_type) => {
+            AppMsg::SetBackend(backend_type) => {
                 sender.oneshot_command({
                     let pipeline = self.pipeline.clone();
                     let sender = sender.input_sender().clone();
@@ -309,7 +309,7 @@ impl SimpleComponent for AppModel {
                     }
                 });
             }
-            AppMsg::ResolutionSelected(resolution) => {
+            AppMsg::SetCaps(resolution) => {
                 let Some(resolution) = resolution else {
                     return;
                 };
@@ -317,7 +317,7 @@ impl SimpleComponent for AppModel {
                 sender.oneshot_command({
                     let pipeline = self.pipeline.clone();
                     async move {
-                        pipeline.lock().unwrap().set_resolution(resolution).unwrap();
+                        pipeline.lock().unwrap().set_caps(resolution).unwrap();
                     }
                 });
             }

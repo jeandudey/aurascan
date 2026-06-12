@@ -1,25 +1,18 @@
+use gst::glib;
 use gst::prelude::DeviceExt;
 use gtk::prelude::*;
+use relm4::css;
 use relm4::prelude::*;
+use std::cell::RefCell;
 use std::cmp::Reverse;
-use std::fmt::Display;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Resolution {
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Display for Resolution {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}x{}", self.width, self.height)
-    }
-}
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct ResolutionSelector {
-    string_list: gtk::StringList,
-    resolutions: Vec<Resolution>,
+    dropdown_model: gtk::StringList,
+    dropdown_factory: gtk::SignalListItemFactory,
+    dropdown_list_factory: gtk::SignalListItemFactory,
+    caps: Arc<RefCell<Vec<gst::Caps>>>,
     selected: Option<usize>,
 }
 
@@ -33,7 +26,7 @@ pub enum ResolutionSelectorInput {
 impl SimpleComponent for ResolutionSelector {
     type Init = ();
     type Input = ResolutionSelectorInput;
-    type Output = Option<Resolution>;
+    type Output = Option<gst::Caps>;
 
     view! {
         gtk::Box {
@@ -47,7 +40,9 @@ impl SimpleComponent for ResolutionSelector {
 
             gtk::DropDown {
                 set_hexpand: true,
-                set_model: Some(&model.string_list),
+                set_model: Some(&model.dropdown_model),
+                set_factory: Some(&model.dropdown_factory),
+                set_list_factory: Some(&model.dropdown_list_factory),
                 connect_selected_notify[sender] => move |dropdown| {
                     sender.input(ResolutionSelectorInput::ResolutionSelected(dropdown.selected()));
                 },
@@ -60,9 +55,86 @@ impl SimpleComponent for ResolutionSelector {
         _root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let caps: Arc<RefCell<Vec<gst::Caps>>> = Arc::new(RefCell::new(Vec::new()));
+
+        let dropdown_model = gtk::StringList::new(&["Not available"]);
+
+        let dropdown_factory = gtk::SignalListItemFactory::new();
+        dropdown_factory.connect_setup(|_, list_item| {
+            let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
+            let label = gtk::Label::builder()
+                .hexpand(true)
+                .halign(gtk::Align::Start)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .build();
+            list_item.set_child(Some(&label));
+        });
+        dropdown_factory.connect_bind(glib::clone!(
+            #[strong]
+            caps,
+            move |_, list_item| {
+                let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
+                if let Some(caps) = caps.borrow().get(list_item.position() as usize) {
+                    let label = list_item.child().unwrap().downcast::<gtk::Label>().unwrap();
+
+                    let (width, height) = resolution(caps);
+                    label.set_label(&format!("{}x{}", width, height));
+                }
+            }
+        ));
+
+        let dropdown_list_factory = gtk::SignalListItemFactory::new();
+        dropdown_list_factory.connect_setup(|_, list_item| {
+            let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
+            let template = ResolutionListItem::init(());
+            list_item.set_child(Some(template.as_ref()));
+        });
+        dropdown_list_factory.connect_bind(glib::clone!(
+            #[strong]
+            caps,
+            move |_, list_item| {
+                let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
+                if let Some(caps) = caps.borrow().get(list_item.position() as usize) {
+                    let (width, height) = resolution(caps);
+
+                    let structure = caps.structure(0).unwrap();
+                    let format = structure
+                        .get::<String>("drm-format")
+                        .map(|drm_format| format!("{} (DRM)", drm_format))
+                        .unwrap_or_else(|_| {
+                            structure.get::<String>("format").unwrap_or_else(|_| {
+                                let name = structure.name();
+                                if name == "image/jpeg" {
+                                    "MJPEG".to_string()
+                                } else {
+                                    name.to_string()
+                                }
+                            })
+                        });
+
+                    let child = list_item.child().unwrap();
+                    let resolution_label = child
+                        .first_child()
+                        .unwrap()
+                        .downcast::<gtk::Label>()
+                        .unwrap();
+                    let format_label = resolution_label
+                        .next_sibling()
+                        .unwrap()
+                        .downcast::<gtk::Label>()
+                        .unwrap();
+
+                    resolution_label.set_label(&format!("{}x{}", width, height));
+                    format_label.set_label(&format);
+                };
+            }
+        ));
+
         let model = Self {
-            string_list: gtk::StringList::new(&["Not available"]),
-            resolutions: Vec::new(),
+            dropdown_model,
+            dropdown_factory,
+            dropdown_list_factory,
+            caps,
             selected: None,
         };
         let widgets = view_output!();
@@ -73,27 +145,39 @@ impl SimpleComponent for ResolutionSelector {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match message {
             ResolutionSelectorInput::DeviceChanged(device) => {
-                clear_string_list(&self.string_list);
+                clear_string_list(&self.dropdown_model);
 
-                let Some(device) = device else {
-                    self.string_list.append("Not available");
+                let Some(device_caps) = device.and_then(|device| device.caps()) else {
+                    self.caps.borrow_mut().clear();
+                    self.dropdown_model.append("Not available");
                     return;
                 };
 
-                self.resolutions = device_resolutions(&device);
-                if self.resolutions.is_empty() {
-                    self.string_list.append("Not available");
+                let caps = individual_caps(&device_caps);
+                if caps.is_empty() {
+                    self.caps.borrow_mut().clear();
+                    self.dropdown_model.append("Not available");
                     return;
                 }
 
-                for resolution in self.resolutions.iter() {
-                    self.string_list.append(&resolution.to_string());
+                let labels = caps
+                    .iter()
+                    .map(|caps| {
+                        let (width, height) = resolution(caps);
+                        format!("{}x{}", width, height)
+                    })
+                    .collect::<Vec<_>>();
+
+                *self.caps.borrow_mut() = caps;
+
+                for label in labels {
+                    self.dropdown_model.append(&label);
                 }
 
-                if self.selected.is_none() && !self.resolutions.is_empty() {
+                if self.selected.is_none() && !self.caps.borrow().is_empty() {
                     self.selected = Some(0);
                     sender
-                        .output(self.resolutions.first().map(|device| device.clone()))
+                        .output(self.caps.borrow().first().map(|caps| caps.copy()))
                         .ok();
                 }
             }
@@ -105,48 +189,70 @@ impl SimpleComponent for ResolutionSelector {
                 let idx = idx as usize;
                 if self.selected != Some(idx) {
                     self.selected = Some(idx);
-                    sender.output(self.resolutions.get(idx).cloned()).ok();
+                    sender.output(self.caps.borrow_mut().get(idx).cloned()).ok();
                 }
             }
         }
     }
 }
 
-fn device_resolutions(device: &gst::Device) -> Vec<Resolution> {
-    const CUTOFF: Resolution = Resolution {
-        width: 640,
-        height: 640,
-    };
+#[relm4::widget_template(pub)]
+impl WidgetTemplate for ResolutionListItem {
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Vertical,
+            set_hexpand: true,
 
-    let Some(caps) = device.caps() else {
-        return Vec::new();
-    };
+            gtk::Label {
+                set_hexpand: true,
+                set_halign: gtk::Align::Start,
+                set_ellipsize: gtk::pango::EllipsizeMode::End,
+            },
 
-    // NOTE: Exclude non-video/x-raw formats, ideally this shouldn't be done
-    // and instead handle this using decodebin perhaps.
-    let caps = gst::Caps::builder("video/x-raw").build().intersect(&caps);
+            gtk::Label {
+                set_hexpand: true,
+                set_halign: gtk::Align::Start,
+                set_ellipsize: gtk::pango::EllipsizeMode::End,
+                add_css_class: css::DIM_LABEL,
+                add_css_class: css::CAPTION,
+            },
+        }
+    }
+}
 
-    let mut resolutions = caps
+/// Split the device caps into individual resolution caps sorted by
+/// resolution.
+fn individual_caps(caps: &gst::Caps) -> Vec<gst::Caps> {
+    let mut individual_caps = caps
         .iter()
         .filter_map(|structure| {
-            Some(Resolution {
-                width: structure.get("width").ok()?,
-                height: structure.get("height").ok()?,
-            })
+            // XXX: Skip DRM formats until I learn how to handle it.
+            if structure.has_field("drm-format") {
+                return None;
+            }
+
+            structure.get::<i32>("width").ok()?;
+            structure.get::<i32>("height").ok()?;
+
+            let mut caps = gst::Caps::new_empty();
+            caps.get_mut()
+                .unwrap()
+                .append_structure(structure.to_owned());
+            Some(caps)
         })
         .collect::<Vec<_>>();
-    resolutions.sort_by_key(|r| Reverse(r.width * r.height));
-    resolutions.dedup();
+    individual_caps.sort_by_key(|caps| {
+        let (width, height) = resolution(caps);
+        Reverse(width * height)
+    });
+    individual_caps
+}
 
-    let has_higher = resolutions
-        .iter()
-        .any(|r| r.width >= CUTOFF.width && r.height >= CUTOFF.height);
-
-    if has_higher {
-        resolutions.retain(|r| r.width >= CUTOFF.width && r.height >= CUTOFF.height);
-    }
-
-    resolutions
+fn resolution(caps: &gst::Caps) -> (i32, i32) {
+    let structure = caps.structure(0).expect("should have structure");
+    let width = structure.get::<i32>("width").expect("should have width");
+    let height = structure.get::<i32>("height").expect("should have height");
+    (width, height)
 }
 
 fn clear_string_list(string_list: &gtk::StringList) {

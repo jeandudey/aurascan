@@ -1,4 +1,3 @@
-use crate::app::resolution_selector::Resolution;
 use gst::glib;
 use gst::prelude::*;
 
@@ -148,17 +147,12 @@ impl Pipeline {
         Ok(())
     }
 
-    pub fn set_resolution(&self, resolution: Resolution) -> Result<(), gst::StateChangeError> {
+    pub fn set_caps(&self, caps: gst::Caps) -> Result<(), gst::StateChangeError> {
         let was_playing = self.is_playing();
         if was_playing {
             self.stop()?;
         }
 
-        let caps = gst_video::VideoCapsBuilder::new()
-            .width(resolution.width)
-            .height(resolution.height)
-            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
-            .build();
         self.input_capsfilter.set_property("caps", &caps);
 
         if was_playing {

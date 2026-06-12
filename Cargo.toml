@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
 members = [
-    "app/aurascan",
     "crates/burn-3ddfa",
     "crates/gst-plugin-aurascan",
     "crates/matio",
@@ -44,6 +43,24 @@ burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
+
+[package]
+name = "aurascan"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+adw = { workspace = true, features = ["v1_4"] }
+eyre.workspace = true
+gtk = { workspace = true, features = ["v4_8"] }
+gst-analytics = { workspace = true, features = ["v1_28"] }
+gst-plugin-gtk4.workspace = true
+gst-plugin-aurascan = { workspace = true, features = ["scrfd-embedded", "sixdrepnet360-pretrained", "vulkan", "rocm"] }
+gst.workspace = true
+gst-app.workspace = true
+gst-video.workspace = true
+relm4 = { workspace = true, features = ["libadwaita"] }
+relm4-components.workspace = true
 
 [patch.crates-io]
 cubecl-hip-sys.path = "../cubecl-hip-sys/crates/cubecl-hip-sys"

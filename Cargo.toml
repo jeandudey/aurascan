@@ -3,7 +3,6 @@ resolver = "3"
 members = [
     "app/aurascan",
     "crates/burn-3ddfa",
-    "crates/bytetrack",
     "crates/gst-plugin-aurascan",
     "crates/matio",
     "crates/matio-sys",

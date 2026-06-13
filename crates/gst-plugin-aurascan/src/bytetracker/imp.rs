@@ -1,13 +1,16 @@
-use edgefirst_tracker::Tracker;
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+
+use gst::glib;
+use gst::glib::ParamSpecBuilderExt;
 use gst::glib::value::ToValue;
-use gst::glib::{self, ParamSpecBuilderExt};
-use gst::prelude::GstParamSpecBuilderExt;
+use gst::prelude::*;
 use gst::subclass::prelude::*;
 use gst_analytics::AnalyticsMetaRefExt;
 use gst_analytics::ffi::gst_analytics_relation_meta_add_tracking_mtd;
 use gst_base::subclass::prelude::BaseTransformImpl;
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+
+use edgefirst_tracker::Tracker;
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(

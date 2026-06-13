@@ -1,11 +1,12 @@
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+
 use byte_slice_cast::AsSliceOf;
 use gst::glib;
 use gst::subclass::prelude::*;
 use gst_analytics::prelude::*;
 use gst_base::subclass::prelude::BaseTransformImpl;
 use gst_video::prelude::*;
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
 
 const NUM_ANCHORS: usize = 2;
 

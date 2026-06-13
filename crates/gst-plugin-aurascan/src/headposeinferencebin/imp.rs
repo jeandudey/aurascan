@@ -1,8 +1,9 @@
+use std::sync::LazyLock;
+
 use gst::glib;
 use gst::glib::object::Cast;
 use gst::prelude::*;
 use gst::subclass::prelude::*;
-use std::sync::LazyLock;
 
 #[derive(Default)]
 pub struct HeadPoseInferenceBin {}

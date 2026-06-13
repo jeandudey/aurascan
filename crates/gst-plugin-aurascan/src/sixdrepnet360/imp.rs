@@ -1,17 +1,21 @@
-use crate::BackendType;
-use burn::tensor::TensorData;
-use burn::{Dispatch, DispatchDevice, Tensor};
+use std::path::PathBuf;
+use std::sync::{LazyLock, Mutex};
+
 use byte_slice_cast::*;
-use eyre::Context;
 use gst::glib::value::{ToSendValue, ToValue};
 use gst::glib::{self, ParamSpecBuilderExt};
 use gst::prelude::GstParamSpecBuilderExt;
 use gst::subclass::prelude::*;
 use gst_base::subclass::prelude::*;
 use gst_video::prelude::*;
+
+use burn::tensor::TensorData;
+use burn::{Dispatch, DispatchDevice, Tensor};
 use sixdrepnet360_burn::sixdrepnet360;
-use std::path::PathBuf;
-use std::sync::{LazyLock, Mutex};
+
+use eyre::Context;
+
+use crate::BackendType;
 
 const GROUP_ID: &glib::GStr = glib::gstr!("sixdrepnet360");
 const SIXDREPNET360_TENSOR_ID: &glib::GStr = glib::gstr!("sixdrepnet360-out");

@@ -1,9 +1,10 @@
+use std::sync::LazyLock;
+
 use byte_slice_cast::AsSliceOf;
 use gst::glib;
 use gst::subclass::prelude::*;
-use gst_base::subclass::prelude::BaseTransformImpl;
+use gst_base::subclass::prelude::*;
 use gst_video::prelude::*;
-use std::sync::LazyLock;
 
 const GROUP_ID: &glib::GStr = glib::gstr!("sixdrepnet360");
 const SIXDREPNET360_TENSOR_ID: &glib::GStr = glib::gstr!("sixdrepnet360-out");

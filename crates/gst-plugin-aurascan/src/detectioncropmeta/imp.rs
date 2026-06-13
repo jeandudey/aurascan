@@ -1,10 +1,12 @@
+use std::sync::{LazyLock, Mutex};
+
+use gst::glib;
+use gst::glib::ParamSpecBuilderExt;
 use gst::glib::value::ToValue;
-use gst::glib::{self, ParamSpecBuilderExt};
 use gst::prelude::*;
 use gst::subclass::prelude::*;
 use gst_analytics::AnalyticsMetaRefExt;
 use gst_base::subclass::prelude::BaseTransformImpl;
-use std::sync::{LazyLock, Mutex};
 
 struct Settings {
     smoothing: f32,

@@ -1,7 +1,8 @@
+use std::sync::{LazyLock, Mutex};
+
 use gst::subclass::prelude::*;
 use gst::{MetaAPI, glib};
 use gst_base::subclass::prelude::*;
-use std::sync::{LazyLock, Mutex};
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(

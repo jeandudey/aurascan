@@ -1,15 +1,17 @@
-use crate::scrfd::ModelType;
-use crate::BackendType;
-use burn::tensor::TensorData;
-use burn::{Dispatch, DispatchDevice, Tensor};
+use std::path::PathBuf;
+use std::sync::{LazyLock, Mutex};
+
 use byte_slice_cast::*;
-use core::f32;
 use gst::glib;
 use gst::subclass::prelude::*;
 use gst_video::prelude::*;
 use gst_video::subclass::prelude::*;
-use std::path::PathBuf;
-use std::sync::{LazyLock, Mutex};
+
+use burn::tensor::TensorData;
+use burn::{Dispatch, DispatchDevice, Tensor};
+
+use crate::BackendType;
+use crate::scrfd::ModelType;
 
 const GROUP_ID: &glib::GStr = glib::gstr!("scrfd");
 const GROUP_ID_KPS: &glib::GStr = glib::gstr!("scrfd-kps");

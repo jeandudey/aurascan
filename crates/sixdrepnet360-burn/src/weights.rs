@@ -9,7 +9,7 @@ pub fn download() -> Result<PathBuf, io::Error> {
 
     let model_dir = dirs::home_dir()
         .expect("Should be able to get a home directory")
-        .join("cache")
+        .join(".cache")
         .join("sixdrepnet360-burn");
 
     if !model_dir.exists() {

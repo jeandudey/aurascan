@@ -1,8 +1,15 @@
-use burn::data::network::downloader;
+// SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// Inspired by the implementation in resnet-burn:
+// - https://github.com/tracel-ai/models/commit/8b06465e73e67034813db853861c6dc56beff1bb
+
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
+
+use burn::data::network::downloader;
 
 pub fn download() -> Result<PathBuf, io::Error> {
     const URL: &str = "https://cloud.ovgu.de/s/TewGC9TDLGgKkmS/download/6DRepNet360_Full-Rotation_300W_LP+Panoptic.pth";

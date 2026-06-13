@@ -1,9 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+# SPDX-License-Identifier: MIT
+
 [package]
 name = "sixdrepnet360-burn"
 version = "0.1.0"
 edition = "2024"
 
 [features]
+# See crate documentation for more information on usage, important notes
+# and limitations as the license is not clear.
 pretrained = ["dirs", "burn/network"]
 
 [dependencies]

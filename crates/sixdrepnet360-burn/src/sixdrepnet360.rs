@@ -1,3 +1,22 @@
+// SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+//! # Implementation of 6DRepNet360 using Burn.
+//!
+//! This provides the [`SixDRepNet360`] model implementation using the Burn
+//! framework.
+//!
+//! # Usage
+//!
+//! To use this model and load the weights from a PyTorch checkpoint, use the
+//! [`SixDRepNet360::from_file`] method. For example:
+//!
+//! ```ignore
+//! use sixdrepnet360_burn::sixdrepnet360::SixDRepNet360;
+//!
+//! let model = SixDRepNet360::<Backend>::from_file("weights.pth", device).ok();
+//! ```
+
 use crate::block::{LayerBlock, LayerBlockConfig};
 #[cfg(feature = "pretrained")]
 use crate::weights;
@@ -26,6 +45,8 @@ pub struct SixDRepNet360<B: Backend> {
 }
 
 impl<B: Backend> SixDRepNet360<B> {
+    /// Creates a new [`SixDRepNet360`] model with the specified number of
+    /// layers and device.
     pub fn new(layers: [usize; 4], device: &B::Device) -> Self {
         SixDRepNet360Config::new(layers).init(device)
     }
@@ -49,6 +70,9 @@ impl<B: Backend> SixDRepNet360<B> {
         compute_rotation_matrix_from_ortho6d(out)
     }
 
+    /// Detect the Euler angles from the input image using the model.
+    ///
+    /// Format is in `[x, y, z]`.
     pub fn detect(&self, input: Tensor<B, 4>) -> Vec<[f32; 3]> {
         let euler = compute_euler_angles_from_rotation_matrices(self.forward(input))
             .mul_scalar(180.0 / std::f32::consts::PI);
@@ -62,6 +86,7 @@ impl<B: Backend> SixDRepNet360<B> {
 }
 
 impl<B: Backend> SixDRepNet360<B> {
+    /// Creates a new [`SixDRepNet360`] model from a PyTorch checkpoint file.
     pub fn from_file(
         torch_weights: impl Into<PathBuf>,
         device: &B::Device,
@@ -71,6 +96,7 @@ impl<B: Backend> SixDRepNet360<B> {
         Ok(model)
     }
 
+    /// Loads the weights from a PyTorch checkpoint file into the model.
     pub fn load_weights(
         model: &mut Self,
         torch_weights: impl Into<PathBuf>,
@@ -159,13 +185,13 @@ impl SixDRepNet360Config {
     }
 }
 
-pub fn normalize_vector<B: Backend>(v: Tensor<B, 2>) -> Tensor<B, 2> {
+fn normalize_vector<B: Backend>(v: Tensor<B, 2>) -> Tensor<B, 2> {
     let v_mag = v.clone().powf_scalar(2.0).sum_dim(1).sqrt(); // [B, 1]
     let v_mag = v_mag.clamp_min(1e-8).expand(v.dims());
     v / v_mag
 }
 
-pub fn cross_product<B: Backend>(u: Tensor<B, 2>, v: Tensor<B, 2>) -> Tensor<B, 2> {
+fn cross_product<B: Backend>(u: Tensor<B, 2>, v: Tensor<B, 2>) -> Tensor<B, 2> {
     let u0 = u.clone().narrow(1, 0, 1);
     let u1 = u.clone().narrow(1, 1, 1);
     let u2 = u.narrow(1, 2, 1);
@@ -179,7 +205,7 @@ pub fn cross_product<B: Backend>(u: Tensor<B, 2>, v: Tensor<B, 2>) -> Tensor<B, 
     Tensor::cat(vec![i, j, k], 1)
 }
 
-pub fn compute_rotation_matrix_from_ortho6d<B: Backend>(poses: Tensor<B, 2>) -> Tensor<B, 3> {
+fn compute_rotation_matrix_from_ortho6d<B: Backend>(poses: Tensor<B, 2>) -> Tensor<B, 3> {
     let batch = poses.dims()[0];
 
     let x_raw = poses.clone().narrow(1, 0, 3); // [batch, 3]
@@ -195,7 +221,7 @@ pub fn compute_rotation_matrix_from_ortho6d<B: Backend>(poses: Tensor<B, 2>) -> 
     Tensor::cat(vec![x, y, z], 2) // [batch, 3, 3]
 }
 
-pub fn compute_euler_angles_from_rotation_matrices<B: Backend>(r: Tensor<B, 3>) -> Tensor<B, 2> {
+fn compute_euler_angles_from_rotation_matrices<B: Backend>(r: Tensor<B, 3>) -> Tensor<B, 2> {
     let batch = r.dims()[0];
 
     // Element accessor: slice [batch, i, j] -> [batch, 1]

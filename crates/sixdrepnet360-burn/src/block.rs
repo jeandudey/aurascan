@@ -1,14 +1,17 @@
+// SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+// SPDX-FileCopyrightText: 2026 resnet-burn authors <https://github.com/tracel-ai/models>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// Original implementation in resnet-burn:
+// - https://github.com/tracel-ai/models/commit/8b06465e73e67034813db853861c6dc56beff1bb
+
 use core::f64::consts::SQRT_2;
 
-use burn::{
-    config::Config,
-    module::Module,
-    nn::{
-        BatchNorm, BatchNormConfig, Initializer, PaddingConfig2d, Relu,
-        conv::{Conv2d, Conv2dConfig},
-    },
-    tensor::{Device, Tensor, backend::Backend},
-};
+use burn::config::Config;
+use burn::module::Module;
+use burn::nn::conv::{Conv2d, Conv2dConfig};
+use burn::nn::{BatchNorm, BatchNormConfig, Initializer, PaddingConfig2d, Relu};
+use burn::tensor::{Device, Tensor, backend::Backend};
 
 #[derive(Module, Debug)]
 #[allow(clippy::large_enum_variant)]

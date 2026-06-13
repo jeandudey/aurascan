@@ -11,10 +11,8 @@ members = [
 
 [workspace.dependencies]
 burn = "0.21.0"
-resnet-burn = { git = "https://github.com/tracel-ai/models", package = "resnet-burn", default-features = false, features = ["pretrained"] }
-mobilenetv2-burn = { git = "https://github.com/tracel-ai/models", package = "mobilenetv2-burn", default-features = false }
-scrfd-burn.path = "crates/scrfd-burn"
-sixdrepnet360-burn.path = "crates/sixdrepnet360-burn"
+burn-store = { version = "0.21.0", features = ["std", "pytorch"] }
+dirs = "6.0.0"
 
 edgefirst-tracker = "0.24"
 
@@ -43,6 +41,8 @@ burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
+scrfd-burn.path = "crates/scrfd-burn"
+sixdrepnet360-burn.path = "crates/sixdrepnet360-burn"
 
 [package]
 name = "aurascan"

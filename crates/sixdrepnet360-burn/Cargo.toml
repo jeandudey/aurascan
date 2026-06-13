@@ -7,6 +7,6 @@ edition = "2024"
 pretrained = ["dirs", "burn/network"]
 
 [dependencies]
-burn = { version = "0.21.0", features = ["train", "vision"] }
-burn-store = { version = "0.21.0", features = ["std", "pytorch"] }
-dirs = { version = "6.0.0", optional = true }
+burn = { workspace = true, features = ["train", "vision"] }
+burn-store.workspace = true
+dirs = { workspace = true, optional = true }

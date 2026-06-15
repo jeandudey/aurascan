@@ -11,13 +11,11 @@ use burn::tensor::TensorData;
 use burn::{Dispatch, DispatchDevice, Tensor};
 
 use crate::BackendType;
-use crate::scrfd::ModelType;
-
-const GROUP_ID: &glib::GStr = glib::gstr!("scrfd");
-const GROUP_ID_KPS: &glib::GStr = glib::gstr!("scrfd-kps");
-const SCRFD_SCORE: &glib::GStr = glib::gstr!("scrfd-score-out");
-const SCRFD_BBOX: &glib::GStr = glib::gstr!("scrfd-bbox-out");
-const SCRFD_KPS: &glib::GStr = glib::gstr!("scrfd-kps-out");
+use crate::scrfd::{
+    ModelType, SCRFD_BBOX8_OUT_ID, SCRFD_BBOX16_OUT_ID, SCRFD_BBOX32_OUT_ID, SCRFD_GROUP_ID,
+    SCRFD_KPS_GROUP_ID, SCRFD_KPS8_OUT_ID, SCRFD_KPS16_OUT_ID, SCRFD_KPS32_OUT_ID,
+    SCRFD_SCORE8_OUT_ID, SCRFD_SCORE16_OUT_ID, SCRFD_SCORE32_OUT_ID,
+};
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
@@ -68,13 +66,13 @@ impl Default for Settings {
 pub struct ScrfdInference {
     state: Mutex<Option<State>>,
     settings: Mutex<Settings>,
-    input_tensors_caps: Mutex<gst::Caps>,
-    output_tensors_caps: Mutex<gst::Caps>,
+    input_tensor_caps: Mutex<gst::Caps>,
+    output_tensor_caps: Mutex<gst::Caps>,
 }
 
 impl Default for ScrfdInference {
     fn default() -> Self {
-        let mut input_tensors_caps = gst_video::VideoCapsBuilder::new()
+        let mut input_tensor_caps = gst_video::VideoCapsBuilder::new()
             .format(gst_video::VideoFormat::Rgb)
             .pixel_aspect_ratio(gst::Fraction::new(1, 1))
             .build();
@@ -84,14 +82,14 @@ impl Default for ScrfdInference {
             .pixel_aspect_ratio(gst::Fraction::new(1, 1))
             .build();
 
-        set_width_and_height_caps(&mut input_tensors_caps);
+        set_width_and_height_caps(&mut input_tensor_caps);
         set_width_and_height_caps(&mut output_tensor_caps);
 
         Self {
             state: Default::default(),
             settings: Default::default(),
-            input_tensors_caps: Mutex::new(input_tensors_caps),
-            output_tensors_caps: Mutex::new(output_tensor_caps),
+            input_tensor_caps: Mutex::new(input_tensor_caps),
+            output_tensor_caps: Mutex::new(output_tensor_caps),
         }
     }
 }
@@ -273,7 +271,7 @@ impl BaseTransformImpl for ScrfdInference {
 
         let state = state.as_mut().unwrap();
 
-        let strided = |field_id: &str, channels: i32| {
+        let strided = |field_id: &glib::GStr, channels: i32| {
             gst::Caps::builder("tensor/strided")
                 .field("field-id", field_id)
                 .field(
@@ -289,38 +287,38 @@ impl BaseTransformImpl for ScrfdInference {
 
         let v_tensor_s = if state.model.is_kps() {
             gst::UniqueList::new([
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-kps-out", 10),
-                strided("scrfd-kps-out", 10),
-                strided("scrfd-kps-out", 10),
+                strided(SCRFD_SCORE8_OUT_ID, 1),
+                strided(SCRFD_SCORE16_OUT_ID, 1),
+                strided(SCRFD_SCORE32_OUT_ID, 1),
+                strided(SCRFD_BBOX8_OUT_ID, 4),
+                strided(SCRFD_BBOX16_OUT_ID, 4),
+                strided(SCRFD_BBOX32_OUT_ID, 4),
+                strided(SCRFD_KPS8_OUT_ID, 10),
+                strided(SCRFD_KPS16_OUT_ID, 10),
+                strided(SCRFD_KPS32_OUT_ID, 10),
             ])
         } else {
             gst::UniqueList::new([
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-score-out", 1),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
-                strided("scrfd-bbox-out", 4),
+                strided(SCRFD_SCORE8_OUT_ID, 1),
+                strided(SCRFD_SCORE16_OUT_ID, 1),
+                strided(SCRFD_SCORE32_OUT_ID, 1),
+                strided(SCRFD_BBOX8_OUT_ID, 4),
+                strided(SCRFD_BBOX16_OUT_ID, 4),
+                strided(SCRFD_BBOX32_OUT_ID, 4),
             ])
         };
 
         let group_id = if state.model.is_kps() {
-            GROUP_ID_KPS
+            SCRFD_KPS_GROUP_ID
         } else {
-            GROUP_ID
+            SCRFD_GROUP_ID
         };
 
         let mut tensor_s = gst::Structure::new_empty("tensorgroups");
         tensor_s.set(group_id, v_tensor_s);
 
-        let mut output_tensors_caps = self.output_tensors_caps.lock().unwrap();
-        output_tensors_caps.make_mut().set("tensors", tensor_s);
+        let mut output_tensor_caps = self.output_tensor_caps.lock().unwrap();
+        output_tensor_caps.make_mut().set("tensors", tensor_s);
 
         gst::info!(CAT, imp = self, "Started");
 
@@ -356,32 +354,72 @@ impl BaseTransformImpl for ScrfdInference {
         caps: &gst::Caps,
         filter: Option<&gst::Caps>,
     ) -> Option<gst::Caps> {
-        let mut input_tensors_caps = self.input_tensors_caps.lock().unwrap();
-        let restrictions = input_tensors_caps.make_mut();
+        let restrictions = self.input_tensor_caps.lock().unwrap();
 
-        let res = match direction {
+        match direction {
             gst::PadDirection::Src => {
+                // Translate src pad caps → sink pad caps: strip tensors so they
+                // don't propagate upstream, then apply video format constraints.
                 let mut res = caps.copy();
                 for s in res.get_mut().unwrap().iter_mut() {
-                    // Remove tensors from caps to prevent upstream propagation.
-                    if let Ok(_) = s.get::<gst::Structure>("tensors") {
-                        s.remove_field("tensors");
-                    }
+                    s.remove_field("tensors");
                 }
-                res.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
+                let res = res.intersect_with_mode(&restrictions, gst::CapsIntersectMode::First);
+                let res = filter
+                    .map(|f| f.intersect_with_mode(&res, gst::CapsIntersectMode::First))
+                    .unwrap_or(res);
+                Some(res)
             }
             _ => {
-                let tensor_caps = self.output_tensors_caps.lock().unwrap().copy();
-                restrictions.intersect_with_mode(&tensor_caps, gst::CapsIntersectMode::First);
-                caps.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
+                // Translate sink pad caps → src pad caps: take the incoming video
+                // caps and set the exact tensor group the loaded model produces.
+                //
+                // Intersection cannot be used here because `caps` (plain video)
+                // lacks the `tensors` field — in First-mode intersection, absent
+                // fields are dropped, so the tensor spec would be lost and the
+                // downstream filter's groups would bleed through unchanged.
+                let output_tensor_caps = self.output_tensor_caps.lock().unwrap();
+                let tensor_s = output_tensor_caps
+                    .structure(0)
+                    .and_then(|s| s.get::<gst::Structure>("tensors").ok());
+
+                let mut res = caps.copy();
+                if let Some(ref tensor_s) = tensor_s {
+                    for s in res.get_mut().unwrap().iter_mut() {
+                        s.set("tensors", tensor_s.clone());
+                    }
+                }
+
+                // Intersect with the filter for video-level constraints only.
+                // Strip tensor fields from the filter first — the filter may
+                // carry a combined structure with all pipeline groups, and
+                // GstStructure equality-based comparison would make intersection
+                // fail against our single-group spec.
+                let res = if let Some(filter) = filter {
+                    let mut filter_video = filter.copy();
+                    for s in filter_video.get_mut().unwrap().iter_mut() {
+                        s.remove_field("tensors");
+                        s.remove_field("tensorgroups");
+                    }
+                    let mut res_video = res.copy();
+                    for s in res_video.get_mut().unwrap().iter_mut() {
+                        s.remove_field("tensors");
+                    }
+                    let mut intersected = filter_video
+                        .intersect_with_mode(&res_video, gst::CapsIntersectMode::First);
+                    if let Some(ref tensor_s) = tensor_s {
+                        for s in intersected.get_mut().unwrap().iter_mut() {
+                            s.set("tensors", tensor_s.clone());
+                        }
+                    }
+                    intersected
+                } else {
+                    res
+                };
+
+                Some(res)
             }
-        };
-
-        let res = filter
-            .map(|filter| filter.intersect_with_mode(&res, gst::CapsIntersectMode::First))
-            .unwrap_or(res);
-
-        Some(res)
+        }
     }
 
     fn transform_ip(
@@ -435,26 +473,24 @@ impl BaseTransformImpl for ScrfdInference {
         };
 
         let mut tensors = Vec::new();
+        let mut output = output.into_iter();
+        tensors.push(into_gst_tensor(SCRFD_SCORE8_OUT_ID, output.next().unwrap()));
+        tensors.push(into_gst_tensor(
+            SCRFD_SCORE16_OUT_ID,
+            output.next().unwrap(),
+        ));
+        tensors.push(into_gst_tensor(
+            SCRFD_SCORE32_OUT_ID,
+            output.next().unwrap(),
+        ));
+        tensors.push(into_gst_tensor(SCRFD_BBOX8_OUT_ID, output.next().unwrap()));
+        tensors.push(into_gst_tensor(SCRFD_BBOX16_OUT_ID, output.next().unwrap()));
+        tensors.push(into_gst_tensor(SCRFD_BBOX32_OUT_ID, output.next().unwrap()));
         if state.model.is_kps() {
-            let mut output = output.into_iter();
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_KPS, output.next().unwrap()));
-        } else {
-            let mut output = output.into_iter();
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_SCORE, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-            tensors.push(into_gst_tensor(SCRFD_BBOX, output.next().unwrap()));
-        };
+            tensors.push(into_gst_tensor(SCRFD_KPS8_OUT_ID, output.next().unwrap()));
+            tensors.push(into_gst_tensor(SCRFD_KPS16_OUT_ID, output.next().unwrap()));
+            tensors.push(into_gst_tensor(SCRFD_KPS32_OUT_ID, output.next().unwrap()));
+        }
 
         let mut meta = gst_analytics::TensorMeta::add(buffer);
         meta.set(glib::Slice::from_iter(tensors));

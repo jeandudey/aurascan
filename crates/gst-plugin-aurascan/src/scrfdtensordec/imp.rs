@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
 use byte_slice_cast::AsSliceOf;
@@ -8,13 +7,14 @@ use gst_analytics::prelude::*;
 use gst_base::subclass::prelude::BaseTransformImpl;
 use gst_video::prelude::*;
 
-const NUM_ANCHORS: usize = 2;
+use crate::scrfd;
+use crate::scrfd::{
+    ModelKind, SCRFD_BBOX8_OUT_ID, SCRFD_BBOX16_OUT_ID, SCRFD_BBOX32_OUT_ID, SCRFD_GROUP_ID,
+    SCRFD_KPS_GROUP_ID, SCRFD_KPS8_OUT_ID, SCRFD_KPS16_OUT_ID, SCRFD_KPS32_OUT_ID,
+    SCRFD_SCORE8_OUT_ID, SCRFD_SCORE16_OUT_ID, SCRFD_SCORE32_OUT_ID,
+};
 
-const GROUP_ID: &glib::GStr = glib::gstr!("scrfd");
-const GROUP_ID_KPS: &glib::GStr = glib::gstr!("scrfd-kps");
-const SCRFD_SCORE: &glib::GStr = glib::gstr!("scrfd-score-out");
-const SCRFD_BBOX: &glib::GStr = glib::gstr!("scrfd-bbox-out");
-const SCRFD_KPS: &glib::GStr = glib::gstr!("scrfd-kps-out");
+const NUM_ANCHORS_PER_CELL: usize = 2;
 const FACE_CLASS_LABEL: &glib::GStr = glib::gstr!("face");
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
@@ -28,7 +28,7 @@ static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
 struct Detection {
     score: f32,
     bbox: [f32; 4],
-    kp: Option<[[f32; 2]; 5]>,
+    kps: Option<[[f32; 2]; 5]>,
 }
 
 impl Detection {
@@ -90,7 +90,12 @@ impl Default for Settings {
 #[derive(Default)]
 pub struct ScrfdTensorDec {
     settings: Mutex<Settings>,
-    video_info: Mutex<Option<gst_video::VideoInfo>>,
+    state: Mutex<Option<State>>,
+}
+
+struct State {
+    video_info: gst_video::VideoInfo,
+    model_kind: scrfd::ModelKind,
 }
 
 #[glib::object_subclass]
@@ -113,7 +118,7 @@ impl ObjectImpl for ScrfdTensorDec {
                     .mutable_playing()
                     .build(),
                 glib::ParamSpecFloat::builder("iou-threshold")
-                    .nick("IOU Threshold")
+                    .nick("IoU Threshold")
                     .blurb("Maximum intersection-over-union between bounding boxes to consider them distinct")
                     .default_value(Settings::default().iou_threshold)
                     .mutable_playing()
@@ -225,6 +230,7 @@ impl BaseTransformImpl for ScrfdTensorDec {
     }
 
     fn stop(&self) -> Result<(), gst::ErrorMessage> {
+        *self.state.lock().unwrap() = None;
         gst::info!(CAT, imp = self, "Stopped");
         Ok(())
     }
@@ -232,7 +238,15 @@ impl BaseTransformImpl for ScrfdTensorDec {
     fn set_caps(&self, incaps: &gst::Caps, _outcaps: &gst::Caps) -> Result<(), gst::LoggableError> {
         let video_info = gst_video::VideoInfo::from_caps(incaps)
             .map_err(|_| gst::loggable_error!(CAT, "Invalid caps {incaps:?}"))?;
-        *self.video_info.lock().unwrap() = Some(video_info);
+        let model_kind = scrfd::ModelKind::from_caps(incaps).ok_or_else(|| {
+            gst::loggable_error!(CAT, "Could not determine model kind from caps {incaps:?}")
+        })?;
+
+        *self.state.lock().unwrap() = Some(State {
+            video_info,
+            model_kind,
+        });
+
         Ok(())
     }
 
@@ -242,77 +256,25 @@ impl BaseTransformImpl for ScrfdTensorDec {
     ) -> Result<gst::FlowSuccess, gst::FlowError> {
         let settings = self.settings.lock().unwrap();
 
-        let video_size = self
-            .video_info
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|info| (info.width() as i32, info.height() as i32));
+        let Some(state) = &*self.state.lock().unwrap() else {
+            gst::error!(CAT, imp = self, "Invalid state");
+            return Ok(gst::FlowSuccess::Ok);
+        };
+
+        let video_size = (
+            state.video_info.width() as i32,
+            state.video_info.height() as i32,
+        );
 
         let mut detections = Vec::new();
-        for meta in buffer.iter_meta::<gst_analytics::TensorMeta>() {
-            gst::trace!(CAT, imp = self, "Num tensors: {}", meta.as_slice().len());
-
-            let score_tensors = find_tensors(&meta, SCRFD_SCORE, 1);
-            let bbox_tensors = find_tensors(&meta, SCRFD_BBOX, 4);
-            let kps_tensors = find_tensors(&meta, SCRFD_KPS, 10);
-
-            gst::trace!(CAT, imp = self, "Num score: {}", score_tensors.len());
-            gst::trace!(CAT, imp = self, "Num bbox: {}", bbox_tensors.len());
-            gst::trace!(CAT, imp = self, "Num kps: {}", kps_tensors.len());
-
-            let tensors = group_tensors(&score_tensors, &bbox_tensors, &kps_tensors);
-            gst::trace!(CAT, imp = self, "Num grouped tensors: {}", tensors.len());
-
-            let tensors = convert_tensors(tensors);
-
-            let feat_max = tensors
-                .iter()
-                .map(|((_, dims), _, _)| ((dims[1] / NUM_ANCHORS) as f64).sqrt() as usize)
-                .fold(0, |a, b| a.max(b));
-
-            for (scores, bboxes, kpses) in tensors {
-                let (scores, scores_dims) = scores;
-                let (bboxes, _) = bboxes;
-
-                let feat = ((scores_dims[1] / NUM_ANCHORS) as f64).sqrt() as usize;
-                let stride = 8 * feat_max / feat; // 8, 16, or 32
-
-                gst::trace!(CAT, imp = self, "Stride: {}", stride);
-                let n = scores_dims[1];
-                for i in 0..n {
-                    let s = scores[i];
-                    if s < settings.score_threshold {
-                        continue;
-                    }
-
-                    let point = i / NUM_ANCHORS;
-                    let gx = point % feat;
-                    let gy = point / feat;
-
-                    let cx = (gx * stride) as f32;
-                    let cy = (gy * stride) as f32;
-
-                    let b = i * 4;
-                    let l = bboxes[b] * stride as f32;
-                    let t = bboxes[b + 1] * stride as f32;
-                    let r = bboxes[b + 2] * stride as f32;
-                    let d = bboxes[b + 3] * stride as f32;
-
-                    let bbox = [cx - l, cy - t, cx + r, cy + d];
-
-                    let kp = kpses.as_ref().map(|(kps, _)| {
-                        let mut pts = [[0.0f32; 2]; 5];
-                        let base = i * 10;
-                        for k in 0..5 {
-                            pts[k][0] = cx + kps[base + k * 2] * stride as f32;
-                            pts[k][1] = cy + kps[base + k * 2 + 1] * stride as f32;
-                        }
-                        pts
-                    });
-
-                    detections.push(Detection { score: s, bbox, kp });
-                }
+        for strides in Stride::from_buffer(buffer, state.model_kind) {
+            for stride in strides {
+                stride.decode_into(
+                    &mut detections,
+                    settings.score_threshold,
+                    state.video_info.width(),
+                    state.video_info.height(),
+                );
             }
         }
 
@@ -327,37 +289,188 @@ impl BaseTransformImpl for ScrfdTensorDec {
             return Ok(gst::FlowSuccess::Ok);
         }
 
-        gst::trace!(CAT, imp = self, "Num detections: {}", detections.len());
-
-        let mut rmeta = gst_analytics::AnalyticsRelationMeta::add(buffer);
-        let class = glib::Quark::from_static_str(FACE_CLASS_LABEL);
-
-        let mut count = 0;
-        for detection in &detections {
-            gst::debug!(
-                CAT,
-                imp = self,
-                "Face: bbox={:?}, score={}, kp={:?}",
-                detection.bbox,
-                detection.score,
-                detection.kp
-            );
-
-            let Some((x, y, w, h)) = detection.to_oriented_od_params(video_size) else {
-                gst::debug!(CAT, imp = self, "Skipping invalid/out-of-frame hand bbox");
-                continue;
-            };
-
-            if let Err(err) = rmeta.add_od_mtd(class, x, y, w, h, detection.score) {
-                gst::warning!(CAT, "Failed to add oriented OD metadata: {err}");
-            }
-
-            count += 1;
-        }
-        gst::debug!(CAT, imp = self, "Added {count} faces to OD metadata");
+        add_detection_meta(buffer, &detections, video_size);
 
         Ok(gst::FlowSuccess::Ok)
     }
+}
+
+fn add_detection_meta(
+    buffer: &mut gst::BufferRef,
+    detections: &[Detection],
+    video_size: (i32, i32),
+) {
+    let face_class_label = glib::Quark::from_static_str(FACE_CLASS_LABEL);
+
+    let mut meta = gst_analytics::AnalyticsRelationMeta::add(buffer);
+    for detection in detections {
+        let Some((x, y, w, h)) = detection.to_oriented_od_params(Some(video_size)) else {
+            gst::debug!(CAT, "Skipping invalid/out-of-frame hand bbox");
+            continue;
+        };
+
+        if let Err(err) = meta.add_od_mtd(face_class_label, x, y, w, h, detection.score) {
+            gst::warning!(CAT, "Failed to add oriented OD metadata: {err}");
+            continue;
+        }
+    }
+}
+
+struct Stride {
+    pub score: Vec<f32>,
+    pub bbox: Vec<f32>,
+    pub kps: Vec<f32>,
+    pub num_anchors: usize,
+    pub stride: usize,
+}
+
+impl Stride {
+    pub fn from_tensors(
+        score: &gst_analytics::Tensor,
+        bbox: &gst_analytics::Tensor,
+        kps: Option<&gst_analytics::Tensor>,
+        stride: usize,
+    ) -> Option<Self> {
+        if score.dims()[1] != bbox.dims()[1] {
+            gst::warning!(CAT, "The score and bbox num_anchor dimension doesn't match");
+            return None;
+        }
+
+        if let Some(kps) = kps {
+            if score.dims()[1] != kps.dims()[1] {
+                gst::warning!(CAT, "The score and kps num_anchor dimension doesn't match");
+                return None;
+            }
+        }
+
+        Some(Self {
+            score: extract_tensor_f32(score)?,
+            bbox: extract_tensor_f32(bbox)?,
+            kps: kps.and_then(extract_tensor_f32).unwrap_or_default(),
+            num_anchors: score.dims()[1],
+            stride,
+        })
+    }
+
+    pub fn from_meta(
+        meta: &gst::MetaRef<gst_analytics::TensorMeta>,
+        model_kind: ModelKind,
+    ) -> Option<[Self; 3]> {
+        let score8 = typed_tensor(meta, SCRFD_SCORE8_OUT_ID, 1)?;
+        let score16 = typed_tensor(meta, SCRFD_SCORE16_OUT_ID, 1)?;
+        let score32 = typed_tensor(meta, SCRFD_SCORE32_OUT_ID, 1)?;
+
+        let bbox8 = typed_tensor(meta, SCRFD_BBOX8_OUT_ID, 4)?;
+        let bbox16 = typed_tensor(meta, SCRFD_BBOX16_OUT_ID, 4)?;
+        let bbox32 = typed_tensor(meta, SCRFD_BBOX32_OUT_ID, 4)?;
+
+        if model_kind == ModelKind::Kps {
+            let kps8 = typed_tensor(meta, SCRFD_KPS8_OUT_ID, 10)?;
+            let kps16 = typed_tensor(meta, SCRFD_KPS16_OUT_ID, 10)?;
+            let kps32 = typed_tensor(meta, SCRFD_KPS32_OUT_ID, 10)?;
+            Some([
+                Stride::from_tensors(score8, bbox8, Some(kps8), 8)?,
+                Stride::from_tensors(score16, bbox16, Some(kps16), 16)?,
+                Stride::from_tensors(score32, bbox32, Some(kps32), 32)?,
+            ])
+        } else {
+            Some([
+                Stride::from_tensors(score8, bbox8, None, 8)?,
+                Stride::from_tensors(score16, bbox16, None, 16)?,
+                Stride::from_tensors(score32, bbox32, None, 32)?,
+            ])
+        }
+    }
+
+    pub fn from_buffer<'a>(
+        buffer: &'a gst::BufferRef,
+        model_kind: ModelKind,
+    ) -> impl Iterator<Item = [Self; 3]> + 'a {
+        buffer
+            .iter_meta::<gst_analytics::TensorMeta>()
+            .filter_map(move |meta| Self::from_meta(&meta, model_kind))
+    }
+
+    pub fn decode_into(
+        &self,
+        detections: &mut Vec<Detection>,
+        threshold: f32,
+        width: u32,
+        height: u32,
+    ) {
+        let feat_w = (width as usize).div_ceil(self.stride);
+        let feat_h = (height as usize).div_ceil(self.stride);
+
+        if feat_w * feat_h * NUM_ANCHORS_PER_CELL != self.num_anchors {
+            gst::error!(
+                CAT,
+                "width and height don't match tensor size: feat_w={feat_w}, feat_h={feat_h}, num_anchors={}",
+                self.num_anchors
+            );
+            return;
+        }
+
+        let mut i = 0;
+        for y in 0..feat_h {
+            for x in 0..feat_w {
+                for _ in 0..NUM_ANCHORS_PER_CELL {
+                    let score = self.score[i];
+                    if score >= threshold {
+                        let cx = (x * self.stride) as f32;
+                        let cy = (y * self.stride) as f32;
+
+                        let dist = &self.bbox[i * 4..i * 4 + 4];
+                        let bbox = [
+                            cx - dist[0] * self.stride as f32,
+                            cy - dist[1] * self.stride as f32,
+                            cx + dist[2] * self.stride as f32,
+                            cy + dist[3] * self.stride as f32,
+                        ];
+
+                        let kps = if !self.kps.is_empty() {
+                            let kps = &self.kps[i * 10..i * 10 + 10];
+                            let mut points = [[0.0; 2]; 5];
+                            for i in 0..5 {
+                                points[i][0] = cx + kps[i * 2] * self.stride as f32;
+                                points[i][1] = cy + kps[i * 2 + 1] * self.stride as f32;
+                            }
+                            Some(points)
+                        } else {
+                            None
+                        };
+
+                        detections.push(Detection { score, bbox, kps });
+                    }
+                    i += 1;
+                }
+            }
+        }
+    }
+}
+
+fn typed_tensor<'a>(
+    meta: &'a gst::MetaRef<gst_analytics::TensorMeta>,
+    id: &'static glib::GStr,
+    channels: usize,
+) -> Option<&'a gst_analytics::Tensor> {
+    meta.typed_tensor(
+        glib::Quark::from_static_str(id),
+        gst_analytics::TensorDataType::Float32,
+        gst_analytics::TensorDimOrder::RowMajor,
+        &[1, usize::MAX, channels],
+    )
+}
+
+fn extract_tensor_f32(tensor: &gst_analytics::Tensor) -> Option<Vec<f32>> {
+    Some(
+        tensor
+            .data()
+            .map_readable()
+            .ok()?
+            .as_slice_of::<f32>()
+            .ok()?
+            .to_vec(),
+    )
 }
 
 fn iou(a: &[f32; 4], b: &[f32; 4]) -> f32 {
@@ -393,78 +506,7 @@ fn nms(mut dets: Vec<Detection>, iou_threshold: f32) -> Vec<Detection> {
     keep
 }
 
-fn convert_tensors<'a>(
-    tensors: Vec<(
-        &'a gst_analytics::Tensor,
-        &'a gst_analytics::Tensor,
-        Option<&'a gst_analytics::Tensor>,
-    )>,
-) -> Vec<(
-    (Vec<f32>, [usize; 3]),
-    (Vec<f32>, [usize; 3]),
-    Option<(Vec<f32>, [usize; 3])>,
-)> {
-    tensors
-        .into_iter()
-        .filter_map(|(score, bbox, kps)| {
-            let score_map = score.data().map_readable().ok()?;
-            let bbox_map = bbox.data().map_readable().ok()?;
-            let kps_map = kps.and_then(|kps| kps.data().map_readable().ok());
-
-            let score_data = score_map.as_slice_of::<f32>().ok()?.to_vec();
-            let bbox_data = bbox_map.as_slice_of::<f32>().ok()?.to_vec();
-            let kps_data = kps_map.and_then(|kps| Some(kps.as_slice_of::<f32>().ok()?.to_vec()));
-
-            let score_dims = score.dims().try_into().unwrap();
-            let bbox_dims = bbox.dims().try_into().unwrap();
-            let kps_dims = kps.map(|t| t.dims().try_into().unwrap());
-            Some((
-                (score_data, score_dims),
-                (bbox_data, bbox_dims),
-                kps_data.and_then(|kps_data| Some((kps_data, kps_dims?))),
-            ))
-        })
-        .collect()
-}
-
-fn group_tensors<'a>(
-    scores: &HashMap<usize, &'a gst_analytics::Tensor>,
-    bboxes: &HashMap<usize, &'a gst_analytics::Tensor>,
-    kps: &HashMap<usize, &'a gst_analytics::Tensor>,
-) -> Vec<(
-    &'a gst_analytics::Tensor,
-    &'a gst_analytics::Tensor,
-    Option<&'a gst_analytics::Tensor>,
-)> {
-    scores
-        .into_iter()
-        .filter_map(|(anchors, &score)| {
-            Some((score, *bboxes.get(&anchors)?, kps.get(&anchors).map(|v| *v)))
-        })
-        .collect()
-}
-
-fn find_tensors<'a>(
-    meta: &'a gst::MetaRef<'a, gst_analytics::TensorMeta>,
-    id: &'static glib::GStr,
-    channels: usize,
-) -> HashMap<usize, &'a gst_analytics::Tensor> {
-    meta.as_slice()
-        .into_iter()
-        .filter(|tensor| {
-            let is_score = tensor.id() == glib::Quark::from_static_str(id);
-            let is_correct_data_type = tensor.check_type(
-                gst_analytics::TensorDataType::Float32,
-                gst_analytics::TensorDimOrder::RowMajor,
-                &[1, usize::MAX, channels],
-            );
-            is_score && is_correct_data_type
-        })
-        .map(|tensor| (tensor.dims()[1], tensor))
-        .collect()
-}
-
-fn strided(field_id: &str, channels: i32) -> gst::Caps {
+fn strided(field_id: &'static glib::GStr, channels: i32) -> gst::Caps {
     gst::Caps::builder("tensor/strided")
         .field("field-id", field_id)
         .field(
@@ -481,27 +523,31 @@ fn strided(field_id: &str, channels: i32) -> gst::Caps {
 fn tensorgroups(is_kps: bool) -> gst::Caps {
     let v_tensor_s = if is_kps {
         gst::UniqueList::new([
-            strided("scrfd-score", 1),
-            strided("scrfd-score", 1),
-            strided("scrfd-score", 1),
-            strided("scrfd-bbox", 4),
-            strided("scrfd-bbox", 4),
-            strided("scrfd-bbox", 4),
-            strided("scrfd-kps", 10),
-            strided("scrfd-kps", 10),
-            strided("scrfd-kps", 10),
+            strided(SCRFD_SCORE8_OUT_ID, 1),
+            strided(SCRFD_SCORE16_OUT_ID, 1),
+            strided(SCRFD_SCORE32_OUT_ID, 1),
+            strided(SCRFD_BBOX8_OUT_ID, 4),
+            strided(SCRFD_BBOX16_OUT_ID, 4),
+            strided(SCRFD_BBOX32_OUT_ID, 4),
+            strided(SCRFD_KPS8_OUT_ID, 10),
+            strided(SCRFD_KPS16_OUT_ID, 10),
+            strided(SCRFD_KPS32_OUT_ID, 10),
         ])
     } else {
         gst::UniqueList::new([
-            strided("scrfd-score", 1),
-            strided("scrfd-score", 1),
-            strided("scrfd-score", 1),
-            strided("scrfd-bbox", 4),
-            strided("scrfd-bbox", 4),
-            strided("scrfd-bbox", 4),
+            strided(SCRFD_SCORE8_OUT_ID, 1),
+            strided(SCRFD_SCORE16_OUT_ID, 1),
+            strided(SCRFD_SCORE32_OUT_ID, 1),
+            strided(SCRFD_BBOX8_OUT_ID, 4),
+            strided(SCRFD_BBOX16_OUT_ID, 4),
+            strided(SCRFD_BBOX32_OUT_ID, 4),
         ])
     };
-    let group_id = if is_kps { GROUP_ID_KPS } else { GROUP_ID };
+    let group_id = if is_kps {
+        SCRFD_KPS_GROUP_ID
+    } else {
+        SCRFD_GROUP_ID
+    };
     let tensors = gst::Structure::builder("tensorgroups")
         .field(group_id, v_tensor_s)
         .build();

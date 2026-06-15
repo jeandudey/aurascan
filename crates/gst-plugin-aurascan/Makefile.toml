@@ -10,14 +10,14 @@ args = ["videocropscale"]
 
 [tasks.launch-headposeinferencebin]
 dependencies = ["build"]
-env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "headposeinferencebin:6" }
+env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "headposeinferencebin:6,scrfdtensordec:9" }
 command = "gst-launch-1.0"
 args = [
     "autovideosrc",
     "!", "video/x-raw,pixel-aspect-ratio=1/1",
     "!", "videoconvertscale",
-    "!", "video/x-raw,format=RGB,width=640,height=640,pixel-aspect-ratio=1/1",
-    "!", "headposeinferencebin",
+    "!", "video/x-raw,format=RGB,width=640,height=384,pixel-aspect-ratio=1/1",
+    "!", "headposeinferencebin", "scrfdinference::backend-type=rocm", "sixdrepnet360inference::backend-type=rocm",
     "!", "videoconvert",
     "!", "fpsdisplaysink", "sync=false",
 ]

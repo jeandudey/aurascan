@@ -371,10 +371,7 @@ impl BaseTransformImpl for ScrfdInference {
                 res.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
             }
             _ => {
-                let tensor_caps = {
-                    let tmp = self.output_tensors_caps.lock().unwrap();
-                    tmp.copy()
-                };
+                let tensor_caps = self.output_tensors_caps.lock().unwrap().copy();
                 restrictions.intersect_with_mode(&tensor_caps, gst::CapsIntersectMode::First);
                 caps.intersect_with_mode(restrictions, gst::CapsIntersectMode::First)
             }

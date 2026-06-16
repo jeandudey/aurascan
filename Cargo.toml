@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/burn-3ddfa",
+    "crates/epoxy-sys",
     "crates/gst-plugin-aurascan",
     "crates/matio",
     "crates/matio-sys",
@@ -35,10 +36,12 @@ gst-video = { package = "gstreamer-video", version = "0.25" }
 gtk = { package = "gtk4", version = "0.11.3" }
 relm4 = "0.11"
 relm4-components = "0.11"
+wgpu = "29.0"
 
 # Local dependencies
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
+epoxy-sys.path = "crates/epoxy-sys"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
 scrfd-burn.path = "crates/scrfd-burn"

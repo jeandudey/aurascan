@@ -96,7 +96,7 @@ impl Default for ScrfdInference {
 
 #[glib::object_subclass]
 impl ObjectSubclass for ScrfdInference {
-    const NAME: &'static str = "GstBurnExtraScrfdInference";
+    const NAME: &'static str = "GstAurascanScrfdInference";
 
     type Type = super::ScrfdInference;
     type ParentType = gst_base::BaseTransform;
@@ -405,8 +405,8 @@ impl BaseTransformImpl for ScrfdInference {
                     for s in res_video.get_mut().unwrap().iter_mut() {
                         s.remove_field("tensors");
                     }
-                    let mut intersected = filter_video
-                        .intersect_with_mode(&res_video, gst::CapsIntersectMode::First);
+                    let mut intersected =
+                        filter_video.intersect_with_mode(&res_video, gst::CapsIntersectMode::First);
                     if let Some(ref tensor_s) = tensor_s {
                         for s in intersected.get_mut().unwrap().iter_mut() {
                             s.set("tensors", tensor_s.clone());

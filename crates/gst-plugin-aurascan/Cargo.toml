@@ -16,6 +16,7 @@ vulkan = ["burn/vulkan"]
 rocm = ["burn/rocm"]
 scrfd-embedded = ["scrfd-burn/embedded"]
 sixdrepnet360-pretrained = ["sixdrepnet360-burn/pretrained"]
+v1_30 = ["gst-analytics/v1_30"]
 
 [dependencies]
 burn = { workspace = true, features = ["autotune", "dispatch", "flex", "fusion"] }

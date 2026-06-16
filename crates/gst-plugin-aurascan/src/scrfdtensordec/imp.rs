@@ -295,6 +295,7 @@ impl BaseTransformImpl for ScrfdTensorDec {
     }
 }
 
+#[cfg_attr(not(feature = "v1_30"), allow(unused_variables))]
 fn add_detection_meta(
     buffer: &mut gst::BufferRef,
     detections: &[Detection],
@@ -309,9 +310,46 @@ fn add_detection_meta(
             continue;
         };
 
-        if let Err(err) = meta.add_od_mtd(face_class_label, x, y, w, h, detection.score) {
-            gst::warning!(CAT, "Failed to add oriented OD metadata: {err}");
-            continue;
+        let od_meta = match meta.add_od_mtd(face_class_label, x, y, w, h, detection.score) {
+            Ok(v) => v,
+            Err(err) => {
+                gst::warning!(CAT, "Failed to add oriented OD metadata: {err}");
+                continue;
+            }
+        };
+
+        if let Some(points) = detection.kps {
+            #[cfg(feature = "v1_30")]
+            {
+                for point in points {
+                    match meta.add_keypoint_mtd(
+                        gst_analytics::AnalyticsKeypointDimensions::_2d,
+                        point[0] as i32,
+                        point[1] as i32,
+                        0,
+                        gst_analytics::AnalyticsKeypointVisibility::VISIBLE,
+                        detection.score,
+                    ) {
+                        Ok(keypoint_meta) => {
+                            if let Err(err) = meta.set_relation(
+                                gst_analytics::RelTypes::RELATE_TO,
+                                od_meta.id(),
+                                keypoint_meta.id(),
+                            ) {
+                                gst::warning!(
+                                    CAT,
+                                    "Failed to set relation between OD and keypoint: {err}"
+                                );
+                            }
+                        }
+                        Err(err) => {
+                            gst::warning!(CAT, "Failed to add keypoint metadata: {err}");
+                        }
+                    }
+                }
+            }
+        } else {
+            gst::warning!(CAT, "can't add keypoint metadata, ignoring");
         }
     }
 }

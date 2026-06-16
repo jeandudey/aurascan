@@ -42,6 +42,23 @@ args = [
     "!", "fpsdisplaysink", "sync=false",
 ]
 
+[tasks.launch-bytetracker]
+dependencies = ["build"]
+env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "bytetracker:6" }
+command = "gst-launch-1.0"
+args = [
+    "autovideosrc",
+    "!", "video/x-raw,pixel-aspect-ratio=1/1",
+    "!", "videoconvertscale",
+    "!", "video/x-raw,format=RGB,width=640,height=640,pixel-aspect-ratio=1/1",
+    "!", "onnxinference", "execution-provider=cpu", "model-file=../../models/onnx/scrfd_500m.onnx",
+    "!", "scrfdtensordec",
+    "!", "bytetracker",
+    "!", "objectdetectionoverlay",
+    "!", "videoconvert",
+    "!", "fpsdisplaysink", "sync=false",
+]
+
 [tasks.launch-detectioncropmeta]
 dependencies = ["build"]
 env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "detectioncropmeta:6" }

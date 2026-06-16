@@ -6,8 +6,7 @@ use gst::glib::ParamSpecBuilderExt;
 use gst::glib::value::ToValue;
 use gst::prelude::*;
 use gst::subclass::prelude::*;
-use gst_analytics::AnalyticsMetaRefExt;
-use gst_analytics::ffi::gst_analytics_relation_meta_add_tracking_mtd;
+use gst_analytics::{AnalyticsMetaRefExt, AnalyticsODMtd, AnalyticsRelationMetaTrackingExt};
 use gst_base::subclass::prelude::BaseTransformImpl;
 
 use edgefirst_tracker::Tracker;
@@ -270,11 +269,28 @@ impl BaseTransformImpl for ByteTracker {
             .enumerate()
             .filter_map(|(i, track_info)| Some((i, track_info?)))
         {
-            set_track_id(
+            let Some(od_meta_id) = buffer
+                .meta::<gst_analytics::AnalyticsRelationMeta>()
+                .and_then(|meta| {
+                    meta.iter::<AnalyticsODMtd>()
+                        .nth(detection_index)
+                        .map(|meta| meta.id())
+                })
+            else {
+                gst::error!(
+                    CAT,
+                    imp = self,
+                    "No OD meta found for detection index {}",
+                    detection_index
+                );
+                continue;
+            };
+
+            add_tracking_mtd(
                 buffer,
-                detection_index,
-                &track_info,
+                od_meta_id,
                 state.id_for(track_info.uuid.clone()),
+                gst::ClockTime::from_nseconds(track_info.created),
             );
         }
 
@@ -282,79 +298,47 @@ impl BaseTransformImpl for ByteTracker {
     }
 }
 
-fn set_track_id(
+fn add_tracking_mtd(
     buffer: &mut gst::BufferRef,
-    detection_index: usize,
-    track_info: &edgefirst_tracker::TrackInfo,
-    track_id: u64,
+    od_meta_id: u32,
+    tracking_id: u64,
+    tracking_first_seen: gst::ClockTime,
 ) {
-    let mut total_idx = 0;
-    let mut meta_idx = 0;
-    let mut od_id = None;
-    'meta: for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
-        for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
-            if od.location().is_err() {
-                gst::warning!(CAT, "Failed to get location from object detection metadata");
-                continue;
-            }
-
-            if total_idx == detection_index {
-                od_id = Some(od.id());
-                break 'meta;
-            } else {
-                total_idx += 1;
-            }
-        }
-
-        if total_idx >= detection_index {
-            break 'meta;
-        } else {
-            meta_idx += 1;
-        }
-    }
-
-    let Some(od_id) = od_id else {
+    let Some(mut meta) = buffer.meta_mut::<gst_analytics::AnalyticsRelationMeta>() else {
+        gst::error!(CAT, "Failed to get meta to set tracking ID");
         return;
     };
 
-    let mut meta = buffer
-        .iter_meta_mut::<gst_analytics::AnalyticsRelationMeta>()
-        .nth(meta_idx)
-        .expect("meta_idx should be valid");
-
-    // TODO: This probably should be a safe method in gstreamer-analytics.
-    //
-    // This is how gstioutracker does it.
-    let tracking_id = unsafe {
-        let mut mtd = std::mem::MaybeUninit::uninit();
-        gst_analytics_relation_meta_add_tracking_mtd(
-            meta.as_mut_ptr(),
-            track_id,
-            track_info.created,
-            mtd.as_mut_ptr(),
-        );
-        let mtd = mtd.assume_init();
-        mtd.id
+    let tracking_mtd_id = {
+        match meta.add_tracking_mtd(tracking_id, tracking_first_seen) {
+            Ok(v) => v.id(),
+            Err(err) => {
+                gst::error!(CAT, "Failed to add tracking metadata: {}", err);
+                return;
+            }
+        }
     };
-    meta.set_relation(gst_analytics::RelTypes::RELATE_TO, od_id, tracking_id)
-        .unwrap()
+
+    if let Err(err) = meta.set_relation(
+        gst_analytics::RelTypes::RELATE_TO,
+        od_meta_id,
+        tracking_mtd_id,
+    ) {
+        gst::error!(CAT, "Failed to set relation: {}", err);
+    }
 }
 
 fn detections(buffer: &gst::BufferRef) -> Vec<DetectionBox> {
-    let mut detections = Vec::new();
-    for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
-        for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
-            let Ok(location) = od.location() else {
-                gst::warning!(CAT, "Failed to get location from object detection metadata");
-                continue;
-            };
-            detections.push(location_to_detection(&location));
-        }
-    }
-    detections
+    let Some(meta) = buffer.meta::<gst_analytics::AnalyticsRelationMeta>() else {
+        return Vec::new();
+    };
+
+    meta.iter::<gst_analytics::AnalyticsODMtd>()
+        .filter_map(|od_meta| od_meta.location().map(location_to_detection).ok())
+        .collect()
 }
 
-fn location_to_detection(location: &gst_analytics::AnalyticsODLocation) -> DetectionBox {
+fn location_to_detection(location: gst_analytics::AnalyticsODLocation) -> DetectionBox {
     let score = location.loc_conf_lvl;
     let x = location.x as f32;
     let y = location.y as f32;

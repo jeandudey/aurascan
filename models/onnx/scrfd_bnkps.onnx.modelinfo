@@ -13,55 +13,55 @@ dir=input
 ranges=0.0,1.0
 
 [score_8]
-id=scrfd-score-out
+id=scrfd-score8-out
 type=float32
 dims=-1,-1,1
 dir=output
 
 [score_16]
-id=scrfd-score-out
+id=scrfd-score16-out
 type=float32
 dims=-1,-1,1
 dir=output
 
 [score_32]
-id=scrfd-score-out
+id=scrfd-score32-out
 type=float32
 dims=-1,-1,1
 dir=output
 
 [bbox_8]
-id=scrfd-bbox-out
+id=scrfd-bbox8-out
 type=float32
 dims=-1,-1,4
 dir=output
 
 [bbox_16]
-id=scrfd-bbox-out
+id=scrfd-bbox16-out
 type=float32
 dims=-1,-1,4
 dir=output
 
 [bbox_32]
-id=scrfd-bbox-out
+id=scrfd-bbox32-out
 type=float32
 dims=-1,-1,4
 dir=output
 
 [kps_8]
-id=scrfd-kps-out
+id=scrfd-kps8-out
 type=float32
 dims=-1,-1,10
 dir=output
 
 [kps_16]
-id=scrfd-kps-out
+id=scrfd-kps16-out
 type=float32
 dims=-1,-1,10
 dir=output
 
 [kps_32]
-id=scrfd-kps-out
+id=scrfd-kps32-out
 type=float32
 dims=-1,-1,10
 dir=output

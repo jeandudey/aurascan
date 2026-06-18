@@ -1,0 +1,19 @@
+[package]
+name = "aurascan-headposeview"
+version = "0.1.0"
+edition = "2024"
+
+[[example]]
+name = "run"
+path = "examples/run.rs"
+required-features = ["run"]
+
+[features]
+run = ["pollster", "winit"]
+
+[dependencies]
+bytemuck.workspace = true
+glam.workspace = true
+wgpu.workspace = true
+pollster = { version = "0.4", optional = true }
+winit = { version = "0.30", optional = true }

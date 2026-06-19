@@ -8,4 +8,5 @@ aurascan-headposeview.workspace = true
 epoxy-sys.workspace = true
 glow.workspace = true
 gtk.workspace = true
+gst.workspace = true
 wgpu.workspace = true

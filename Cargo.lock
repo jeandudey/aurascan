@@ -322,6 +322,7 @@ dependencies = [
  "aurascan-headposeview",
  "epoxy-sys",
  "glow",
+ "gstreamer",
  "gtk4",
  "wgpu",
 ]

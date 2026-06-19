@@ -297,6 +297,7 @@ checksum = "21e4227379beff4205943696e6c3e0cd809bacdf3f0edd6e3dd153e2269571a4"
 name = "aurascan"
 version = "0.1.0"
 dependencies = [
+ "aurascan-gtk4",
  "aurascan-headposeview",
  "epoxy-sys",
  "eyre",
@@ -311,6 +312,17 @@ dependencies = [
  "libadwaita",
  "relm4",
  "relm4-components",
+ "wgpu",
+]
+
+[[package]]
+name = "aurascan-gtk4"
+version = "0.1.0"
+dependencies = [
+ "aurascan-headposeview",
+ "epoxy-sys",
+ "glow",
+ "gtk4",
  "wgpu",
 ]
 

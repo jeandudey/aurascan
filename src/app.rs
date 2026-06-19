@@ -3,8 +3,8 @@ use crate::app::resolution_selector::{ResolutionSelector, ResolutionSelectorInpu
 use crate::app::source_selector::SourceSelector;
 use crate::app::status::{Status, StatusInput};
 use crate::pipeline2::{Pipeline, PipelineState};
-use crate::widgets::HeadPoseView;
 use adw::prelude::*;
+use aurascan_gtk4::HeadPoseView;
 use relm4::SimpleComponent;
 use relm4::prelude::*;
 use relm4_components::alert::{Alert, AlertMsg, AlertSettings};

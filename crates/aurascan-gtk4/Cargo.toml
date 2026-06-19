@@ -1,0 +1,11 @@
+[package]
+name = "aurascan-gtk4"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aurascan-headposeview.workspace = true
+epoxy-sys.workspace = true
+glow.workspace = true
+gtk.workspace = true
+wgpu.workspace = true

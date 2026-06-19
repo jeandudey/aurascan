@@ -3,13 +3,12 @@ use relm4::RelmApp;
 
 mod app;
 mod pipeline2;
-mod widgets;
 
 const CSS: &str = include_str!("app.css");
 
 fn main() {
     gst::init().unwrap();
-    gtk::init().unwrap();
+    aurascan_gtk4::init();
     adw::init().unwrap();
 
     gstgtk4::plugin_register_static().unwrap();

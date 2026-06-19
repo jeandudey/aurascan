@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/aurascan-gtk4",
     "crates/aurascan-headposeview",
     "crates/burn-3ddfa",
     "crates/epoxy-sys",
@@ -43,6 +44,7 @@ relm4-components = "0.11"
 wgpu = "29.0"
 
 # Local dependencies
+aurascan-gtk4.path = "crates/aurascan-gtk4"
 aurascan-headposeview.path = "crates/aurascan-headposeview"
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
@@ -59,6 +61,7 @@ edition = "2024"
 
 [dependencies]
 adw = { workspace = true, features = ["v1_4"] }
+aurascan-gtk4.workspace = true
 aurascan-headposeview.workspace = true
 epoxy-sys.workspace = true
 eyre.workspace = true

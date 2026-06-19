@@ -7,16 +7,23 @@ mod imp {
 
     use aurascan_headposeview::Renderer;
 
-    use crate::widgets::WGPUArea;
+    use crate::WGPUArea;
 
     use super::*;
 
     #[derive(Default)]
     pub struct HeadPoseView {
-        pub renderer: OnceCell<Renderer>,
-        pub wgpu_area: WGPUArea,
-        pub rotation: RefCell<(f32, f32, f32)>,
-        pub aspect_ratio: RefCell<f32>,
+        renderer: OnceCell<Renderer>,
+        rotation: RefCell<(f32, f32, f32)>,
+        aspect_ratio: RefCell<f32>,
+        wgpu_area: WGPUArea,
+    }
+
+    impl HeadPoseView {
+        pub fn set_rotation(&self, yaw: f32, pitch: f32, roll: f32) {
+            *self.rotation.borrow_mut() = (yaw, pitch, roll);
+            self.wgpu_area.queue_render();
+        }
     }
 
     #[glib::object_subclass]
@@ -101,7 +108,6 @@ impl HeadPoseView {
     }
 
     pub fn set_rotation(&self, yaw: f32, pitch: f32, roll: f32) {
-        *self.imp().rotation.borrow_mut() = (yaw, pitch, roll);
-        self.imp().wgpu_area.queue_render();
+        self.imp().set_rotation(yaw, pitch, roll);
     }
 }

@@ -323,7 +323,10 @@ dependencies = [
  "epoxy-sys",
  "glow",
  "gstreamer",
+ "gstreamer-video",
  "gtk4",
+ "log",
+ "thiserror 2.0.18",
  "wgpu",
 ]
 

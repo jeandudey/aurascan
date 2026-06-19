@@ -210,16 +210,9 @@ impl Pipeline {
                 return gst::PadProbeReturn::Ok;
             };
 
-            let structure = meta.structure();
-            let Some((yaw, pitch, roll)) = structure.get("yaw").ok().and_then(|y| {
-                structure
-                    .get("pitch")
-                    .ok()
-                    .and_then(|p| structure.get("roll").ok().map(|r| (y, p, r)))
-            }) else {
+            let Some((yaw, pitch, roll)) = parse_euler_angles_meta(meta) else {
                 return gst::PadProbeReturn::Ok;
             };
-
             let measurements = InferenceMeasurements {
                 x: 0.0,
                 y: 0.0,
@@ -302,4 +295,13 @@ impl Pipeline {
     pub fn inferencesink(&self) -> &gst::Element {
         &self.inferencesink
     }
+}
+
+fn parse_euler_angles_meta(meta: gst::MetaRef<gst::meta::CustomMeta>) -> Option<(f32, f32, f32)> {
+    let structure = meta.structure();
+
+    let yaw = structure.get::<f32>("yaw").ok()?;
+    let pitch = structure.get::<f32>("pitch").ok()?;
+    let roll = structure.get::<f32>("roll").ok()?;
+    Some((yaw, pitch, roll))
 }

@@ -9,4 +9,7 @@ epoxy-sys.workspace = true
 glow.workspace = true
 gtk.workspace = true
 gst.workspace = true
+gst-video.workspace = true
+log.workspace = true
+thiserror.workspace = true
 wgpu.workspace = true

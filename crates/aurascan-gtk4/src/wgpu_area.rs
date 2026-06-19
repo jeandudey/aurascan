@@ -105,6 +105,7 @@ mod imp {
             texture: glow::NativeTexture,
             label: Option<&str>,
             format: wgpu::TextureFormat,
+            usage: wgpu::TextureUses,
         ) -> wgpu::Texture {
             let size = self.size();
 
@@ -118,7 +119,7 @@ mod imp {
                         sample_count: 1,
                         dimension: wgpu::TextureDimension::D2,
                         format,
-                        usage: wgpu::TextureUses::UNINITIALIZED,
+                        usage,
                         memory_flags: wgpu::hal::MemoryFlags::empty(),
                         view_formats: Vec::new(),
                     },
@@ -151,6 +152,7 @@ mod imp {
             renderbuffer: glow::NativeRenderbuffer,
             label: Option<&str>,
             format: wgpu::TextureFormat,
+            usage: wgpu::TextureUses,
         ) -> wgpu::Texture {
             let size = self.size();
 
@@ -164,7 +166,7 @@ mod imp {
                         sample_count: 1,
                         dimension: wgpu::TextureDimension::D2,
                         format,
-                        usage: wgpu::TextureUses::UNINITIALIZED,
+                        usage,
                         memory_flags: wgpu::hal::MemoryFlags::empty(),
                         view_formats: Vec::new(),
                     },
@@ -196,13 +198,14 @@ mod imp {
             attachment: Attachment,
             label: Option<&str>,
             format: wgpu::TextureFormat,
+            usage: wgpu::TextureUses,
         ) -> wgpu::Texture {
             match attachment {
                 Attachment::Texture(texture) => unsafe {
-                    self.texture_from_raw(texture, label, format)
+                    self.texture_from_raw(texture, label, format, usage)
                 },
                 Attachment::Renderbuffer(renderbuffer) => unsafe {
-                    self.texture_from_raw_renderbuffer(renderbuffer, label, format)
+                    self.texture_from_raw_renderbuffer(renderbuffer, label, format, usage)
                 },
             }
         }
@@ -330,6 +333,7 @@ mod imp {
                             attachment,
                             Some("wgpuarea-color-attachment"),
                             color_format,
+                            wgpu::TextureUses::COLOR_TARGET,
                         )
                     })
             };
@@ -347,6 +351,7 @@ mod imp {
                             attachment,
                             Some("wgpuarea-depth"),
                             depth_format,
+                            wgpu::TextureUses::DEPTH_STENCIL_WRITE,
                         )
                     })
             };

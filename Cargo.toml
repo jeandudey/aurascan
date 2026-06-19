@@ -39,8 +39,10 @@ gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25" }
 gtk = { package = "gtk4", version = "0.11.3" }
+log = "0.4"
 relm4 = "0.11"
 relm4-components = "0.11"
+thiserror = "2"
 wgpu = "29.0"
 
 # Local dependencies

@@ -52,7 +52,7 @@ impl Gpu {
         };
         surface.configure(&device, &config);
 
-        let renderer = Renderer::new(&device, format);
+        let renderer = Renderer::new(&device, format, wgpu::TextureFormat::Depth32Float);
         let depth_view = Self::depth_texture(&device, w, h);
 
         Self {

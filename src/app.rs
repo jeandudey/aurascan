@@ -2,7 +2,8 @@ use crate::app::msg::AppMsg;
 use crate::app::resolution_selector::{ResolutionSelector, ResolutionSelectorInput};
 use crate::app::source_selector::SourceSelector;
 use crate::app::status::{Status, StatusInput};
-use crate::pipeline::{Pipeline, PipelineState};
+use crate::pipeline2::{Pipeline, PipelineState};
+use crate::widgets::HeadPoseView;
 use adw::prelude::*;
 use relm4::SimpleComponent;
 use relm4::prelude::*;
@@ -22,6 +23,9 @@ pub struct AppModel {
     pipeline: Arc<Mutex<Pipeline>>,
     toggle_label: &'static str,
     start_requested: bool,
+    yaw: f32,
+    pitch: f32,
+    roll: f32,
 }
 
 #[relm4::component(pub)]
@@ -118,38 +122,45 @@ impl SimpleComponent for AppModel {
                                 set_content = &gtk::Box {
                                     set_orientation: gtk::Orientation::Vertical,
 
-                                    gtk::Overlay {
-                                        #[wrap(Some)]
-                                        set_child = &gtk::Overlay {
-                                            #[wrap(Some)]
-                                            set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().livefeedsink()) {
-                                                set_hexpand: true,
-                                                set_vexpand: true,
-                                            },
+                                    //gtk::Overlay {
+                                    //    #[wrap(Some)]
+                                    //    set_child = &gtk::Overlay {
+                                    //        #[wrap(Some)]
+                                    //        set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().livefeedsink()) {
+                                    //            set_hexpand: true,
+                                    //            set_vexpand: true,
+                                    //        },
 
-                                            add_overlay = &gtk::Frame {
-                                                add_css_class: "pip",
-                                                set_overflow: gtk::Overflow::Hidden,
-                                                set_halign: gtk::Align::End,
-                                                set_valign: gtk::Align::Start,
-                                                set_margin_all: 16,
-                                                set_size_request: (224, 224),
+                                    //        add_overlay = &gtk::Frame {
+                                    //            add_css_class: "pip",
+                                    //            set_overflow: gtk::Overflow::Hidden,
+                                    //            set_halign: gtk::Align::End,
+                                    //            set_valign: gtk::Align::Start,
+                                    //            set_margin_all: 16,
+                                    //            set_size_request: (224, 224),
 
-                                                #[wrap(Some)]
-                                                set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().inferencesink()),
-                                            },
-                                        },
+                                    //            #[wrap(Some)]
+                                    //            set_child = &gstgtk4::RenderWidget::new(&model.pipeline.lock().unwrap().inferencesink()),
+                                    //        },
+                                    //    },
 
-                                        add_overlay = &gtk::Spinner {
-                                            set_halign: gtk::Align::Center,
-                                            set_valign: gtk::Align::Center,
-                                            set_width_request: 48,
-                                            set_height_request: 48,
-                                            #[watch]
-                                            set_visible: model.start_requested,
-                                            #[watch]
-                                            set_spinning: model.start_requested,
-                                        },
+                                    //    add_overlay = &gtk::Spinner {
+                                    //        set_halign: gtk::Align::Center,
+                                    //        set_valign: gtk::Align::Center,
+                                    //        set_width_request: 48,
+                                    //        set_height_request: 48,
+                                    //        #[watch]
+                                    //        set_visible: model.start_requested,
+                                    //        #[watch]
+                                    //        set_spinning: model.start_requested,
+                                    //    },
+                                    //},
+
+                                    HeadPoseView {
+                                        set_hexpand: true,
+                                        set_vexpand: true,
+                                        #[watch]
+                                        set_rotation: (model.yaw, model.pitch, model.roll),
                                     },
 
                                     model.status.widget(),
@@ -212,7 +223,11 @@ impl SimpleComponent for AppModel {
 
         pipeline.connect_inference_measurements({
             let status_sender = status.sender().clone();
+            let sender = sender.input_sender().clone();
             move |measurements| {
+                sender
+                    .send(AppMsg::UpdateInference(measurements.clone()))
+                    .unwrap();
                 status_sender
                     .send(StatusInput::UpdateInference(measurements))
                     .unwrap();
@@ -240,6 +255,9 @@ impl SimpleComponent for AppModel {
             pipeline: Arc::new(Mutex::new(pipeline)),
             toggle_label: "Start",
             start_requested: false,
+            yaw: 0.0,
+            pitch: 0.0,
+            roll: 0.0,
         };
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -254,6 +272,11 @@ impl SimpleComponent for AppModel {
                         pipeline.lock().unwrap().set_source(device).unwrap();
                     }
                 });
+            }
+            AppMsg::UpdateInference(measurements) => {
+                self.yaw = measurements.yaw;
+                self.pitch = measurements.pitch;
+                self.roll = measurements.roll;
             }
             AppMsg::TogglePipeline => {
                 let pipeline = self.pipeline.lock().unwrap();

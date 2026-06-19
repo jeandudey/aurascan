@@ -2,7 +2,8 @@ use crate::app::AppModel;
 use relm4::RelmApp;
 
 mod app;
-mod pipeline;
+mod pipeline2;
+mod widgets;
 
 const CSS: &str = include_str!("app.css");
 

@@ -1,4 +1,4 @@
-use crate::pipeline::InferenceMeasurements;
+use crate::pipeline2::InferenceMeasurements;
 use gtk::prelude::*;
 use relm4::prelude::*;
 

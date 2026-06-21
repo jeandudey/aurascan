@@ -4,7 +4,7 @@ use crate::app::source_selector::SourceSelector;
 use crate::app::status::{Status, StatusInput};
 use crate::pipeline2::{Pipeline, PipelineState};
 use adw::prelude::*;
-use aurascan_gtk4::HeadPoseView;
+use aurascan_gtk4::{HeadPoseView, Viewfinder};
 use relm4::SimpleComponent;
 use relm4::prelude::*;
 use relm4_components::alert::{Alert, AlertMsg, AlertSettings};
@@ -116,11 +116,32 @@ impl SimpleComponent for AppModel {
 
                             #[wrap(Some)]
                             set_child = &adw::ToolbarView {
-                                add_top_bar = &adw::HeaderBar {},
+                                add_top_bar = &adw::HeaderBar {
+                                    #[wrap(Some)]
+                                    set_title_widget = &adw::ViewSwitcher {
+                                        #[wrap(Some)]
+                                        set_stack = &adw::ViewStack {
+                                            add_titled: (
+                                                &gtk::Label::new(Some("titled")),
+                                                Some("titled"),
+                                                "titled",
+                                            ),
+                                        },
+                                    },
+
+                                    pack_end = &gtk::MenuButton {
+                                        set_icon_name: "open-menu-symbolic",
+                                    },
+                                },
 
                                 #[wrap(Some)]
                                 set_content = &gtk::Box {
                                     set_orientation: gtk::Orientation::Vertical,
+
+                                    Viewfinder::new("tech.jeandudey.Aurascan") {
+                                        set_hexpand: true,
+                                        set_vexpand: true,
+                                    },
 
                                     //gtk::Overlay {
                                     //    #[wrap(Some)]
@@ -156,12 +177,12 @@ impl SimpleComponent for AppModel {
                                     //    },
                                     //},
 
-                                    HeadPoseView {
-                                        set_hexpand: true,
-                                        set_vexpand: true,
-                                        #[watch]
-                                        set_rotation: (model.yaw, model.pitch, model.roll),
-                                    },
+                                    //HeadPoseView {
+                                    //    set_hexpand: true,
+                                    //    set_vexpand: true,
+                                    //    #[watch]
+                                    //    set_rotation: (model.yaw, model.pitch, model.roll),
+                                    //},
 
                                     model.status.widget(),
                                 }

@@ -231,7 +231,7 @@ mod imp {
 
             let obj = self.obj();
 
-            obj.set_use_es(true);
+            obj.set_allowed_apis(gdk::GLAPI::GLES);
             obj.set_has_stencil_buffer(true);
             obj.set_has_depth_buffer(true);
         }

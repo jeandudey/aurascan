@@ -1,21 +1,18 @@
-use crate::app::AppModel;
-use relm4::RelmApp;
-
 mod app;
+mod application;
 mod pipeline2;
+
+use crate::app::AppModel;
+use crate::application::Application;
+use relm4::RelmApp;
 
 const CSS: &str = include_str!("app.css");
 
 fn main() {
-    gst::init().unwrap();
-    aurascan_gtk4::init();
-    adw::init().unwrap();
+    let application = Application::new();
 
-    gstgtk4::plugin_register_static().unwrap();
-    gstaurascan::plugin_register_static().unwrap();
-
-    let app = RelmApp::new("tech.jeandudey.AuraScan");
-    relm4::set_global_css(CSS);
+    let app = RelmApp::from_app(application);
+    //relm4::set_global_css(CSS);
     app.run::<AppModel>(());
     unsafe { gst::deinit() };
 }

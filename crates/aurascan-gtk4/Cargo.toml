@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+adw.workspace = true
 aurascan-headposeview.workspace = true
 epoxy-sys.workspace = true
+futures-channel.workspace = true
 glow.workspace = true
 gtk.workspace = true
 gst.workspace = true
+gst-plugin-aurascan.workspace = true
+gst-plugin-gtk4.workspace = true
 gst-video.workspace = true
 log.workspace = true
 thiserror.workspace = true

@@ -48,6 +48,7 @@ mod imp {
         type Interfaces = (gio::ListModel,);
     }
 
+    #[glib::derived_properties]
     impl ObjectImpl for DeviceProvider {
         fn constructed(&self) {
             self.parent_constructed();
@@ -193,6 +194,17 @@ impl DeviceProvider {
             .get()
             .and_then(|f| cameras.iter().find(|camera| f(camera)))
             .cloned()
+    }
+
+    /// Gets a [`Camera`] object for the given camera index.
+    ///
+    /// # Returns
+    ///
+    /// a [`Camera`] at `position`.
+    ///
+    /// [`Camera`]: crate::Camera
+    pub fn camera(&self, position: u32) -> Option<crate::Camera> {
+        self.item(position).and_downcast()
     }
 }
 

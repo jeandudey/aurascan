@@ -41,6 +41,19 @@ impl Camera {
         glib::Object::builder().property("device", device).build()
     }
 
+    pub(crate) fn reconfigure(&self, element: &gst::Element) -> Result<(), glib::BoolError> {
+        self.device().reconfigure_element(element)
+    }
+
+    pub(crate) fn create_element(
+        &self,
+        client_name: &str,
+    ) -> Result<gst::Element, glib::BoolError> {
+        let element = self.device().create_element(None)?;
+        element.set_property("client-name", client_name);
+        Ok(element)
+    }
+
     /// Gets the `serial` of the device
     ///
     /// For newer pipewire versions this corresponds to the `target-object` of

@@ -8,12 +8,15 @@ use gst::prelude::*;
 mod camera;
 mod device_provider;
 mod head_pose_view;
+mod pipeline_tee;
 mod viewfinder;
 mod wgpu_area;
 
 pub use camera::Camera;
 pub use device_provider::{DeviceProvider, DeviceProviderError};
 pub use head_pose_view::HeadPoseView;
+pub use pipeline_tee::PipelineTee;
+pub use viewfinder::{Viewfinder, ViewfinderState};
 pub use wgpu_area::WGPUArea;
 
 pub(crate) const SUPPORTED_ENCODINGS: [&str; 2] = ["video/x-raw", "image/jpeg"];
@@ -51,10 +54,17 @@ static IS_INIT: Once = Once::new();
 pub fn init() {
     IS_INIT.call_once(|| {
         gtk::init().unwrap();
+        adw::init().unwrap();
+        gst::init().unwrap();
+
+        gstaurascan::plugin_register_static().unwrap();
+        gstgtk4::plugin_register_static().unwrap();
 
         Camera::static_type();
         DeviceProvider::static_type();
         HeadPoseView::static_type();
+        PipelineTee::static_type();
+        Viewfinder::static_type();
         WGPUArea::static_type();
     });
 }

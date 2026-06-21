@@ -310,8 +310,10 @@ dependencies = [
  "gstreamer-video",
  "gtk4",
  "libadwaita",
+ "log",
  "relm4",
  "relm4-components",
+ "tracing-subscriber",
  "wgpu",
 ]
 
@@ -321,10 +323,14 @@ version = "0.1.0"
 dependencies = [
  "aurascan-headposeview",
  "epoxy-sys",
+ "futures-channel",
  "glow",
+ "gst-plugin-aurascan",
+ "gst-plugin-gtk4",
  "gstreamer",
  "gstreamer-video",
  "gtk4",
+ "libadwaita",
  "log",
  "thiserror 2.0.18",
  "wgpu",

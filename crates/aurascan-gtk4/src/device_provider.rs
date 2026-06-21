@@ -147,7 +147,7 @@ impl DeviceProvider {
             .iter()
             .filter(|device| is_camera(device))
             .map(crate::Camera::new)
-            .filter(|device| is_ir_camera(device))
+            .filter(|device| !is_ir_camera(device))
             .collect::<Vec<_>>();
         cameras.retain(|item| seen.insert(item.target_object()));
         cameras.iter().for_each(|camera| {

@@ -39,6 +39,12 @@ mod imp {
         fn started(&self) -> bool {
             STARTED.is_completed()
         }
+
+        pub fn has_camera(&self, camera: &crate::Camera) -> bool {
+            self.cameras.borrow().iter().any(|c| {
+                c.device() == camera.device() || c.target_object() == camera.target_object()
+            })
+        }
     }
 
     #[glib::object_subclass]
@@ -127,7 +133,10 @@ impl DeviceProvider {
     where
         F: Fn(&crate::Camera) -> bool + 'static,
     {
+        log::debug!("DeviceProvider::start_with_default");
+
         if STARTED.is_completed() {
+            log::debug!("DeviceProvider already started");
             return Ok(());
         }
 
@@ -171,7 +180,10 @@ impl DeviceProvider {
                 self,
                 #[upgrade_or]
                 glib::ControlFlow::Break,
-                move |_, msg| { glib::ControlFlow::Continue }
+                move |_, msg| {
+                    obj.handle_message(msg);
+                    glib::ControlFlow::Continue
+                }
             ))
             .expect("Failed to add bus watch");
         imp.bus_watch.set(watch).unwrap();
@@ -205,6 +217,42 @@ impl DeviceProvider {
     /// [`Camera`]: crate::Camera
     pub fn camera(&self, position: u32) -> Option<crate::Camera> {
         self.item(position).and_downcast()
+    }
+
+    fn handle_message(&self, msg: &gst::Message) {
+        let imp = self.imp();
+
+        match msg.view() {
+            gst::MessageView::Error(err) => {
+                log::error!(
+                    "Error from {:?}: {} ({:?})",
+                    err.src().map(|s| s.path_string()),
+                    err.error(),
+                    err.debug()
+                );
+            }
+            gst::MessageView::DeviceAdded(e) => {
+                log::debug!("Device added: {:?}", e.structure());
+
+                if let Some(device) = e
+                    .structure()
+                    .and_then(|s| s.get::<gst::Device>("device").ok())
+                {
+                    if !is_camera(&device) {
+                        return;
+                    }
+
+                    let device = crate::Camera::new(&device);
+                    if !imp.has_camera(&device) {
+                        if is_ir_camera(&device) {
+                            log::info!("IR Camera ignored: {}", device.display_name());
+                        }
+                    }
+                }
+            }
+            gst::MessageView::DeviceRemoved(_s) => {}
+            _ => (),
+        }
     }
 }
 

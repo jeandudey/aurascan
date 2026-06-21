@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::sync::{Arc, Mutex};
+
 use gst::prelude::*;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
@@ -44,6 +46,7 @@ mod imp {
 
         pub camerabin: OnceCell<gst::Element>,
         pub camera_element: OnceCell<gst::Element>,
+        pub capsfilter: OnceCell<gst::Element>,
 
         pub devices: OnceCell<crate::DeviceProvider>,
         pub bus_watch: OnceCell<gst::bus::BusWatchGuard>,
@@ -399,7 +402,48 @@ impl Viewfinder {
             &capsfilter_post_decode,
         ])?;
         gst::Element::link_many([device_src, &capsfilter, &decodebin3])?;
-        Ok(bin.upcast())
+
+        self.imp().capsfilter.set(capsfilter).unwrap();
+
+        let (sender, receiver) = futures_channel::oneshot::channel();
+        let sender = Arc::new(Mutex::new(Some(sender)));
+        decodebin3.connect_pad_added(glib::clone!(
+            #[weak]
+            capsfilter_post_decode,
+            move |_, pad| {
+                let has_succeeded = pad.link(&capsfilter_post_decode.static_pad("sink").unwrap()).inspect_err(|err| {
+                    log::error!("Failed to link decodebin3:video_%u pad with capsfilter_post_decode:sink pad: {err}");
+                }).is_ok();
+                let mut guard = sender.lock().unwrap();
+                if let Some(sender) = guard.take() {
+                    sender.send(has_succeeded).ok();
+                }
+            }
+        ));
+
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = obj)]
+            self,
+            async move {
+                let has_succeeded = receiver.await.unwrap_or(false);
+                if !has_succeeded {
+                    obj.imp().set_state(ViewfinderState::Error);
+                }
+            }
+        ));
+
+        let pad = capsfilter_post_decode.static_pad("src").unwrap();
+        let ghost_pad = gst::GhostPad::with_target(&pad)?;
+        ghost_pad.set_active(true)?;
+
+        bin.add_pad(&ghost_pad)?;
+
+        let wrappercamerabinsrc = gst::ElementFactory::make("wrappercamerabinsrc")
+            .property("video-source", &bin)
+            .build()
+            .expect("Missing GStreamer Bad Plug-ins");
+
+        Ok(wrappercamerabinsrc)
     }
 
     fn setup_camera_element(&self, camera: &crate::Camera) -> Result<(), glib::BoolError> {
@@ -414,6 +458,11 @@ impl Viewfinder {
             imp.camerabin().set_property("camera-source", &wrapper);
 
             imp.camera_element.set(element).unwrap();
+        }
+
+        if let Some(capsfilter) = imp.capsfilter.get() {
+            let caps = camera.best_caps();
+            capsfilter.set_property("caps", &caps);
         }
 
         Ok(())

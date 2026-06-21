@@ -19,6 +19,7 @@ pub use pipeline_tee::PipelineTee;
 pub use viewfinder::{Viewfinder, ViewfinderState};
 pub use wgpu_area::WGPUArea;
 
+pub(crate) const PREFERRED_FORMATS: [&str; 5] = ["I420", "BGRx", "RGBx", "xBGR", "xRGB"];
 pub(crate) const SUPPORTED_ENCODINGS: [&str; 2] = ["video/x-raw", "image/jpeg"];
 pub(crate) const MAXIMUM_RATE: i32 = 30;
 

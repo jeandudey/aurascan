@@ -268,6 +268,8 @@ impl SimpleComponent for AppModel {
             })
             .forward(sender.input_sender(), |_| AppMsg::HideError);
 
+        aurascan_gtk4::DeviceProvider::instance().start().unwrap();
+
         let model = AppModel {
             resolution_selector,
             source_selector,

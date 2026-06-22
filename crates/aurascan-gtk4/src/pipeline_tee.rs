@@ -18,7 +18,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for PipelineTee {
-        const NAME: &'static str = "AperturePipelineTee";
+        const NAME: &'static str = "AscPipelineTee";
         type Type = super::PipelineTee;
         type ParentType = gst::Bin;
     }
@@ -66,7 +66,13 @@ impl PipelineTee {
     pub fn add_branch(&self, branch: &gst::Element) {
         let imp = self.imp();
 
-        let queue = gst::ElementFactory::make("queue").build().unwrap();
+        let queue = gst::ElementFactory::make("queue")
+            .property_from_str("leaky", "downstream")
+            .property("max-size-buffers", 2u32)
+            .property("max-size-bytes", 0u32)
+            .property("max-size-time", 0u64)
+            .build()
+            .unwrap();
 
         imp.hashmap
             .lock()
@@ -76,13 +82,29 @@ impl PipelineTee {
         self.add_many([&queue, branch]).unwrap();
         queue.link(branch).unwrap();
 
-        let tee_pad = imp.tee.get().unwrap().request_pad_simple("src_%u").unwrap();
+        let tee = imp.tee.get().unwrap();
+        let tee_pad = tee.request_pad_simple("src_%u").unwrap();
         let queue_pad = queue.static_pad("sink").unwrap();
 
-        tee_pad.link(&queue_pad).unwrap();
-
-        queue.sync_state_with_parent().unwrap();
-        branch.sync_state_with_parent().unwrap();
+        tee_pad.add_probe(
+            gst::PadProbeType::BLOCK_DOWNSTREAM,
+            glib::clone!(
+                #[weak]
+                queue,
+                #[weak]
+                branch,
+                #[weak]
+                queue_pad,
+                #[upgrade_or]
+                gst::PadProbeReturn::Remove,
+                move |tee_pad, _| {
+                    tee_pad.link(&queue_pad).unwrap();
+                    queue.sync_state_with_parent().unwrap();
+                    branch.sync_state_with_parent().unwrap();
+                    gst::PadProbeReturn::Remove
+                }
+            ),
+        );
     }
 
     pub fn remove_branch(&self, branch: &gst::Element) {

@@ -271,9 +271,9 @@ impl BaseTransformImpl for ScrfdInference {
 
         let state = state.as_mut().unwrap();
 
-        let strided = |field_id: &glib::GStr, channels: i32| {
+        let strided = |tensor_id: &glib::GStr, channels: i32| {
             gst::Caps::builder("tensor/strided")
-                .field("field-id", field_id)
+                .field("tensor-id", tensor_id)
                 .field(
                     "dims",
                     gst::Array::from_values([

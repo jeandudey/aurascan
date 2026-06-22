@@ -544,9 +544,9 @@ fn nms(mut dets: Vec<Detection>, iou_threshold: f32) -> Vec<Detection> {
     keep
 }
 
-fn strided(field_id: &'static glib::GStr, channels: i32) -> gst::Caps {
+fn strided(tensor_id: &'static glib::GStr, channels: i32) -> gst::Caps {
     gst::Caps::builder("tensor/strided")
-        .field("field-id", field_id)
+        .field("tensor-id", tensor_id)
         .field(
             "dims",
             gst::Array::from_values([

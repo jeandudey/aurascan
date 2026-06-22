@@ -187,6 +187,7 @@ impl ElementImpl for SixDRepNet360Inference {
                 .format(gst_video::VideoFormat::Rgb)
                 .width(224)
                 .height(224)
+                .pixel_aspect_ratio(gst::Fraction::new(1, 1))
                 .build();
 
             let sink_pad_template = gst::PadTemplate::new(
@@ -201,13 +202,14 @@ impl ElementImpl for SixDRepNet360Inference {
                 .format(gst_video::VideoFormat::Rgb)
                 .width(224)
                 .height(224)
+                .pixel_aspect_ratio(gst::Fraction::new(1, 1))
                 .field(
                     "tensors",
                     gst::Structure::builder("tensorgroups")
                         .field(
                             GROUP_ID,
                             gst::UniqueList::new([gst::Caps::builder("tensor/strided")
-                                .field("field-id", SIXDREPNET360_TENSOR_ID)
+                                .field("tensor-id", SIXDREPNET360_TENSOR_ID)
                                 .field(
                                     "dims",
                                     gst::Array::from_values([
@@ -302,6 +304,8 @@ impl BaseTransformImpl for SixDRepNet360Inference {
                     tensors.remove_field(GROUP_ID);
                     s.set("tensors", tensors);
                 }
+                s.set("width", 224i32);
+                s.set("height", 224i32);
             }
 
             res
@@ -331,6 +335,8 @@ impl BaseTransformImpl for SixDRepNet360Inference {
                 );
 
                 s.set("tensors", tensors);
+                s.set("width", 224i32);
+                s.set("height", 224i32);
             }
 
             res

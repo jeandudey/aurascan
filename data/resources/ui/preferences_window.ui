@@ -13,7 +13,8 @@
               <object class="AdwComboRow">
                 <property name="title" translatable="yes">_Back end</property>
                 <property name="subtitle" translatable="yes">Select the back end to use for inference</property>
-                <property name="use-underline">true</property>
+                <property name="use-underline">True</property>
+                <property name="action-name">preferences-window.backend</property>
                 <property name="model">
                   <object class="GtkStringList">
                     <items>

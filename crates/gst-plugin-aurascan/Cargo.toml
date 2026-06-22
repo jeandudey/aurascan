@@ -23,10 +23,10 @@ burn = { workspace = true, features = ["autotune", "dispatch", "flex", "fusion"]
 byte-slice-cast.workspace = true
 edgefirst-tracker.workspace = true
 eyre.workspace = true
-gst = { workspace = true, features = ["v1_28"] }
-gst-analytics = { workspace = true, features = ["v1_28"] }
-gst-base = { workspace = true, features = ["v1_28"] }
-gst-video = { workspace = true, features = ["v1_28"] }
+gst.workspace = true
+gst-analytics.workspace = true
+gst-base.workspace = true
+gst-video.workspace = true
 scrfd-burn.workspace = true
 sixdrepnet360-burn.workspace = true
 

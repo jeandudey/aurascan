@@ -1,8 +1,13 @@
 pub const APP_ID: Option<&str> = option_env!("APP_ID");
+pub const BASE_ID: Option<&str> = option_env!("BASE_ID");
 pub const RESOURCES_FILE: Option<&str> = option_env!("RESOURCES_FILE");
 
 pub fn app_id() -> &'static str {
     APP_ID.expect("APP_ID env var not set at compile time")
+}
+
+pub fn base_id() -> &'static str {
+    BASE_ID.expect("BASE_ID env var not set at compile time")
 }
 
 pub fn resources_file() -> &'static str {

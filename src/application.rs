@@ -1,6 +1,8 @@
 use gtk::prelude::*;
 use gtk::{gio, glib};
 
+use crate::app_id;
+
 mod imp {
     use adw::subclass::prelude::*;
 
@@ -53,11 +55,33 @@ mod imp {
             self.parent_handle_local_options(options)
         }
 
+        fn activate(&self) {
+            log::debug!("Application::activate");
+            self.parent_activate();
+
+            let app = self.obj();
+
+            if let Some(window) = app.active_window() {
+                window.present();
+                return;
+            }
+
+            let window = crate::widgets::Window::new(&app);
+            window.present();
+        }
+
         fn startup(&self) {
-            log::info!("Aurascan ({})", "tech.jeandudey.Aurascan");
+            log::info!("Aurascan ({})", app_id());
             self.parent_startup();
 
+            let app = self.obj();
+
             aurascan_gtk4::init();
+            crate::widgets::init();
+
+            gtk::Window::set_default_icon_name(app_id());
+
+            app.setup_accels();
         }
     }
 
@@ -83,5 +107,12 @@ impl Default for Application {
 impl Application {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets up the application shortcuts.
+    fn setup_accels(&self) {
+        self.set_accels_for_action("win.quit", &["<Control>q"]);
+        self.set_accels_for_action("win.preferences", &["<Control>comma"]);
+        self.set_accels_for_action("window.close", &["<Control>w"]);
     }
 }

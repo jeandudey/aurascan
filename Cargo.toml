@@ -13,7 +13,7 @@ members = [
 ]
 
 [workspace.dependencies]
-adw = { package = "libadwaita", version = "0.9.1" }
+adw = { package = "libadwaita", version = "0.9.1", features = ["v1_5"] }
 async-channel = "2.5"
 burn = "0.21.0"
 burn-store = { version = "0.21.0", features = ["std", "pytorch"] }

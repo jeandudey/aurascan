@@ -1,19 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <template class="Window" parent="AdwApplicationWindow">
+  <template class="AscWindow" parent="AdwApplicationWindow">
     <property name="title" translatable="yes">Aurascan</property>
     <child>
-      <object class="AdwToastOverlay" id="toast_overlay">
-        <child>
-          <object class="AdwNavigationView" id="navigation_view">
-            <child>
-              <object class="AdwNavigationPage" id="camera_page">
-                <property name="title" translatable="yes">Aurascan</property>
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="title-widget">
+              <object class="AdwViewSwitcher" id="view_switcher">
+                <property name="stack">stack</property>
+                <property name="policy">wide</property>
+              </object>
+            </property>
+            <child type="start">
+              <object class="GtkButton" id="play_button">
+                <property name="icon-name">media-playback-start-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Start</property>
+                <property name="action-name">win.play</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkMenuButton" id="menu_button">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="tooltip_text" translatable="yes">Main Menu</property>
+                <property name="menu-model">primary_menu</property>
+                <property name="primary">true</property>
               </object>
             </child>
           </object>
         </child>
+        <property name="content">
+          <object class="AdwViewStack" id="stack">
+            <child>
+              <object class="AdwViewStackPage">
+                <property name="name">viewfinder</property>
+                <property name="title" translatable="yes">Live View</property>
+                <property name="icon-name">camera-video-symbolic</property>
+                <property name="child">
+                  <object class="AscViewfinder" id="viewfinder">
+                    <property name="application-id">tech.jeandudey.Aurascan</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwViewStackPage">
+                <property name="name">view3d</property>
+                <property name="title" translatable="yes">3D</property>
+                <property name="icon-name">view-paged-symbolic</property>
+                <property name="child">
+                  <object class="AscHeadPoseView" id="headposeview">
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </property>
       </object>
     </child>
   </template>
+  <menu id="primary_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Settings</attribute>
+        <attribute name="action">win.preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+        <attribute name="action">app.shortcuts</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_About Aurascan</attribute>
+        <attribute name="action">win.about</attribute>
+      </item>
+    </section>
+  </menu>
 </interface>

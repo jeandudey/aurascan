@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="AscPreferencesWindow" parent="AdwPreferencesDialog">
+    <property name="content-width">360</property>
+    <child type="content">
+      <object class="AdwPreferencesPage">
+        <property name="title" translatable="yes">General</property>
+        <property name="icon-name">application-system-symbolic</property>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">General</property>
+            <child>
+              <object class="AdwComboRow">
+                <property name="title" translatable="yes">_Back end</property>
+                <property name="subtitle" translatable="yes">Select the back end to use for inference</property>
+                <property name="use-underline">true</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Flex</item>
+                      <item translatable="yes">Vulkan</item>
+                      <item translatable="yes">ROCm</item>
+                    </items>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

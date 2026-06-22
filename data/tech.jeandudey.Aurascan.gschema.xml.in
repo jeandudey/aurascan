@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <schemalist>
-  <schema id="tech.jeandudey.AuraScan" path="/tech/jeandudey/AuraScan">
+  <schema id="@APP_ID@" path="/tech/jeandudey/Aurascan">
     <key name="window-width" type="i">
       <default>1280</default>
     </key>
@@ -16,6 +16,7 @@
         <choice value="Flex" />
       </choices>
       <default>ROCm</default>
+      <summary>Backend to use for inference</summary>
     </key>
   </schema>
 </schemalist>

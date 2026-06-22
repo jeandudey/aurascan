@@ -20,12 +20,12 @@ pub struct AppModel {
     source_selector: relm4::Controller<SourceSelector>,
     status: relm4::Controller<Status>,
     alert: Controller<Alert>,
-    pipeline: Arc<Mutex<Pipeline>>,
-    toggle_label: &'static str,
+    //pipeline: Arc<Mutex<Pipeline>>,
     start_requested: bool,
     yaw: f32,
     pitch: f32,
     roll: f32,
+    detect_head_pose: bool,
 }
 
 #[relm4::component(pub)]
@@ -101,10 +101,10 @@ impl SimpleComponent for AppModel {
 
                                     gtk::Button {
                                         #[watch]
-                                        set_label: model.toggle_label,
+                                        set_label: if model.detect_head_pose { "Stop" } else { "Start" },
                                         set_width_request: 150,
                                         add_css_class: "suggested-action",
-                                        connect_clicked => AppMsg::TogglePipeline,
+                                        connect_clicked => AppMsg::ToggleDetect,
                                     },
                                 },
                             },
@@ -141,6 +141,11 @@ impl SimpleComponent for AppModel {
                                     Viewfinder::new("tech.jeandudey.Aurascan") {
                                         set_hexpand: true,
                                         set_vexpand: true,
+                                        #[watch]
+                                        set_detect_head_pose: model.detect_head_pose,
+                                        connect_fps_measurements[sender] => move |_, fps, droprate, avgfps| {
+                                            sender.input(AppMsg::UpdateFps { fps, droprate, avgfps });
+                                        }
                                     },
 
                                     //gtk::Overlay {
@@ -218,46 +223,46 @@ impl SimpleComponent for AppModel {
 
         let status = Status::builder().launch(()).detach();
 
-        let mut pipeline = Pipeline::new().unwrap();
+        //let mut pipeline = Pipeline::new().unwrap();
 
-        pipeline.connect_state_changed({
-            let status_sender = sender.input_sender().clone();
-            move |state| {
-                status_sender
-                    .send(AppMsg::PipelineStateChanged(state))
-                    .unwrap();
-            }
-        });
+        //pipeline.connect_state_changed({
+        //    let status_sender = sender.input_sender().clone();
+        //    move |state| {
+        //        status_sender
+        //            .send(AppMsg::PipelineStateChanged(state))
+        //            .unwrap();
+        //    }
+        //});
 
-        pipeline.connect_fps_measurements({
-            let status_sender = status.sender().clone();
-            move |fps, droprate, avgfps| {
-                status_sender
-                    .send(StatusInput::UpdateFps {
-                        fps,
-                        droprate,
-                        avgfps,
-                    })
-                    .unwrap();
-            }
-        });
+        //pipeline.connect_fps_measurements({
+        //    let status_sender = status.sender().clone();
+        //    move |fps, droprate, avgfps| {
+        //        status_sender
+        //            .send(StatusInput::UpdateFps {
+        //                fps,
+        //                droprate,
+        //                avgfps,
+        //            })
+        //            .unwrap();
+        //    }
+        //});
 
-        pipeline.connect_inference_measurements({
-            let status_sender = status.sender().clone();
-            let sender = sender.input_sender().clone();
-            move |measurements| {
-                sender
-                    .send(AppMsg::UpdateInference(measurements.clone()))
-                    .unwrap();
-                status_sender
-                    .send(StatusInput::UpdateInference(measurements))
-                    .unwrap();
-            }
-        });
+        //pipeline.connect_inference_measurements({
+        //    let status_sender = status.sender().clone();
+        //    let sender = sender.input_sender().clone();
+        //    move |measurements| {
+        //        sender
+        //            .send(AppMsg::UpdateInference(measurements.clone()))
+        //            .unwrap();
+        //        status_sender
+        //            .send(StatusInput::UpdateInference(measurements))
+        //            .unwrap();
+        //    }
+        //});
 
-        pipeline
-            .set_backend_type(gstaurascan::BackendType::Rocm)
-            .unwrap();
+        //pipeline
+        //    .set_backend_type(gstaurascan::BackendType::Rocm)
+        //    .unwrap();
 
         let alert = Alert::builder()
             .transient_for(&root)
@@ -275,12 +280,12 @@ impl SimpleComponent for AppModel {
             source_selector,
             status,
             alert,
-            pipeline: Arc::new(Mutex::new(pipeline)),
-            toggle_label: "Start",
+            //pipeline: Arc::new(Mutex::new(pipeline)),
             start_requested: false,
             yaw: 0.0,
             pitch: 0.0,
             roll: 0.0,
+            detect_head_pose: false,
         };
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -288,84 +293,71 @@ impl SimpleComponent for AppModel {
 
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match message {
-            AppMsg::SourceChanged(device) => {
-                sender.oneshot_command({
-                    let pipeline = self.pipeline.clone();
-                    async move {
-                        pipeline.lock().unwrap().set_source(device).unwrap();
-                    }
+            AppMsg::UpdateFps {
+                fps,
+                droprate,
+                avgfps,
+            } => {
+                self.status.emit(StatusInput::UpdateFps {
+                    fps,
+                    droprate,
+                    avgfps,
                 });
+            }
+            AppMsg::SourceChanged(device) => {
+                //sender.oneshot_command({
+                //    let pipeline = self.pipeline.clone();
+                //    async move {
+                //        pipeline.lock().unwrap().set_source(device).unwrap();
+                //    }
+                //});
             }
             AppMsg::UpdateInference(measurements) => {
                 self.yaw = measurements.yaw;
                 self.pitch = measurements.pitch;
                 self.roll = measurements.roll;
             }
-            AppMsg::TogglePipeline => {
-                let pipeline = self.pipeline.lock().unwrap();
-                if pipeline.is_playing() {
-                    self.start_requested = false;
-                    self.toggle_label = "Start";
-                    self.status.sender().send(StatusInput::Clear).unwrap();
-
-                    sender.oneshot_command({
-                        let pipeline = self.pipeline.clone();
-                        async move {
-                            pipeline.lock().unwrap().stop().unwrap();
-                        }
-                    });
-                } else {
-                    self.start_requested = true;
-                    sender.oneshot_command({
-                        let pipeline = self.pipeline.clone();
-                        let sender = sender.input_sender().clone();
-                        async move {
-                            if let Err(e) = pipeline.lock().unwrap().play() {
-                                sender.send(AppMsg::Error(e.to_string())).unwrap();
-                            }
-                        }
-                    });
-                }
+            AppMsg::ToggleDetect => {
+                self.detect_head_pose = !self.detect_head_pose;
             }
             AppMsg::PipelineStateChanged(state) => match (state, self.start_requested) {
                 (PipelineState::Started, true) => {
-                    self.toggle_label = "Stop";
                     self.start_requested = false;
                 }
                 _ => (),
             },
             AppMsg::SetBackend(backend_type) => {
-                sender.oneshot_command({
-                    let pipeline = self.pipeline.clone();
-                    let sender = sender.input_sender().clone();
-                    async move {
-                        if let Err(e) =
-                            pipeline
-                                .lock()
-                                .unwrap()
-                                .set_backend_type(match backend_type {
-                                    0 => gstaurascan::BackendType::Rocm,
-                                    1 => gstaurascan::BackendType::Vulkan,
-                                    2 => gstaurascan::BackendType::Flex,
-                                    _ => unreachable!(),
-                                })
-                        {
-                            sender.send(AppMsg::Error(e.to_string())).unwrap();
-                        }
-                    }
-                });
+                //sender.oneshot_command({
+                //    let pipeline = self.pipeline.clone();
+                //    let sender = sender.input_sender().clone();
+                //    async move {
+                //        if let Err(e) =
+                //            pipeline
+                //                .lock()
+                //                .unwrap()
+                //                .set_backend_type(match backend_type {
+                //                    0 => gstaurascan::BackendType::Rocm,
+                //                    1 => gstaurascan::BackendType::Vulkan,
+                //                    2 => gstaurascan::BackendType::Flex,
+                //                    _ => unreachable!(),
+                //                })
+                //        {
+                //            sender.send(AppMsg::Error(e.to_string())).unwrap();
+                //        }
+                //    }
+                //});
             }
             AppMsg::SetCaps(resolution) => {
                 let Some(resolution) = resolution else {
                     return;
                 };
 
-                sender.oneshot_command({
-                    let pipeline = self.pipeline.clone();
-                    async move {
-                        pipeline.lock().unwrap().set_caps(resolution).unwrap();
-                    }
-                });
+                //sender.oneshot_command({
+                //    let pipeline = self.pipeline.clone();
+                //    async move {
+                //        pipeline.lock().unwrap().set_caps(resolution).unwrap();
+                //    }
+                //});
             }
             AppMsg::Error(error) => {
                 if self.start_requested {
@@ -381,7 +373,7 @@ impl SimpleComponent for AppModel {
         }
     }
 
-    fn shutdown(&mut self, _widgets: &mut Self::Widgets, _output: relm4::Sender<Self::Output>) {
-        self.pipeline.lock().unwrap().stop().unwrap();
-    }
+    //fn shutdown(&mut self, _widgets: &mut Self::Widgets, _output: relm4::Sender<Self::Output>) {
+    //    self.pipeline.lock().unwrap().stop().unwrap();
+    //}
 }

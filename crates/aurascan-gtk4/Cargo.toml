@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 adw.workspace = true
+async-channel.workspace = true
 aurascan-headposeview.workspace = true
 epoxy-sys.workspace = true
 futures-channel.workspace = true

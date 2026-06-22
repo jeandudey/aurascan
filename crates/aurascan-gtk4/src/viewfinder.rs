@@ -39,6 +39,8 @@ mod imp {
     pub struct Viewfinder {
         #[property(get, explicit_notify, default)]
         state: Cell<ViewfinderState>,
+        #[property(get = Self::detect_head_pose, set = Self::set_detect_head_pose, explicit_notify)]
+        detect_head_pose: Cell<bool>,
         #[property(get, set = Self::set_camera, nullable, explicit_notify)]
         camera: RefCell<Option<crate::Camera>>,
         #[property(get, set, construct_only)]
@@ -47,6 +49,7 @@ mod imp {
         pub camerabin: OnceCell<gst::Element>,
         pub camera_element: OnceCell<gst::Element>,
         pub capsfilter: OnceCell<gst::Element>,
+        pub inference_branch: RefCell<Option<gst::Element>>,
 
         pub devices: OnceCell<crate::DeviceProvider>,
         pub bus_watch: OnceCell<gst::bus::BusWatchGuard>,
@@ -65,6 +68,32 @@ mod imp {
             if state != self.state.replace(state) {
                 self.obj().notify_state();
             }
+        }
+
+        fn detect_head_pose(&self) -> bool {
+            self.inference_branch.borrow().is_some()
+        }
+
+        fn set_detect_head_pose(&self, detect: bool) {
+            if detect == self.detect_head_pose.replace(detect) {
+                return;
+            }
+
+            let tee = self.tee.get().unwrap();
+            if detect {
+                match self.obj().create_inference_bin() {
+                    Ok(inference_branch) => {
+                        tee.add_branch(&inference_branch);
+                        self.inference_branch.replace(Some(inference_branch));
+                    }
+                    Err(e) => log::error!("Failed to create inference branch: {}", e),
+                }
+            } else if let Some(inference_branch) = self.inference_branch.take() {
+                tee.remove_branch(&inference_branch);
+            }
+
+            log::debug!("Notifying detect change");
+            self.obj().notify_detect_head_pose();
         }
 
         fn set_camera(&self, camera: Option<crate::Camera>) {
@@ -158,6 +187,7 @@ mod imp {
             let tee = crate::PipelineTee::new();
 
             let paintablesink = gst::ElementFactory::make("gtk4paintablesink")
+                .property("sync", false)
                 .build()
                 .expect("Missing gst-plugin-gtk4");
 
@@ -190,6 +220,7 @@ mod imp {
                     .is_some();
                 if is_gl_supported {
                     gst::ElementFactory::make("glsinkbin")
+                        .property("sync", false)
                         .property("sink", &paintablesink)
                         .build()
                         .expect("Missing GStreamer Base Plug-ins")
@@ -214,13 +245,7 @@ mod imp {
             tee.add_branch(&sink);
             self.camerabin().set_property("viewfinder-sink", &tee);
 
-            let caps_video = gst_video::video_make_raw_caps(&[
-                gst_video::VideoFormat::I420,
-                gst_video::VideoFormat::Nv12,
-            ])
-            .build();
-            self.camerabin()
-                .set_property("video-capture-caps", caps_video);
+            self.tee.set(tee).unwrap();
 
             self.picture
                 .set_accessible_role(gtk::AccessibleRole::Presentation);
@@ -259,7 +284,9 @@ mod imp {
         fn signals() -> &'static [glib::subclass::Signal] {
             static SIGNALS: LazyLock<Vec<glib::subclass::Signal>> = LazyLock::new(|| {
                 vec![
-                    glib::subclass::Signal::builder("fps-update").build(),
+                    glib::subclass::Signal::builder("fps-measurements")
+                        .param_types([f64::static_type(), f64::static_type(), f64::static_type()])
+                        .build(),
                     glib::subclass::Signal::builder("head-tracking-sample").build(),
                 ]
             });
@@ -383,6 +410,17 @@ impl Viewfinder {
         }
     }
 
+    pub fn connect_fps_measurements<F>(&self, f: F) -> glib::SignalHandlerId
+    where
+        F: Fn(&Self, f64, f64, f64) + 'static,
+    {
+        self.connect_closure(
+            "fps-measurements",
+            false,
+            glib::closure_local!(|obj, fps, droprate, avgfps| f(obj, fps, droprate, avgfps)),
+        )
+    }
+
     fn create_camera_element(
         &self,
         device_src: &gst::Element,
@@ -468,6 +506,102 @@ impl Viewfinder {
         Ok(())
     }
 
+    fn create_inference_bin(&self) -> Result<gst::Element, glib::BoolError> {
+        let bin = gst::Bin::new();
+
+        let videoconvertscale = gst::ElementFactory::make("videoconvertscale")
+            .property("add-borders", true)
+            .build()?;
+
+        let caps = gst_video::VideoCapsBuilder::new()
+            .format(gst_video::VideoFormat::Rgb)
+            .width(640)
+            .height(640)
+            .pixel_aspect_ratio(gst::Fraction::new(1, 1))
+            .build();
+
+        let capsfilter = gst::ElementFactory::make("capsfilter")
+            .property("caps", &caps)
+            .build()?;
+
+        let scrfdinference = gst::ElementFactory::make("burn-scrfdinference").build()?;
+
+        let scrfdtensordec = gst::ElementFactory::make("scrfdtensordec").build()?;
+
+        let bytetracker = gst::ElementFactory::make("bytetracker").build()?;
+
+        let detectioncropmeta = gst::ElementFactory::make("detectioncropmeta").build()?;
+
+        let videocropscale = gst::ElementFactory::make("videocropscale").build()?;
+
+        let sixdrepnet360inference = gst::ElementFactory::make("burn-sixdrepnet360inference")
+            .build()
+            .unwrap();
+
+        let fakesink = gst::ElementFactory::make("fakesink")
+            .property("sync", false)
+            .build()?;
+
+        let fpsdisplaysink = gst::ElementFactory::make("fpsdisplaysink")
+            .property("text-overlay", false)
+            .property("signal-fps-measurements", true)
+            .property("video-sink", &fakesink)
+            .property("sync", false)
+            .build()?;
+
+        let (sender, receiver) = async_channel::unbounded::<(f64, f64, f64)>();
+        fpsdisplaysink.connect("fps-measurements", false, move |args| {
+            let fps = args[1].get::<f64>().unwrap();
+            let droprate = args[2].get::<f64>().unwrap();
+            let avgfps = args[3].get::<f64>().unwrap();
+            sender.send_blocking((fps, droprate, avgfps)).ok();
+            None
+        });
+
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = obj)]
+            self,
+            async move {
+                while let Ok((fps, droprate, avgfps)) = receiver.recv().await {
+                    obj.emit_fps_measurements(fps, droprate, avgfps);
+                }
+            }
+        ));
+
+        bin.add_many([
+            &videoconvertscale,
+            &capsfilter,
+            &scrfdinference,
+            &scrfdtensordec,
+            &bytetracker,
+            &detectioncropmeta,
+            &videocropscale,
+            &sixdrepnet360inference,
+            &fpsdisplaysink,
+        ])
+        .unwrap();
+
+        gst::Element::link_many([
+            &videoconvertscale,
+            &capsfilter,
+            &scrfdinference,
+            &scrfdtensordec,
+            &bytetracker,
+            &detectioncropmeta,
+            &videocropscale,
+            &sixdrepnet360inference,
+            &fpsdisplaysink,
+        ])
+        .unwrap();
+
+        let pad = videoconvertscale.static_pad("sink").unwrap();
+        let ghost_pad = gst::GhostPad::with_target(&pad).unwrap();
+        ghost_pad.set_active(true).unwrap();
+        bin.add_pad(&ghost_pad).unwrap();
+
+        Ok(bin.upcast())
+    }
+
     fn init(&self) {
         log::debug!("Viewfinder init");
 
@@ -500,7 +634,25 @@ impl Viewfinder {
 
     fn on_bus_message(&self, msg: &gst::Message) {
         match msg.view() {
-            _ => (),
+            gst::MessageView::Error(err) => self.on_pipeline_error(err),
+            _ => {}
         }
+    }
+
+    fn on_pipeline_error(&self, err: &gst::message::Error) {
+        log::error!(
+            "Bus error from {:?}\n{}\n{:?}",
+            err.src().map(|s| s.path_string()),
+            err.error(),
+            err.debug()
+        );
+
+        if self.imp().camerabin().current_state() != gst::State::Playing {
+            self.imp().set_state(ViewfinderState::Error);
+        }
+    }
+
+    fn emit_fps_measurements(&self, fps: f64, droprate: f64, avgfps: f64) {
+        self.emit_by_name::<()>("fps-measurements", &[&fps, &droprate, &avgfps]);
     }
 }

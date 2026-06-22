@@ -27,6 +27,7 @@ nalgebra = "0.35"
 lapjv = "0.3"
 
 adw = { package = "libadwaita", version = "0.9.1" }
+async-channel = "2.5"
 bytemuck = "1.25"
 futures-channel = "0.3"
 glam = "0.33"
@@ -66,7 +67,6 @@ edition = "2024"
 [dependencies]
 adw = { workspace = true, features = ["v1_4"] }
 aurascan-gtk4.workspace = true
-aurascan-headposeview.workspace = true
 epoxy-sys.workspace = true
 eyre.workspace = true
 gtk = { workspace = true, features = ["v4_8"] }

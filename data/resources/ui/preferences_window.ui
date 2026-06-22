@@ -10,11 +10,10 @@
           <object class="AdwPreferencesGroup">
             <property name="title" translatable="yes">General</property>
             <child>
-              <object class="AdwComboRow">
+              <object class="AdwComboRow" id="backend">
                 <property name="title" translatable="yes">_Back end</property>
                 <property name="subtitle" translatable="yes">Select the back end to use for inference</property>
                 <property name="use-underline">True</property>
-                <property name="action-name">preferences-window.backend</property>
                 <property name="model">
                   <object class="GtkStringList">
                     <items>

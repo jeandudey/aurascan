@@ -31,6 +31,7 @@ mod imp {
     use std::sync::LazyLock;
 
     use glib::Properties;
+    use gst::prelude::*;
 
     use super::*;
 
@@ -41,6 +42,8 @@ mod imp {
         state: Cell<ViewfinderState>,
         #[property(get = Self::detect_head_pose, set = Self::set_detect_head_pose, explicit_notify)]
         detect_head_pose: Cell<bool>,
+        #[property(get, set = Self::set_backend, explicit_notify, builder(gstaurascan::BackendType::default()))]
+        backend: Cell<gstaurascan::BackendType>,
         #[property(get, set = Self::set_camera, nullable, explicit_notify)]
         camera: RefCell<Option<crate::Camera>>,
         #[property(get, set, construct_only)]
@@ -94,6 +97,20 @@ mod imp {
 
             log::debug!("Notifying detect change");
             self.obj().notify_detect_head_pose();
+        }
+
+        fn set_backend(&self, backend: gstaurascan::BackendType) {
+            if backend == self.backend.get() {
+                return;
+            }
+
+            if self.inference_branch.borrow().is_some() {
+                log::warn!("Backend change is not supported when inference branch is active");
+                return;
+            }
+
+            self.backend.replace(backend);
+            self.obj().notify_backend();
         }
 
         fn set_camera(&self, camera: Option<crate::Camera>) {
@@ -507,6 +524,8 @@ impl Viewfinder {
     }
 
     fn create_inference_bin(&self) -> Result<gst::Element, glib::BoolError> {
+        log::debug!("Creating inference bin for backend {:?}", self.backend());
+
         let bin = gst::Bin::new();
 
         let videoconvertscale = gst::ElementFactory::make("videoconvertscale")
@@ -524,7 +543,9 @@ impl Viewfinder {
             .property("caps", &caps)
             .build()?;
 
-        let scrfdinference = gst::ElementFactory::make("burn-scrfdinference").build()?;
+        let scrfdinference = gst::ElementFactory::make("burn-scrfdinference")
+            .property("backend-type", self.backend())
+            .build()?;
 
         let scrfdtensordec = gst::ElementFactory::make("scrfdtensordec").build()?;
 
@@ -535,6 +556,7 @@ impl Viewfinder {
         let videocropscale = gst::ElementFactory::make("videocropscale").build()?;
 
         let sixdrepnet360inference = gst::ElementFactory::make("burn-sixdrepnet360inference")
+            .property("backend-type", self.backend())
             .build()
             .unwrap();
 

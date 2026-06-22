@@ -9,9 +9,9 @@ pub mod sixdrepnet360;
 pub mod sixdrepnet360tensordec;
 pub mod videocropscale;
 
-#[derive(Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
 #[repr(C)]
-#[enum_type(name = "GstBurnExtraBackendType")]
+#[enum_type(name = "GstAscBackendType")]
 pub enum BackendType {
     #[default]
     Flex = 0,

@@ -20,6 +20,8 @@ mod imp {
         pub viewfinder: TemplateChild<aurascan_gtk4::Viewfinder>,
         #[template_child]
         pub headposeview: TemplateChild<aurascan_gtk4::HeadPoseView>,
+        #[template_child]
+        pub play_button: TemplateChild<gtk::Button>,
 
         pub provider: OnceCell<aurascan_gtk4::DeviceProvider>,
         pub settings: gio::Settings,
@@ -62,6 +64,7 @@ mod imp {
             Self {
                 viewfinder: Default::default(),
                 headposeview: Default::default(),
+                play_button: Default::default(),
 
                 provider: Default::default(),
                 settings: gio::Settings::new(app_id()),
@@ -82,7 +85,11 @@ mod imp {
             //klass.bind_template_callbacks();
 
             klass.install_action("win.preferences", None, |window, _, _| {
-                window.show_preferences_dialog();
+                window.show_preferences_window();
+            });
+
+            klass.install_action("win.play", None, |window, _, _| {
+                window.toggle_detection();
             });
         }
 
@@ -97,6 +104,37 @@ mod imp {
 
             let provider = aurascan_gtk4::DeviceProvider::instance();
             self.provider.set(provider.clone()).unwrap();
+
+            self.viewfinder
+                .connect_fps_measurements(|_, fps, droprate, avgfps| {
+                    log::info!("FPS: {fps}, Drop Rate: {droprate}, AVG: {avgfps}");
+                });
+
+            self.settings.connect_changed(
+                Some("backend"),
+                glib::clone!(
+                    #[weak(rename_to = viewfinder)]
+                    self.viewfinder,
+                    move |settings, _| {
+                        if viewfinder.detect_head_pose() {
+                            log::warn!("Cannot change backend while detecting head pose");
+                            return;
+                        }
+
+                        let backend = match settings.enum_("backend") {
+                            0 => gstaurascan::BackendType::Flex,
+                            1 => gstaurascan::BackendType::Vulkan,
+                            2 => gstaurascan::BackendType::Rocm,
+                            _ => {
+                                log::warn!("Invalid backend type setting");
+                                return;
+                            }
+                        };
+
+                        viewfinder.set_backend(backend);
+                    }
+                ),
+            );
 
             let obj = self.obj();
 
@@ -183,12 +221,28 @@ impl Window {
         Ok(())
     }
 
-    fn show_preferences_dialog(&self) {
+    fn show_preferences_window(&self) {
         if self.visible_dialog().is_some() {
             return;
         }
 
-        let preferences = PreferencesWindow::new();
+        let is_detecting_head_pose = self.imp().viewfinder.detect_head_pose();
+        let preferences = PreferencesWindow::new(is_detecting_head_pose);
         preferences.present(Some(self));
+    }
+
+    fn toggle_detection(&self) {
+        let should_play = !self.imp().viewfinder.detect_head_pose();
+        self.imp().viewfinder.set_detect_head_pose(should_play);
+
+        if should_play {
+            self.imp()
+                .play_button
+                .set_icon_name("media-playback-stop-symbolic");
+        } else {
+            self.imp()
+                .play_button
+                .set_icon_name("media-playback-start-symbolic");
+        }
     }
 }

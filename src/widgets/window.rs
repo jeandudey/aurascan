@@ -3,7 +3,7 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
 
 use crate::widgets::PreferencesWindow;
-use crate::{Application, base_id};
+use crate::{Application, app_id};
 
 mod imp {
     use std::cell::{OnceCell, RefCell};
@@ -64,7 +64,7 @@ mod imp {
                 headposeview: Default::default(),
 
                 provider: Default::default(),
-                settings: gio::Settings::new(base_id()),
+                settings: gio::Settings::new(app_id()),
 
                 is_active_handle: Default::default(),
             }
@@ -100,6 +100,8 @@ mod imp {
 
             let obj = self.obj();
 
+            obj.load_window_size();
+
             obj.connect_is_active_notify(|obj| {
                 if !obj.is_active() {
                     return;
@@ -122,7 +124,19 @@ mod imp {
 
     impl WidgetImpl for Window {}
 
-    impl WindowImpl for Window {}
+    impl WindowImpl for Window {
+        // Save window state on delete event
+        fn close_request(&self) -> glib::Propagation {
+            let window = self.obj();
+
+            if let Err(err) = window.save_window_size() {
+                log::warn!("Failed to save window state, {err:?}");
+            }
+
+            // Pass close request on to the parent
+            self.parent_close_request()
+        }
+    }
 
     impl ApplicationWindowImpl for Window {}
     impl AdwApplicationWindowImpl for Window {}
@@ -139,6 +153,34 @@ impl Window {
         glib::Object::builder()
             .property("application", &app)
             .build()
+    }
+
+    fn load_window_size(&self) {
+        let imp = self.imp();
+
+        let width = imp.settings.int("window-width");
+        let height = imp.settings.int("window-height");
+        let is_maximized = imp.settings.boolean("is-maximized");
+
+        self.set_default_size(width, height);
+
+        if is_maximized {
+            self.maximize();
+        }
+    }
+
+    fn save_window_size(&self) -> Result<(), glib::BoolError> {
+        let imp = self.imp();
+
+        let (width, height) = self.default_size();
+
+        imp.settings.set_int("window-width", width)?;
+        imp.settings.set_int("window-height", height)?;
+
+        imp.settings
+            .set_boolean("is-maximized", self.is_maximized())?;
+
+        Ok(())
     }
 
     fn show_preferences_dialog(&self) {

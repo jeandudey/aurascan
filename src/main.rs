@@ -3,7 +3,7 @@ mod config;
 mod widgets;
 
 use crate::application::Application;
-use crate::config::{app_id, base_id, resources_file};
+use crate::config::{app_id, resources_file};
 use gtk::gio::prelude::ApplicationExtManual;
 use gtk::{gio, glib};
 

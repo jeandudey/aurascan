@@ -12,7 +12,7 @@ if host_machine.system() == 'linux'
     )
 
     gschema_conf = configuration_data()
-    gschema_conf.set('BASE_ID', base_id)
+    gschema_conf.set('APP_ID', application_id)
     configure_file(
         input: '@0@.gschema.xml.in'.format(base_id),
         output: '@0@.gschema.xml'.format(application_id),

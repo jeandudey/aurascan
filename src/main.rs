@@ -1,15 +1,15 @@
-mod app;
 mod application;
-mod pipeline2;
+mod config;
 
-use crate::app::AppModel;
 use crate::application::Application;
-use relm4::RelmApp;
+use crate::config::{app_id, resources_file};
+use gtk::gio::prelude::ApplicationExtManual;
+use gtk::{gio, glib};
 
-fn main() {
-    let application = Application::new();
+fn main() -> glib::ExitCode {
+    let res = gio::Resource::load(resources_file()).expect("Could not load gresource file");
+    gio::resources_register(&res);
 
-    let app = RelmApp::from_app(application);
-    app.run::<AppModel>(());
-    unsafe { gst::deinit() };
+    let app = Application::new();
+    app.run()
 }

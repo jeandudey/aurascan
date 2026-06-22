@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <gresources>
-  <gresource prefix="/org/gnome/Snapshot/">
+  <gresource prefix="/tech/jeandudey/Aurascan/">
+    <file compressed="true" preprocess="xml-stripblanks">ui/window.ui</file>
   </gresource>
 </gresources>

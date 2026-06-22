@@ -24,6 +24,7 @@ eyre = "0.6.12"
 dirs = "6.0.0"
 futures-channel = "0.3"
 glam = "0.33"
+glib = { version = "0.22", features = ["v2_68"] }
 glow = "0.17"
 gst = { package = "gstreamer", version = "0.25", features = ["v1_28"] }
 gst-analytics = { package = "gstreamer-analytics", version = "0.25", features = ["v1_28"] }
@@ -63,6 +64,7 @@ aurascan-gtk4.workspace = true
 epoxy-sys.workspace = true
 eyre.workspace = true
 gtk.workspace = true
+glib.workspace = true
 glow.workspace = true
 gst-analytics.workspace = true
 gst-plugin-gtk4.workspace = true
@@ -71,8 +73,6 @@ gst.workspace = true
 gst-app.workspace = true
 gst-video.workspace = true
 log.workspace = true
-relm4 = { workspace = true, features = ["libadwaita"] }
-relm4-components.workspace = true
 tracing-subscriber.workspace = true
 wgpu.workspace = true
 

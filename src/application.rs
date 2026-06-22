@@ -74,7 +74,7 @@ glib::wrapper! {
 impl Default for Application {
     fn default() -> Self {
         glib::Object::builder()
-            .property("application-id", "tech.jeandudey.Aurascan")
+            .property("application-id", crate::app_id())
             .property("resource-base-path", "/tech/jeandudey/Aurascan/")
             .build()
     }

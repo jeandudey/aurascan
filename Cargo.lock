@@ -300,6 +300,7 @@ dependencies = [
  "aurascan-gtk4",
  "epoxy-sys",
  "eyre",
+ "glib",
  "glow",
  "gst-plugin-aurascan",
  "gst-plugin-gtk4",
@@ -310,8 +311,6 @@ dependencies = [
  "gtk4",
  "libadwaita",
  "log",
- "relm4",
- "relm4-components",
  "tracing-subscriber",
  "wgpu",
 ]
@@ -762,7 +761,7 @@ dependencies = [
  "num-traits",
  "parking_lot",
  "portable-atomic",
- "spin 0.10.0",
+ "spin",
  "tracing",
 ]
 
@@ -783,7 +782,7 @@ dependencies = [
  "rand 0.10.1",
  "rand_distr 0.6.0",
  "serde",
- "spin 0.10.0",
+ "spin",
  "thiserror 2.0.18",
 ]
 
@@ -868,7 +867,7 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "spin 0.10.0",
+ "spin",
  "thiserror 2.0.18",
  "uuid",
 ]
@@ -920,7 +919,7 @@ dependencies = [
  "derive-new",
  "hashbrown 0.16.1",
  "serde",
- "spin 0.10.0",
+ "spin",
 ]
 
 [[package]]
@@ -1026,7 +1025,7 @@ dependencies = [
  "log",
  "serde",
  "smallvec",
- "spin 0.10.0",
+ "spin",
  "tracing",
 ]
 
@@ -1175,7 +1174,7 @@ dependencies = [
  "burn-std",
  "hashbrown 0.16.1",
  "log",
- "spin 0.10.0",
+ "spin",
 ]
 
 [[package]]
@@ -1195,7 +1194,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "smallvec",
- "spin 0.10.0",
+ "spin",
  "tokio",
 ]
 
@@ -2154,7 +2153,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "spin 0.10.0",
+ "spin",
  "toml",
  "tracing",
  "tynm",
@@ -2369,7 +2368,7 @@ dependencies = [
  "md5",
  "serde",
  "serde_json",
- "spin 0.10.0",
+ "spin",
  "thiserror 2.0.18",
  "toml",
  "tracing",
@@ -2407,7 +2406,7 @@ dependencies = [
  "num-traits",
  "paste",
  "serde",
- "spin 0.10.0",
+ "spin",
  "variadics_please",
 ]
 
@@ -3234,9 +3233,6 @@ name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
-dependencies = [
- "getrandom 0.3.4",
-]
 
 [[package]]
 name = "fax"
@@ -3344,18 +3340,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flume"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e139bc46ca777eb5efaf62df0ab8cc5fd400866427e56c68b22e414e53bd3be"
-dependencies = [
- "fastrand",
- "futures-core",
- "futures-sink",
- "spin 0.9.8",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3407,15 +3391,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fragile"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8878864ba14bb86e818a412bfd6f18f9eabd4ec0f008a28e8f7eb61db532fcf9"
-dependencies = [
- "futures-core",
 ]
 
 [[package]]
@@ -7563,52 +7538,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
-name = "relm4"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6420f090f0545e9ec9656469d139a4e1b66ff9c30b808fe2247892724f71a198"
-dependencies = [
- "flume",
- "fragile",
- "futures",
- "gtk4",
- "libadwaita",
- "once_cell",
- "relm4-css",
- "relm4-macros",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "relm4-components"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62088215be530760481537aa8add43fdbe4b3794bf6cb4673a39083eb993307b"
-dependencies = [
- "once_cell",
- "relm4",
- "tracker",
-]
-
-[[package]]
-name = "relm4-css"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3b81d263f784b103c815afa29124486b59741eca069ce7a5999efb14f13c368"
-
-[[package]]
-name = "relm4-macros"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36c9dbf50a60c82375e66b61d522c936b187a11b25c0a42e91c516326ad24a4f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
 name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8466,15 +8395,6 @@ checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "spin"
-version = "0.9.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
-dependencies = [
- "lock_api",
 ]
 
 [[package]]
@@ -9432,26 +9352,6 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
-]
-
-[[package]]
-name = "tracker"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5c98457ff700aaeefcd4a4a492096e78a2af1dd8523c66e94a3adb0fdbd415"
-dependencies = [
- "tracker-macros",
-]
-
-[[package]]
-name = "tracker-macros"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc19eb2373ccf3d1999967c26c3d44534ff71ae5d8b9dacf78f4b13132229e48"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
 ]
 
 [[package]]

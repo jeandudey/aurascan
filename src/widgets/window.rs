@@ -102,6 +102,8 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
 
+            let obj = self.obj();
+
             let provider = aurascan_gtk4::DeviceProvider::instance();
             self.provider.set(provider.clone()).unwrap();
 
@@ -110,33 +112,17 @@ mod imp {
                     log::info!("FPS: {fps}, Drop Rate: {droprate}, AVG: {avgfps}");
                 });
 
+            // Load the backend type and watch for changes from the
+            // preferences.
+            obj.load_backend_type();
             self.settings.connect_changed(
                 Some("backend"),
                 glib::clone!(
-                    #[weak(rename_to = viewfinder)]
-                    self.viewfinder,
-                    move |settings, _| {
-                        if viewfinder.detect_head_pose() {
-                            log::warn!("Cannot change backend while detecting head pose");
-                            return;
-                        }
-
-                        let backend = match settings.enum_("backend") {
-                            0 => gstaurascan::BackendType::Flex,
-                            1 => gstaurascan::BackendType::Vulkan,
-                            2 => gstaurascan::BackendType::Rocm,
-                            _ => {
-                                log::warn!("Invalid backend type setting");
-                                return;
-                            }
-                        };
-
-                        viewfinder.set_backend(backend);
-                    }
+                    #[weak]
+                    obj,
+                    move |_, _| obj.load_backend_type()
                 ),
             );
-
-            let obj = self.obj();
 
             obj.load_window_size();
 
@@ -191,6 +177,27 @@ impl Window {
         glib::Object::builder()
             .property("application", &app)
             .build()
+    }
+
+    fn load_backend_type(&self) {
+        let imp = self.imp();
+
+        if imp.viewfinder.detect_head_pose() {
+            log::warn!("Cannot change backend while detecting head pose");
+            return;
+        }
+
+        let backend = match imp.settings.enum_("backend") {
+            0 => gstaurascan::BackendType::Flex,
+            1 => gstaurascan::BackendType::Vulkan,
+            2 => gstaurascan::BackendType::Rocm,
+            _ => {
+                log::warn!("Invalid backend type setting");
+                return;
+            }
+        };
+
+        imp.viewfinder.set_backend(backend);
     }
 
     fn load_window_size(&self) {

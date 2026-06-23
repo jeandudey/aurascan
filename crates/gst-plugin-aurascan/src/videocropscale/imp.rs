@@ -26,7 +26,7 @@ pub struct VideoCropScale {
 
 #[glib::object_subclass]
 impl ObjectSubclass for VideoCropScale {
-    const NAME: &'static str = "GstAuraScanVideoCropScale";
+    const NAME: &'static str = "GstAscVideoCropScale";
     type Type = super::VideoCropScale;
     type ParentType = gst_base::BaseTransform;
 }

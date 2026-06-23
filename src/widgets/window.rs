@@ -109,7 +109,7 @@ mod imp {
 
             self.viewfinder
                 .connect_fps_measurements(|_, fps, droprate, avgfps| {
-                    log::info!("FPS: {fps}, Drop Rate: {droprate}, AVG: {avgfps}");
+                    log::debug!("FPS: {fps}, Drop Rate: {droprate}, AVG: {avgfps}");
                 });
 
             // Load the backend type and watch for changes from the

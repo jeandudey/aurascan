@@ -560,6 +560,8 @@ impl Viewfinder {
             .build()
             .unwrap();
 
+        let sixdrepnet360tensordec = gst::ElementFactory::make("sixdrepnet360tensordec").build()?;
+
         let fakesink = gst::ElementFactory::make("fakesink")
             .property("sync", false)
             .build()?;
@@ -599,6 +601,7 @@ impl Viewfinder {
             &detectioncropmeta,
             &videocropscale,
             &sixdrepnet360inference,
+            &sixdrepnet360tensordec,
             &fpsdisplaysink,
         ])
         .unwrap();
@@ -612,6 +615,7 @@ impl Viewfinder {
             &detectioncropmeta,
             &videocropscale,
             &sixdrepnet360inference,
+            &sixdrepnet360tensordec,
             &fpsdisplaysink,
         ])
         .unwrap();

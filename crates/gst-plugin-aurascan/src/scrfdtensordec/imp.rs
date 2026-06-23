@@ -100,7 +100,7 @@ struct State {
 
 #[glib::object_subclass]
 impl ObjectSubclass for ScrfdTensorDec {
-    const NAME: &'static str = "GstBurnExtraScrfdtensorDec";
+    const NAME: &'static str = "GstAscScrfdtensorDec";
     type Type = super::ScrfdTensorDec;
     type ParentType = gst_base::BaseTransform;
 }

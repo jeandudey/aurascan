@@ -80,7 +80,7 @@ impl Default for SixDRepNet360Inference {
 
 #[glib::object_subclass]
 impl ObjectSubclass for SixDRepNet360Inference {
-    const NAME: &'static str = "GstBurnExtraSixDRepNet360Inference";
+    const NAME: &'static str = "GstAscSixDRepNet360Inference";
 
     type Type = super::SixDRepNet360Inference;
     type ParentType = gst_base::BaseTransform;

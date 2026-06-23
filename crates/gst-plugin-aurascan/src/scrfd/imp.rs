@@ -96,7 +96,7 @@ impl Default for ScrfdInference {
 
 #[glib::object_subclass]
 impl ObjectSubclass for ScrfdInference {
-    const NAME: &'static str = "GstAurascanScrfdInference";
+    const NAME: &'static str = "GstAscScrfdInference";
 
     type Type = super::ScrfdInference;
     type ParentType = gst_base::BaseTransform;

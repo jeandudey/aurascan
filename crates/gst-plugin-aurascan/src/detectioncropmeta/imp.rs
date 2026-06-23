@@ -202,7 +202,7 @@ pub struct DetectionCropMeta {
 
 #[glib::object_subclass]
 impl ObjectSubclass for DetectionCropMeta {
-    const NAME: &'static str = "GstAuraScanDetectionCropMeta";
+    const NAME: &'static str = "GstAscDetectionCropMeta";
 
     type Type = super::DetectionCropMeta;
     type ParentType = gst_base::BaseTransform;

@@ -95,7 +95,7 @@ pub struct ByteTracker {
 
 #[glib::object_subclass]
 impl ObjectSubclass for ByteTracker {
-    const NAME: &'static str = "GstAurascanByteTracker";
+    const NAME: &'static str = "GstAscByteTracker";
 
     type Type = super::ByteTracker;
     type ParentType = gst_base::BaseTransform;

@@ -29,7 +29,7 @@ pub struct SixDRepNet360TensorDec;
 
 #[glib::object_subclass]
 impl ObjectSubclass for SixDRepNet360TensorDec {
-    const NAME: &'static str = "GstBurnExtraSixDRepNet360TensorDec";
+    const NAME: &'static str = "GstAscSixDRepNet360TensorDec";
 
     type Type = super::SixDRepNet360TensorDec;
     type ParentType = gst_base::BaseTransform;

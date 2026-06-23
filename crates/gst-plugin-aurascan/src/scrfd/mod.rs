@@ -21,7 +21,7 @@ glib::wrapper! {
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, glib::Enum)]
 #[repr(C)]
-#[enum_type(name = "GstAurascanScrfdModelType")]
+#[enum_type(name = "GstAscScrfdModelType")]
 pub enum ModelType {
     #[default]
     Scrfd500m,

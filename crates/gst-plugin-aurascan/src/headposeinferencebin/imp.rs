@@ -10,7 +10,7 @@ pub struct HeadPoseInferenceBin {}
 
 #[glib::object_subclass]
 impl ObjectSubclass for HeadPoseInferenceBin {
-    const NAME: &'static str = "GstAuraScanHeadPoseInferenceBin";
+    const NAME: &'static str = "GstAscHeadPoseInferenceBin";
 
     type Type = super::HeadPoseInferenceBin;
     type ParentType = gst::Bin;

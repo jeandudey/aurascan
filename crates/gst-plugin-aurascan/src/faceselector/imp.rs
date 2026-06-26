@@ -379,38 +379,21 @@ impl BaseTransformImpl for FaceSelector {
 
         // Always emit a rect: last known smoothed position, or full frame when
         // no detection has ever been seen.
-        let (x, y, width, height) = tracker_state.cropper.rect(frame_w, frame_h);
+        let (crop_x, crop_y, crop_width, crop_height) =
+            tracker_state.cropper.rect(frame_w, frame_h);
         drop(video_info_guard);
 
         gst::debug!(
             CAT,
             imp = self,
-            "track_id={} x={x} y={y} width={width} height={height}",
+            "track_id={} crop_x={crop_x} crop_y={crop_y} crop_width={crop_width} crop_height={crop_height}",
             chosen_id.map_or(-1i64, |id| id as i64),
         );
 
-        gst_video::VideoCropMeta::add(buffer, (x, y, width, height));
-
-        if let Some(location) = location {
-            let mut structure = gst::Structure::builder("selected-detection")
-                .field("x", location.x)
-                .field("y", location.y)
-                .field("w", location.w)
-                .field("h", location.h)
-                .field("loc-conf-lvl", location.loc_conf_lvl);
-
-            if let Some(id) = chosen_id {
-                structure = structure.field("id", id);
-            }
-
-            if let Some(pts) = buffer.pts() {
-                structure = structure.field("pts", pts);
-            }
-
-            self.obj()
-                .post_message(gst::message::Application::new(structure.build()))
-                .unwrap();
-        }
+        // Add the crop metadata for the selected face and emit custom
+        // metadata about what face was selected.
+        gst_video::VideoCropMeta::add(buffer, (crop_x, crop_y, crop_width, crop_height));
+        add_selected_face_meta(buffer, location, chosen_id)?;
 
         Ok(gst::FlowSuccess::Ok)
     }
@@ -443,6 +426,37 @@ fn find_location(
     }
 
     None
+}
+
+fn add_selected_face_meta(
+    buffer: &mut gst::BufferRef,
+    location: Option<gst_analytics::AnalyticsODLocation>,
+    id: Option<u64>,
+) -> Result<(), gst::FlowError> {
+    let Some(location) = location else {
+        return Ok(());
+    };
+
+    let mut meta = match gst::meta::CustomMeta::add(buffer, "SelectedFaceMeta") {
+        Ok(meta) => meta,
+        Err(err) => {
+            gst::error!(CAT, "Failed to add SelectedFaceMeta: {err}");
+            return Err(gst::FlowError::Flushing);
+        }
+    };
+
+    let structure = meta.mut_structure();
+    structure.set("x", location.x);
+    structure.set("y", location.y);
+    structure.set("w", location.w);
+    structure.set("h", location.h);
+    structure.set("loc-conf-lvl", location.loc_conf_lvl);
+
+    if let Some(id) = id {
+        structure.set("id", id);
+    }
+
+    Ok(())
 }
 
 fn object_detection_tracking_id(

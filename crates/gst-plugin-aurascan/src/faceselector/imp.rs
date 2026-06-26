@@ -194,21 +194,21 @@ struct TrackerState {
 }
 
 #[derive(Default)]
-pub struct DetectionCropMeta {
+pub struct FaceSelector {
     settings: Mutex<Settings>,
     tracker_state: Mutex<Option<TrackerState>>,
     video_info: Mutex<Option<gst_video::VideoInfo>>,
 }
 
 #[glib::object_subclass]
-impl ObjectSubclass for DetectionCropMeta {
+impl ObjectSubclass for FaceSelector {
     const NAME: &'static str = "GstAscDetectionCropMeta";
 
-    type Type = super::DetectionCropMeta;
+    type Type = super::FaceSelector;
     type ParentType = gst_base::BaseTransform;
 }
 
-impl ObjectImpl for DetectionCropMeta {
+impl ObjectImpl for FaceSelector {
     fn properties() -> &'static [glib::ParamSpec] {
         static PROPERTIES: LazyLock<Vec<glib::ParamSpec>> = LazyLock::new(|| {
             vec![glib::ParamSpecFloat::builder("smoothing")
@@ -245,9 +245,9 @@ impl ObjectImpl for DetectionCropMeta {
     }
 }
 
-impl GstObjectImpl for DetectionCropMeta {}
+impl GstObjectImpl for FaceSelector {}
 
-impl ElementImpl for DetectionCropMeta {
+impl ElementImpl for FaceSelector {
     fn metadata() -> Option<&'static gst::subclass::ElementMetadata> {
         static METADATA: LazyLock<gst::subclass::ElementMetadata> = LazyLock::new(|| {
             gst::subclass::ElementMetadata::new(
@@ -285,7 +285,7 @@ impl ElementImpl for DetectionCropMeta {
     }
 }
 
-impl BaseTransformImpl for DetectionCropMeta {
+impl BaseTransformImpl for FaceSelector {
     const MODE: gst_base::subclass::BaseTransformMode =
         gst_base::subclass::BaseTransformMode::AlwaysInPlace;
     const PASSTHROUGH_ON_SAME_CAPS: bool = false;

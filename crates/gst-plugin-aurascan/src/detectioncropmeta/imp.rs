@@ -344,31 +344,29 @@ impl BaseTransformImpl for DetectionCropMeta {
 
         // Collect detections from analytics metadata (immutable borrow of buffer).
         let mut detections = Vec::new();
-        for meta in buffer.iter_meta::<gst_analytics::AnalyticsRelationMeta>() {
-            'od: for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
-                let Ok(location) = od.location() else {
-                    continue 'od;
-                };
-                let Some(tr) = meta
-                    .iter_direct_related::<gst_analytics::AnalyticsTrackingMtd>(
-                        od.id(),
-                        gst_analytics::RelTypes::RELATE_TO,
-                    )
-                    .next()
-                else {
-                    continue 'od;
-                };
-                detections.push(Detection {
-                    track_id: tr.info().0,
-                    bbox: [
-                        location.x as f32,
-                        location.y as f32,
-                        location.w as f32,
-                        location.h as f32,
-                    ],
-                    score: location.loc_conf_lvl as f32,
-                });
-            }
+        let Some(meta) = buffer.meta::<gst_analytics::AnalyticsRelationMeta>() else {
+            return Ok(gst::FlowSuccess::Ok);
+        };
+
+        for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
+            let Ok(location) = od.location() else {
+                continue;
+            };
+
+            let Some(track_id) = object_detection_tracking_id(&meta, &od) else {
+                continue;
+            };
+
+            detections.push(Detection {
+                track_id,
+                bbox: [
+                    location.x as f32,
+                    location.y as f32,
+                    location.w as f32,
+                    location.h as f32,
+                ],
+                score: location.loc_conf_lvl as f32,
+            });
         }
 
         let chosen_id = tracker_state.selector.pick(&detections, frame_w, frame_h);
@@ -445,4 +443,16 @@ fn find_location(
     }
 
     None
+}
+
+fn object_detection_tracking_id(
+    meta: &gst::MetaRef<gst_analytics::AnalyticsRelationMeta>,
+    object_detection: &gst_analytics::AnalyticsMtdRef<gst_analytics::AnalyticsODMtd>,
+) -> Option<u64> {
+    meta.iter_direct_related::<gst_analytics::AnalyticsTrackingMtd>(
+        object_detection.id(),
+        gst_analytics::RelTypes::RELATE_TO,
+    )
+    .next()
+    .map(|tracking_meta| tracking_meta.info().0)
 }

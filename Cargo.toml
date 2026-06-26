@@ -3,6 +3,8 @@ resolver = "3"
 members = [
     "crates/aurascan-gtk4",
     "crates/aurascan-headposeview",
+    "crates/aurascan-oneeurofilter",
+    "crates/aurascan-steam",
     "crates/burn-3ddfa",
     "crates/epoxy-sys",
     "crates/gst-plugin-aurascan",
@@ -35,14 +37,19 @@ gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25", features = ["v1_28"] }
 gtk = { package = "gtk4", version = "0.11.3", features = ["v4_16"] }
+keyvalues-serde = "0.2"
 log = "0.4"
+opencv = { version = "0.99", features = ["clang-runtime"] }
+serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 tracing-subscriber = "0.3"
 wgpu = "29.0"
+zerocopy = { version = "0.8", features = ["derive"] }
 
 # Local dependencies
 aurascan-gtk4.path = "crates/aurascan-gtk4"
 aurascan-headposeview.path = "crates/aurascan-headposeview"
+aurascan-steam.path = "crates/aurascan-steam"
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
 epoxy-sys.path = "crates/epoxy-sys"
@@ -59,6 +66,7 @@ edition = "2024"
 [dependencies]
 adw = { workspace = true, features = ["v1_4"] }
 aurascan-gtk4.workspace = true
+aurascan-steam.workspace = true
 epoxy-sys.workspace = true
 eyre.workspace = true
 gtk.workspace = true

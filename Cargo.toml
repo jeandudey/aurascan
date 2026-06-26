@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/aurascan-faceselector",
     "crates/aurascan-gtk4",
     "crates/aurascan-headposeview",
     "crates/aurascan-oneeurofilter",

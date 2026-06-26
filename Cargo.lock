@@ -317,6 +317,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "aurascan-faceselector"
+version = "0.1.0"
+
+[[package]]
 name = "aurascan-gtk4"
 version = "0.1.0"
 dependencies = [

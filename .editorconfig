@@ -2,6 +2,10 @@
 indent_style = space
 indent_size = 2
 
+[*.ui]
+indent_style = space
+indent_size = 2
+
 [*.meson]
 indent_style = space
 indent_size = 2

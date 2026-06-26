@@ -27,6 +27,7 @@ gst.workspace = true
 gst-analytics.workspace = true
 gst-base.workspace = true
 gst-video.workspace = true
+opencv.workspace = true
 scrfd-burn.workspace = true
 sixdrepnet360-burn.workspace = true
 

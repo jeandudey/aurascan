@@ -34,7 +34,7 @@ args = [
     "!", "onnxinference", "execution-provider=cpu", "model-file=../../models/onnx/scrfd_500m.onnx",
     "!", "scrfdtensordec",
     "!", "bytetracker",
-    "!", "detectioncropmeta",
+    "!", "faceselector",
     "!", "videocropscale",
     "!", "burn-sixdrepnet360inference",
     "!", "sixdrepnet360tensordec",
@@ -59,9 +59,9 @@ args = [
     "!", "fpsdisplaysink", "sync=false",
 ]
 
-[tasks.launch-detectioncropmeta]
+[tasks.launch-faceselector]
 dependencies = ["build"]
-env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "detectioncropmeta:6" }
+env = { GST_PLUGIN_PATH = "../../target/release", GST_DEBUG = "faceselector:6" }
 command = "gst-launch-1.0"
 args = [
     "autovideosrc",
@@ -71,7 +71,7 @@ args = [
     "!", "onnxinference", "execution-provider=cpu", "model-file=../../models/onnx/scrfd_500m.onnx",
     "!", "scrfdtensordec",
     "!", "bytetracker",
-    "!", "detectioncropmeta",
+    "!", "faceselector",
     "!", "videoconvert",
     "!", "fpsdisplaysink", "sync=false",
 ]

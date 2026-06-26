@@ -20,7 +20,7 @@ impl Default for Settings {
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
-        "detectioncropmeta",
+        "faceselector",
         gst::DebugColorFlags::empty(),
         Some("Detection Crop Metadata Element"),
     )

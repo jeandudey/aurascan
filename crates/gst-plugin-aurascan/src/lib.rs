@@ -1,7 +1,8 @@
 use gst::glib;
 
 pub mod bytetracker;
-pub mod detectioncropmeta;
+pub mod cvsolvepnp;
+pub mod faceselector;
 pub mod headposeinferencebin;
 pub mod scrfd;
 pub mod scrfdtensordec;
@@ -26,8 +27,25 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
         gst::meta::CustomMeta::register("EulerAnglesMeta", &[]);
     }
 
+    if !gst::meta::CustomMeta::is_registered("SelectedFaceMeta") {
+        gst::meta::CustomMeta::register("SelectedFaceMeta", &[]);
+    }
+
+    if !gst::meta::CustomMeta::is_registered("HeadPoseMeta") {
+        gst::meta::CustomMeta::register("HeadPoseMeta", &[]);
+    }
+
+    if !gst::meta::CustomMeta::is_registered("PnpProblemMeta") {
+        gst::meta::CustomMeta::register("PnpProblemMeta", &[]);
+    }
+
+    if !gst::meta::CustomMeta::is_registered("PnpResultMeta") {
+        gst::meta::CustomMeta::register("PnpResultMeta", &[]);
+    }
+
     bytetracker::register(plugin)?;
-    detectioncropmeta::register(plugin)?;
+    cvsolvepnp::register(plugin)?;
+    faceselector::register(plugin)?;
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;
     sixdrepnet360::register(plugin)?;

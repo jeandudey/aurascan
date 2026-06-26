@@ -36,8 +36,8 @@ impl ObjectImpl for HeadPoseInferenceBin {
             .name("bytetracker")
             .build()
             .unwrap();
-        let detectioncropmeta = gst::ElementFactory::make("detectioncropmeta")
-            .name("detectioncropmeta")
+        let faceselector = gst::ElementFactory::make("faceselector")
+            .name("faceselector")
             .build()
             .unwrap();
         let videocropscale = gst::ElementFactory::make("videocropscale")
@@ -57,7 +57,7 @@ impl ObjectImpl for HeadPoseInferenceBin {
             &facedetectorinfernce,
             &facedetectortensordec,
             &tracker,
-            &detectioncropmeta,
+            &faceselector,
             &videocropscale,
             &headposeinference,
             &headposetensordec,

@@ -551,7 +551,7 @@ impl Viewfinder {
 
         let bytetracker = gst::ElementFactory::make("bytetracker").build()?;
 
-        let detectioncropmeta = gst::ElementFactory::make("detectioncropmeta").build()?;
+        let faceselector = gst::ElementFactory::make("faceselector").build()?;
 
         let videocropscale = gst::ElementFactory::make("videocropscale").build()?;
 
@@ -561,6 +561,8 @@ impl Viewfinder {
             .unwrap();
 
         let sixdrepnet360tensordec = gst::ElementFactory::make("sixdrepnet360tensordec").build()?;
+
+        let cvsolvepnp = gst::ElementFactory::make("cvsolvepnp").build()?;
 
         let fakesink = gst::ElementFactory::make("fakesink")
             .property("sync", false)
@@ -598,10 +600,11 @@ impl Viewfinder {
             &scrfdinference,
             &scrfdtensordec,
             &bytetracker,
-            &detectioncropmeta,
+            &faceselector,
             &videocropscale,
             &sixdrepnet360inference,
             &sixdrepnet360tensordec,
+            &cvsolvepnp,
             &fpsdisplaysink,
         ])
         .unwrap();
@@ -612,10 +615,11 @@ impl Viewfinder {
             &scrfdinference,
             &scrfdtensordec,
             &bytetracker,
-            &detectioncropmeta,
+            &faceselector,
             &videocropscale,
             &sixdrepnet360inference,
             &sixdrepnet360tensordec,
+            &cvsolvepnp,
             &fpsdisplaysink,
         ])
         .unwrap();

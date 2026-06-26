@@ -9,6 +9,7 @@ mod camera;
 mod device_provider;
 mod head_pose_view;
 mod pipeline_tee;
+mod proton_application;
 mod viewfinder;
 mod wgpu_area;
 
@@ -16,6 +17,7 @@ pub use camera::Camera;
 pub use device_provider::{DeviceProvider, DeviceProviderError};
 pub use head_pose_view::HeadPoseView;
 pub use pipeline_tee::PipelineTee;
+pub use proton_application::ProtonApplication;
 pub use viewfinder::{Viewfinder, ViewfinderState};
 pub use wgpu_area::WGPUArea;
 

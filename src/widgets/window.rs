@@ -45,7 +45,8 @@ mod imp {
                         obj,
                         #[upgrade_or]
                         false,
-                        move |camera| {
+                        // TODO: Finish this.
+                        move |_camera| {
                             let stored_id = obj.imp().settings.string("last-camera-id");
                             !stored_id.is_empty()
                         }

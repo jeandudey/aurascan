@@ -15,12 +15,18 @@ mod imp {
     #[properties(wrapper_type = super::PreferencesWindow)]
     pub struct PreferencesWindow {
         #[template_child]
-        backend: TemplateChild<adw::ComboRow>,
+        pub backend: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub output: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub wine: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub steam_application: TemplateChild<adw::ComboRow>,
 
         #[property(get, set, construct_only)]
         pub is_detecting_head_pose: Cell<bool>,
 
-        settings: OnceCell<gio::Settings>,
+        pub settings: OnceCell<gio::Settings>,
     }
 
     #[glib::object_subclass]
@@ -48,7 +54,7 @@ mod imp {
             let settings = gio::Settings::new(app_id());
             let action_group = gio::SimpleActionGroup::new();
 
-            if !self.obj().is_detecting_head_pose() {
+            if !obj.is_detecting_head_pose() {
                 let backend = settings.create_action("backend");
                 action_group.add_action(&backend);
 
@@ -74,6 +80,58 @@ mod imp {
                         };
                         Some(nick.to_variant())
                     })
+                    .build();
+
+                let output = settings.create_action("output");
+                action_group.add_action(&output);
+
+                settings
+                    .bind("output", &self.output.get(), "selected")
+                    .mapping(|variant, _| {
+                        variant
+                            .str()
+                            .and_then(|s| match s {
+                                "wine" => Some(0),
+                                "flightgear" => Some(1),
+                                "network" => Some(2),
+                                _ => None,
+                            })
+                            .map(|idx: u32| idx.to_value())
+                    })
+                    .set_mapping(|value, _| {
+                        let nick = match value.get::<u32>().ok()? {
+                            0 => "wine",
+                            1 => "flightgear",
+                            2 => "network",
+                            _ => return None,
+                        };
+
+                        Some(nick.to_variant())
+                    })
+                    .build();
+
+                settings.connect_changed(
+                    Some("output"),
+                    glib::clone!(
+                        #[weak]
+                        obj,
+                        #[weak(rename_to = wine)]
+                        self.wine,
+                        move |settings, _| {
+                            let visible = settings.string("output") == "wine";
+                            wine.set_visible(visible);
+                            obj.set_content_height(-1);
+                            obj.queue_resize();
+                        }
+                    ),
+                );
+
+                let use_steam_proton = settings.create_action("use-steam-proton");
+                action_group.add_action(&use_steam_proton);
+
+                settings
+                    .bind("use-steam-proton", &self.steam_application.get(), "visible")
+                    .flags(gio::SettingsBindFlags::GET)
                     .build();
             } else {
                 self.backend.set_sensitive(false);

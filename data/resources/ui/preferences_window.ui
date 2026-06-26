@@ -12,7 +12,7 @@
             <child>
               <object class="AdwComboRow" id="backend">
                 <property name="title" translatable="yes">_Back end</property>
-                <property name="subtitle" translatable="yes">Select the back end to use for inference</property>
+                <property name="subtitle" translatable="yes">The back end to use for inference</property>
                 <property name="use-underline">True</property>
                 <property name="model">
                   <object class="GtkStringList">
@@ -23,6 +23,42 @@
                     </items>
                   </object>
                 </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="output">
+                <property name="title" translatable="yes">_Output</property>
+                <property name="subtitle" translatable="yes">Where to send head pose information</property>
+                <property name="use-underline">True</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Wine</item>
+                      <item translatable="yes">FlightGear</item>
+                      <item translatable="yes">Network (UDP)</item>
+                    </items>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup" id="wine">
+            <property name="title" translatable="yes">Wine</property>
+            <property name="description" translatable="yes">Allows configuring how to send head pose data to Windows titles using Wine or Steam's Proton</property>
+            <child>
+              <object class="AdwSwitchRow">
+                <property name="title" translatable="yes">_Use Steam's Proton</property>
+                <property name="use-underline">True</property>
+                <property name="action-name">preferences-window.use-steam-proton</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="steam_application">
+                <property name="title" translatable="yes">_Steam Application</property>
+                <property name="subtitle" translatable="yes">Select the application to send head pose information</property>
+                <property name="use-underline">True</property>
               </object>
             </child>
           </object>

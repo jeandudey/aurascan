@@ -8,16 +8,6 @@ use gst::subclass::prelude::*;
 use gst_analytics::AnalyticsMetaRefExt;
 use gst_base::subclass::prelude::BaseTransformImpl;
 
-struct Settings {
-    smoothing: f32,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self { smoothing: 0.3 }
-    }
-}
-
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
         "faceselector",
@@ -26,177 +16,11 @@ static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     )
 });
 
-struct Selector {
-    locked_id: Option<u64>,
-    switch_margin: f32,
-    grace_frames: u32,
-    missing: u32,
-}
-
-impl Selector {
-    fn pick(&mut self, dets: &[Detection], frame_w: f32, frame_h: f32) -> Option<u64> {
-        let best = dets.iter().max_by(|a, b| {
-            a.score(frame_w, frame_h)
-                .partial_cmp(&b.score(frame_w, frame_h))
-                .unwrap()
-        });
-
-        match self.locked_id {
-            Some(id) => {
-                if let Some(cur) = dets.iter().find(|d| d.track_id == id) {
-                    self.missing = 0;
-                    let cur_s = cur.score(frame_w, frame_h);
-                    if let Some(best) = best {
-                        if best.track_id != id
-                            && best.score(frame_w, frame_h) > cur_s + self.switch_margin
-                        {
-                            self.locked_id = Some(best.track_id);
-                        }
-                    }
-                } else {
-                    self.missing += 1;
-                    if self.missing > self.grace_frames {
-                        self.locked_id = best.map(|d| d.track_id);
-                        self.missing = 0;
-                    }
-                }
-            }
-            None => self.locked_id = best.map(|d| d.track_id),
-        }
-        self.locked_id
-    }
-}
-
-struct Detection {
-    track_id: u64,
-    /// `[x, y, w, h]`
-    bbox: [f32; 4],
-    score: f32,
-}
-
-impl Detection {
-    fn score(&self, frame_w: f32, frame_h: f32) -> f32 {
-        let [x, y, w, h] = self.bbox;
-        let area = (w * h) / (frame_w * frame_h);
-        let cx = x + w * 0.5;
-        let cy = y + h * 0.5;
-        let dx = (cx - frame_w * 0.5) / frame_w;
-        let dy = (cy - frame_h * 0.5) / frame_h;
-        let centrality = 1.0 - (dx * dx + dy * dy).sqrt();
-        0.6 * area + 0.3 * centrality + 0.1 * self.score
-    }
-}
-
-/// Smooths the crop region over time with EMA.
-///
-/// Call `advance` whenever a fresh detection is available, then call `rect` to
-/// get the crop to emit.  When no detection has ever been seen `rect` returns
-/// the full frame so downstream always receives a valid region.
-struct Cropper {
-    cx: f32,
-    cy: f32,
-    side: f32,
-    initialized: bool,
-}
-
-impl Cropper {
-    fn new() -> Self {
-        Self {
-            cx: 0.0,
-            cy: 0.0,
-            side: 0.0,
-            initialized: false,
-        }
-    }
-
-    fn advance(&mut self, location: &gst_analytics::AnalyticsODLocation, alpha: f32) {
-        let w = location.w as f32;
-        let h = location.h as f32;
-        let x = location.x as f32;
-        let y = location.y as f32;
-
-        let exp_top = 0.45;
-        let exp_bottom = 0.15;
-        let exp_side = 0.25;
-
-        let left_raw = x - w * exp_side;
-        let right_raw = x + w + w * exp_side;
-        let top_raw = y - h * exp_top;
-        let bottom_raw = y + h + h * exp_bottom;
-
-        let bw = right_raw - left_raw;
-        let bh = bottom_raw - top_raw;
-        let t_side = bw.max(bh);
-        let t_cx = (left_raw + right_raw) / 2.0;
-        let t_cy = (top_raw + bottom_raw) / 2.0;
-
-        if !self.initialized {
-            self.cx = t_cx;
-            self.cy = t_cy;
-            self.side = t_side;
-            self.initialized = true;
-        } else {
-            self.cx += alpha * (t_cx - self.cx);
-            self.cy += alpha * (t_cy - self.cy);
-            self.side += alpha * (t_side - self.side);
-        }
-    }
-
-    /// Returns `(x, y, width, height)` for `GstVideoCropMeta`.
-    ///
-    /// Falls back to the full frame when no detection has been seen yet so that
-    /// downstream always gets a valid region even before the tracker fires.
-    fn rect(&self, frame_w: f32, frame_h: f32) -> (u32, u32, u32, u32) {
-        if !self.initialized {
-            return (0, 0, frame_w as u32, frame_h as u32);
-        }
-
-        let side = self.side.min(frame_w - 1.0).min(frame_h - 1.0).max(1.0);
-        let mut left = self.cx - side / 2.0;
-        let mut top = self.cy - side / 2.0;
-        let mut right = left + side;
-        let mut bottom = top + side;
-
-        if left < 0.0 {
-            right -= left;
-            left = 0.0;
-        }
-        if top < 0.0 {
-            bottom -= top;
-            top = 0.0;
-        }
-        if right > frame_w {
-            left -= right - frame_w;
-            right = frame_w;
-        }
-        if bottom > frame_h {
-            top -= bottom - frame_h;
-            bottom = frame_h;
-        }
-
-        let left = left.max(0.0);
-        let top = top.max(0.0);
-        let right = right.min(frame_w);
-        let bottom = bottom.min(frame_h);
-
-        let x = left.round() as u32;
-        let y = top.round() as u32;
-        let width = (right - left).round().max(0.0) as u32;
-        let height = (bottom - top).round().max(0.0) as u32;
-
-        (x, y, width, height)
-    }
-}
-
-struct TrackerState {
-    selector: Selector,
-    cropper: Cropper,
-}
-
 #[derive(Default)]
 pub struct FaceSelector {
     settings: Mutex<Settings>,
-    tracker_state: Mutex<Option<TrackerState>>,
+    selector: Mutex<Option<aurascan_faceselector::FaceSelector>>,
+    cropper: Mutex<Option<aurascan_smoothedcrop::SmoothedCrop>>,
     video_info: Mutex<Option<gst_video::VideoInfo>>,
 }
 
@@ -292,15 +116,8 @@ impl BaseTransformImpl for FaceSelector {
     const TRANSFORM_IP_ON_PASSTHROUGH: bool = true;
 
     fn start(&self) -> Result<(), gst::ErrorMessage> {
-        *self.tracker_state.lock().unwrap() = Some(TrackerState {
-            selector: Selector {
-                locked_id: None,
-                switch_margin: 0.15,
-                grace_frames: 15,
-                missing: 0,
-            },
-            cropper: Cropper::new(),
-        });
+        *self.selector.lock().unwrap() = Some(aurascan_faceselector::FaceSelector::new());
+        *self.cropper.lock().unwrap() = Some(aurascan_smoothedcrop::SmoothedCrop::new());
 
         gst::info!(CAT, imp = self, "Started");
 
@@ -308,7 +125,8 @@ impl BaseTransformImpl for FaceSelector {
     }
 
     fn stop(&self) -> Result<(), gst::ErrorMessage> {
-        *self.tracker_state.lock().unwrap() = None;
+        *self.selector.lock().unwrap() = None;
+        *self.cropper.lock().unwrap() = None;
         *self.video_info.lock().unwrap() = None;
 
         gst::info!(CAT, imp = self, "Stopped");
@@ -327,72 +145,67 @@ impl BaseTransformImpl for FaceSelector {
         &self,
         buffer: &mut gst::BufferRef,
     ) -> Result<gst::FlowSuccess, gst::FlowError> {
-        let mut tracker_state_guard = self.tracker_state.lock().unwrap();
-        let Some(tracker_state) = &mut *tracker_state_guard else {
-            gst::error!(CAT, imp = self, "Wrong state");
+        let mut selector_guard = self.selector.lock().unwrap();
+        let Some(selector) = &mut *selector_guard else {
+            gst::error!(CAT, imp = self, "Wrong state, selector not started");
             return Err(gst::FlowError::Flushing);
         };
 
-        let video_info_guard = self.video_info.lock().unwrap();
-        let Some(video_info) = &*video_info_guard else {
-            return Ok(gst::FlowSuccess::Ok);
+        let mut cropper_guard = self.cropper.lock().unwrap();
+        let Some(cropper) = &mut *cropper_guard else {
+            gst::error!(CAT, imp = self, "Wrong state, cropper not started");
+            return Err(gst::FlowError::Flushing);
         };
 
-        let frame_w = video_info.width() as f32;
-        let frame_h = video_info.height() as f32;
-        let smoothing = self.settings.lock().unwrap().smoothing;
+        let (frame_w, frame_h) = self
+            .video_info
+            .lock()
+            .map(|video_info| {
+                (
+                    video_info.as_ref().unwrap().width(),
+                    video_info.as_ref().unwrap().height(),
+                )
+            })
+            .unwrap();
 
-        // Collect detections from analytics metadata (immutable borrow of buffer).
-        let mut detections = Vec::new();
-        let Some(meta) = buffer.meta::<gst_analytics::AnalyticsRelationMeta>() else {
-            return Ok(gst::FlowSuccess::Ok);
-        };
+        let settings = self.settings.lock().unwrap();
 
-        for od in meta.iter::<gst_analytics::AnalyticsODMtd>() {
-            let Ok(location) = od.location() else {
-                continue;
-            };
+        let detections = detections(buffer);
 
-            let Some(track_id) = object_detection_tracking_id(&meta, &od) else {
-                continue;
-            };
-
-            detections.push(Detection {
-                track_id,
-                bbox: [
-                    location.x as f32,
-                    location.y as f32,
-                    location.w as f32,
-                    location.h as f32,
-                ],
-                score: location.loc_conf_lvl as f32,
-            });
-        }
-
-        let chosen_id = tracker_state.selector.pick(&detections, frame_w, frame_h);
+        let chosen_id = selector.select(
+            detections.iter().cloned(),
+            frame_w as f32,
+            frame_h as f32,
+            settings.score_margin,
+            settings.missing_threshold,
+        );
 
         // When a detection is selected, advance the EMA toward its location.
         let location = chosen_id.and_then(|chosen_id| find_location(chosen_id, buffer));
         if let Some(location) = location.as_ref() {
-            tracker_state.cropper.advance(&location, smoothing);
+            cropper.advance(
+                aurascan_smoothedcrop::Rect {
+                    x: location.x as u32,
+                    y: location.y as u32,
+                    width: location.w as u32,
+                    height: location.h as u32,
+                },
+                &aurascan_smoothedcrop::Settings {
+                    expansion_top: settings.expansion_top,
+                    expansion_bottom: settings.expansion_bottom,
+                    expansion_side: settings.expansion_side,
+                    alpha: settings.smoothing,
+                },
+            );
         }
 
         // Always emit a rect: last known smoothed position, or full frame when
         // no detection has ever been seen.
-        let (crop_x, crop_y, crop_width, crop_height) =
-            tracker_state.cropper.rect(frame_w, frame_h);
-        drop(video_info_guard);
-
-        gst::debug!(
-            CAT,
-            imp = self,
-            "track_id={} crop_x={crop_x} crop_y={crop_y} crop_width={crop_width} crop_height={crop_height}",
-            chosen_id.map_or(-1i64, |id| id as i64),
-        );
+        let crop = cropper.rect(frame_w, frame_h);
 
         // Add the crop metadata for the selected face and emit custom
         // metadata about what face was selected.
-        gst_video::VideoCropMeta::add(buffer, (crop_x, crop_y, crop_width, crop_height));
+        gst_video::VideoCropMeta::add(buffer, (crop.x, crop.y, crop.width, crop.height));
         add_selected_face_meta(buffer, location, chosen_id)?;
 
         Ok(gst::FlowSuccess::Ok)
@@ -457,6 +270,81 @@ fn add_selected_face_meta(
     }
 
     Ok(())
+}
+
+struct Settings {
+    expansion_top: f32,
+    expansion_bottom: f32,
+    expansion_side: f32,
+    smoothing: f32,
+    score_margin: f32,
+    missing_threshold: usize,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            expansion_top: 0.45,
+            expansion_bottom: 0.15,
+            expansion_side: 0.25,
+            smoothing: 0.3,
+            score_margin: 0.15,
+            missing_threshold: 15,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Detection {
+    location: gst_analytics::AnalyticsODLocation,
+    id: u64,
+}
+
+impl aurascan_faceselector::FaceDetection for Detection {
+    fn x(&self) -> f32 {
+        self.location.x as f32
+    }
+
+    fn y(&self) -> f32 {
+        self.location.y as f32
+    }
+
+    fn w(&self) -> f32 {
+        self.location.w as f32
+    }
+
+    fn h(&self) -> f32 {
+        self.location.h as f32
+    }
+
+    fn score(&self) -> f32 {
+        self.location.loc_conf_lvl
+    }
+
+    fn id(&self) -> u64 {
+        self.id
+    }
+}
+
+fn detections(buffer: &gst::BufferRef) -> Vec<Detection> {
+    let Some(meta) = buffer.meta::<gst_analytics::AnalyticsRelationMeta>() else {
+        return Vec::new();
+    };
+
+    meta.iter::<gst_analytics::AnalyticsODMtd>()
+        .filter_map(|odmeta| {
+            let id = object_detection_tracking_id(&meta, &odmeta)?;
+            Some(Detection {
+                id,
+                location: odmeta
+                    .location()
+                    .inspect_err(|err| {
+                        gst::error!(CAT, "Failed to retrieve AnalyticsODMtd location: {err}");
+                    })
+                    .ok()?,
+            })
+        })
+        .collect()
 }
 
 fn object_detection_tracking_id(

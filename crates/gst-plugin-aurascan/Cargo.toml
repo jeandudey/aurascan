@@ -19,6 +19,8 @@ sixdrepnet360-pretrained = ["sixdrepnet360-burn/pretrained"]
 v1_30 = ["gst-analytics/v1_30"]
 
 [dependencies]
+aurascan-faceselector.workspace = true
+aurascan-smoothedcrop.workspace = true
 burn = { workspace = true, features = ["autotune", "dispatch", "flex", "fusion"] }
 byte-slice-cast.workspace = true
 edgefirst-tracker.workspace = true

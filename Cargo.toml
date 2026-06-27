@@ -5,6 +5,7 @@ members = [
     "crates/aurascan-gtk4",
     "crates/aurascan-headposeview",
     "crates/aurascan-oneeurofilter",
+    "crates/aurascan-smoothedcrop",
     "crates/aurascan-steam",
     "crates/burn-3ddfa",
     "crates/epoxy-sys",
@@ -48,8 +49,10 @@ wgpu = "29.0"
 zerocopy = { version = "0.8", features = ["derive"] }
 
 # Local dependencies
+aurascan-faceselector.path = "crates/aurascan-faceselector"
 aurascan-gtk4.path = "crates/aurascan-gtk4"
 aurascan-headposeview.path = "crates/aurascan-headposeview"
+aurascan-smoothedcrop.path = "crates/aurascan-smoothedcrop"
 aurascan-steam.path = "crates/aurascan-steam"
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"

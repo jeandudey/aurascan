@@ -1,16 +1,23 @@
 use std::cmp::Ordering;
 
+/// Selects a face from a list of face detections each frame, keeping
+/// track of the previous tracked face.
 #[derive(Debug)]
 pub struct FaceSelector {
-    score_margin: f32,
-    missing_threshold: usize,
-
     current_id: Option<u64>,
     missing: usize,
 }
 
 impl FaceSelector {
     /// Create a new [`FaceSelector`].
+    pub fn new() -> Self {
+        Self {
+            current_id: None,
+            missing: 0,
+        }
+    }
+
+    /// Select a face from the detections and return the ID.
     ///
     /// - `score_margin` is the added margin to the calculated score to
     /// switch to a new face, if the tracked face is present in the
@@ -19,17 +26,8 @@ impl FaceSelector {
     /// - `missing_threshold` is the threshold of how many frames (calls to
     /// [`FaceSelector::select`]) the face must be missing to drop the
     /// selection and choose a new best one.
-    pub fn new(score_margin: f32, missing_threshold: usize) -> Self {
-        Self {
-            score_margin,
-            missing_threshold,
-
-            current_id: None,
-            missing: 0,
-        }
-    }
-
-    /// Select a face from the detections and return the ID.
+    ///
+    /// # Return
     ///
     /// Returns `None` if `detections` is empty or if the current selected
     /// face is not present in the detections and it hasn't been dropped
@@ -39,6 +37,8 @@ impl FaceSelector {
         mut detections: impl Iterator<Item = D> + Clone,
         frame_width: f32,
         frame_height: f32,
+        score_margin: f32,
+        missing_threshold: usize,
     ) -> Option<u64> {
         debug_assert!(frame_width > 0.0 && frame_height > 0.0);
         debug_assert_detections(detections.clone(), frame_width, frame_height);
@@ -61,7 +61,7 @@ impl FaceSelector {
             self.missing += 1;
 
             // If missing for too long, select the best face as the new one being tracked.
-            if self.missing > self.missing_threshold {
+            if self.missing > missing_threshold {
                 self.missing = 0;
                 self.current_id = best.map(|detection| detection.id());
                 return self.current_id;
@@ -78,7 +78,7 @@ impl FaceSelector {
         if let Some(best) = best {
             let matching_score = face_score(&matching_detection, frame_width, frame_height);
             let best_score = face_score(&best, frame_width, frame_height);
-            let is_above_margin = best_score > matching_score + self.score_margin;
+            let is_above_margin = best_score > matching_score + score_margin;
             if best.id() != matching_detection.id() && is_above_margin {
                 self.current_id = Some(best.id());
             }

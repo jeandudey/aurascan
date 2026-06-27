@@ -356,6 +356,10 @@ name = "aurascan-oneeurofilter"
 version = "0.1.0"
 
 [[package]]
+name = "aurascan-smoothedcrop"
+version = "0.1.0"
+
+[[package]]
 name = "aurascan-steam"
 version = "0.1.0"
 dependencies = [
@@ -4254,6 +4258,8 @@ dependencies = [
 name = "gst-plugin-aurascan"
 version = "0.1.0"
 dependencies = [
+ "aurascan-faceselector",
+ "aurascan-smoothedcrop",
  "burn",
  "byte-slice-cast",
  "edgefirst-tracker",

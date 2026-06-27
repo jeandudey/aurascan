@@ -13,7 +13,7 @@ use eyre::Context;
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
-        "solvepnp",
+        "cvsolvepnp",
         gst::DebugColorFlags::empty(),
         Some("SolvePnP Element"),
     )

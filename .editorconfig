@@ -10,10 +10,6 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
-[meson.build]
-indent_style = space
-indent_size = 2
-
-[meson.options]
+[{meson.build,meson.options}]
 indent_style = space
 indent_size = 2

@@ -15,8 +15,13 @@ freetrackclient_rc = configure_file(
 )
 res = windows.compile_resources(freetrackclient_rc)
 
+name = 'FreeTrackClient'
+if host_machine.cpu_family() == 'x86_64'
+  name += '64'
+endif
+
 dll = shared_library(
-  'FreeTrackClient',
+  name,
   'freetrackclient.c',
   res,
   name_prefix: '',

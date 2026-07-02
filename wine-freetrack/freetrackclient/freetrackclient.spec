@@ -1,0 +1,5 @@
+1 stdcall FTGetData (ptr)
+2 stdcall FTGetDllVersion ()
+3 stdcall FTProvider ()
+4 stdcall FTReportID (long)
+5 stdcall FTReportName (long)

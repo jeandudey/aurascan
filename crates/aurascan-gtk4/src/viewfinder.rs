@@ -562,6 +562,8 @@ impl Viewfinder {
 
         let sixdrepnet360tensordec = gst::ElementFactory::make("sixdrepnet360tensordec").build()?;
 
+        let facepnpadapter = gst::ElementFactory::make("facepnpadapter").build()?;
+
         let cvsolvepnp = gst::ElementFactory::make("cvsolvepnp").build()?;
 
         let fakesink = gst::ElementFactory::make("fakesink")
@@ -604,6 +606,7 @@ impl Viewfinder {
             &videocropscale,
             &sixdrepnet360inference,
             &sixdrepnet360tensordec,
+            &facepnpadapter,
             &cvsolvepnp,
             &fpsdisplaysink,
         ])
@@ -619,6 +622,7 @@ impl Viewfinder {
             &videocropscale,
             &sixdrepnet360inference,
             &sixdrepnet360tensordec,
+            &facepnpadapter,
             &cvsolvepnp,
             &fpsdisplaysink,
         ])

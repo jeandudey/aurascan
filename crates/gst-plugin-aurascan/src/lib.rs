@@ -2,6 +2,7 @@ use gst::glib;
 
 pub mod bytetracker;
 pub mod cvsolvepnp;
+pub mod facepnpadapter;
 pub mod faceselector;
 pub mod headposeinferencebin;
 pub mod scrfd;
@@ -45,6 +46,7 @@ fn plugin_init(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
 
     bytetracker::register(plugin)?;
     cvsolvepnp::register(plugin)?;
+    facepnpadapter::register(plugin)?;
     faceselector::register(plugin)?;
     scrfd::register(plugin)?;
     scrfdtensordec::register(plugin)?;

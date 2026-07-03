@@ -122,10 +122,10 @@ FTReportName (LPCSTR Name)
   CopyMemory (FTProgramName, Name, Len);
   FTProgramName[Len] = 0;
 
+  ReleaseMutex (FTMutex);
+
   MsgID = RegisterWindowMessageA (FT_PROGRAMID);
   SendMessageTimeoutA (*FTHandle, MsgID, 0, 0, 0, 2000, NULL);
-
-  ReleaseMutex (FTMutex);
 }
 
 VOID WINAPI

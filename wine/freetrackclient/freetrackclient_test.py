@@ -19,7 +19,7 @@ else:
         ["winepath", "--windows", os.path.abspath(os.path.dirname(dll))], text=True
     ).strip()
     subprocess.run(
-        ["wine64", "reg", "add", key, "/v", "Path", "/t", "REG_SZ", "/d", path, "/f"],
+        ["wine", "reg", "add", key, "/v", "Path", "/t", "REG_SZ", "/d", path, "/f"],
         check=True,
     )
     subprocess.run(["wine64", test_exe], check=True)

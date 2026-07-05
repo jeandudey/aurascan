@@ -1,3 +1,12 @@
+/**
+ * SPDX-FileCopyrightText: 2009 Tulthix, uglyDwarf
+ * SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+ * SPDX-License-Identifier: MIT
+ *
+ * Extracted from Linuxtrack:
+ * - <https://github.com/uglyDwarf/linuxtrack>
+ */
+
 #include <stdio.h>
 #include <strsafe.h>
 #include <windows.h>

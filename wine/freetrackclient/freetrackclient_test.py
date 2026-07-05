@@ -22,4 +22,4 @@ else:
         ["wine", "reg", "add", key, "/v", "Path", "/t", "REG_SZ", "/d", path, "/f"],
         check=True,
     )
-    subprocess.run(["wine64", test_exe], check=True)
+    subprocess.run(["wine", test_exe], check=True)

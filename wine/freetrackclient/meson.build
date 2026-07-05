@@ -26,6 +26,7 @@ dll = shared_library(
   res,
   name_prefix: '',
   dependencies: version_dep,
+  install: true,
 )
 
 test_exe = executable('freetrackclient_test', 'freetrackclient_test.c')
@@ -34,4 +35,12 @@ test(
   'freetrackclient test',
   python3,
   args: [files('freetrackclient_test.py'), dll, test_exe],
+)
+
+ui_res = windows.compile_resources('freetrackclient_test_ui.rc')
+executable(
+  'freetrackclient_test_ui',
+  'freetrackclient_test_ui.c',
+  ui_res,
+  install: true,
 )

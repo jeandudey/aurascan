@@ -15,7 +15,7 @@ freetrackclient_rc = configure_file(
 )
 res = windows.compile_resources(freetrackclient_rc)
 
-name = 'FreeTrackClient'
+name = 'freetrackclient'
 if host_machine.cpu_family() == 'x86_64'
   name += '64'
 endif

@@ -61,9 +61,9 @@ FTLoadDll (FreeTrackProcs *Procs, HMODULE *FreeTrackClient)
     return FALSE;
 
 #if defined(_WIN64)
-  wsprintfA (FullPath, "%s\\FreeTrackClient64.dll", Path);
+  wsprintfA (FullPath, "%s\\freetrackclient64.dll", Path);
 #else
-  wsprintfA (FullPath, "%s\\FreeTrackClient.dll", Path);
+  wsprintfA (FullPath, "%s\\freetrackclient.dll", Path);
 #endif
 
   *FreeTrackClient = LoadLibraryA (FullPath);

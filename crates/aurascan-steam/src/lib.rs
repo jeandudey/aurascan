@@ -3,9 +3,10 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
+use eyre::{Context, OptionExt};
+
 mod library_folders;
 
-use eyre::{Context, OptionExt};
 pub use library_folders::{LibraryFolder, LibraryFolders};
 
 const KNOWN_PATHS: &[&str] = &[

@@ -366,6 +366,7 @@ dependencies = [
  "chrono",
  "eyre",
  "keyvalues-serde",
+ "log",
  "serde",
 ]
 

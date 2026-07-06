@@ -5,6 +5,8 @@ use std::path::Path;
 use eyre::Context;
 use serde::{Deserialize, Deserializer};
 
+use crate::ConfigInfo;
+
 // NOTE: Uses String for the fields I don't care about, if needed
 // switch to proper type deserialization.
 #[derive(Debug, Deserialize)]
@@ -37,6 +39,18 @@ impl AppManifest {
         let file = File::open(path).wrap_err("Failed to open app manifest")?;
         keyvalues_serde::from_reader(BufReader::new(file))
             .wrap_err("Failed to deserialize app manifest")
+    }
+
+    pub fn config_info(&self, steam_dir: impl AsRef<Path>) -> eyre::Result<Option<ConfigInfo>> {
+        let path = steam_dir
+            .as_ref()
+            .join(format!("steamapps/compatdata/{}/config_info", self.app_id));
+
+        if path.exists() {
+            ConfigInfo::from_file(path).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 }
 

@@ -5,9 +5,11 @@ use std::sync::LazyLock;
 
 use eyre::{Context, OptionExt};
 
+mod app_manifest;
 mod config_info;
 mod library_folders;
 
+pub use app_manifest::AppManifest;
 pub use config_info::ConfigInfo;
 pub use library_folders::{LibraryFolder, LibraryFolders};
 

@@ -1,0 +1,14 @@
+11.0-100
+/home/steamuser/.local/share/Steam/steamapps/common/Proton - Experimental/files/share/fonts/
+/home/steamuser/.local/share/Steam/steamapps/common/Proton - Experimental/files/lib/
+/home/steamuser/.local/share/Steam
+1781043446.0
+1781043450.0
+1516738214.0
+/home/steamuser/.local/share/Steam/steamapps/common/Proton - Experimental/files/share/default_pfx/
+1781202038.8633409
+False
+True
+d3dcompiler_*.dll,d3dcsx*.dll,d3dx*.dll,dx8vb.dll,x3daudio*.dll,xactengine*.dll,xapofx*.dll,xaudio*.dll,xinput*.dll,atl1*.dll,atl.dll,concrt*.dll,msvcp1*.dll,msvcrt*.dll,msvcp7*.dll,msvcp6*.dll,msvcp_win.dll,msvcr1*.dll,msvcrt*.dll,msvcr7*.dll,vcamp1*.dll,vcomp1*.dll,vccorlib1*.dll,vcruntime1*.dll,ucrtbase.dll,comctl32.dll,ntdll.dll,vulkan-1.dll,ir50_32.dll
+True
+False

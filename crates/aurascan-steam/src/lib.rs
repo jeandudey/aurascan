@@ -5,8 +5,10 @@ use std::sync::LazyLock;
 
 use eyre::{Context, OptionExt};
 
+mod config_info;
 mod library_folders;
 
+pub use config_info::ConfigInfo;
 pub use library_folders::{LibraryFolder, LibraryFolders};
 
 const KNOWN_PATHS: &[&str] = &[

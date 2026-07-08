@@ -15,7 +15,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for SteamApplication {
-        const NAME: &'static str = "AscProtonApplication";
+        const NAME: &'static str = "AscSteamApplication";
         type Type = super::SteamApplication;
     }
 

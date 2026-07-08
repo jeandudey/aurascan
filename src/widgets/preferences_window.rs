@@ -51,6 +51,8 @@ mod imp {
 
             let obj = self.obj();
 
+            let steam_applications = setup_steam_applications(&self.steam_application);
+
             let settings = gio::Settings::new(app_id());
             let action_group = gio::SimpleActionGroup::new();
 
@@ -133,12 +135,46 @@ mod imp {
                     .bind("use-steam-proton", &self.steam_application.get(), "visible")
                     .flags(gio::SettingsBindFlags::GET)
                     .build();
+
+                settings
+                    .bind(
+                        "steam-application-id",
+                        &self.steam_application.get(),
+                        "selected",
+                    )
+                    .mapping(glib::clone!(
+                        #[weak]
+                        steam_applications,
+                        #[upgrade_or]
+                        None,
+                        move |variant, _ty| {
+                            let id = variant.get::<u64>()?;
+                            let pos = steam_applications
+                                .iter::<aurascan_gtk4::SteamApplication>()
+                                .position(|app| app.map(|app| app.id()) == Ok(id))
+                                .unwrap_or(gtk::INVALID_LIST_POSITION as usize);
+                            Some((pos as u32).to_value())
+                        }
+                    ))
+                    .set_mapping(glib::clone!(
+                        #[weak]
+                        steam_applications,
+                        #[upgrade_or]
+                        None,
+                        move |value, _ty| {
+                            let pos = value.get::<u32>().ok()?;
+                            steam_applications
+                                .item(pos)
+                                .and_downcast::<aurascan_gtk4::SteamApplication>()
+                                .map(|app| app.id().to_variant())
+                        }
+                    ))
+                    .build();
             } else {
                 self.backend.set_sensitive(false);
             }
 
             obj.insert_action_group("preferences-window", Some(&action_group));
-
             self.settings.set(settings).unwrap();
         }
     }
@@ -146,6 +182,48 @@ mod imp {
     impl WidgetImpl for PreferencesWindow {}
     impl AdwDialogImpl for PreferencesWindow {}
     impl PreferencesDialogImpl for PreferencesWindow {}
+
+    fn setup_steam_applications(steam_application: &adw::ComboRow) -> gio::ListStore {
+        let model = gio::ListStore::new::<aurascan_gtk4::SteamApplication>();
+        steam_application.set_model(Some(&model));
+
+        let expression = gtk::PropertyExpression::new(
+            aurascan_gtk4::SteamApplication::static_type(),
+            None::<gtk::Expression>,
+            "name",
+        );
+        steam_application.set_expression(Some(expression));
+
+        let library_folders = match aurascan_steam::library_folders() {
+            Ok(v) => v,
+            Err(err) => {
+                log::error!("Failed to parse Steam library folders: {err}");
+                return model;
+            }
+        };
+
+        for (id, library_folder) in library_folders.folders {
+            let manifests = match library_folder.manifests() {
+                Ok(v) => v,
+                Err(err) => {
+                    log::error!("Failed to parse Steam manifests for library folder {id}: {err}");
+                    continue;
+                }
+            };
+
+            for app in manifests
+                .iter()
+                .filter(|manifest| manifest.1.has_wine_prefix(&library_folder.path))
+                .map(|(&app_id, manifest)| {
+                    aurascan_gtk4::SteamApplication::new(app_id, &manifest.name)
+                })
+            {
+                model.append(&app);
+            }
+        }
+
+        model
+    }
 }
 
 glib::wrapper! {

@@ -1,3 +1,4 @@
+use glib::prelude::*;
 use glib::subclass::prelude::*;
 use gtk::glib;
 
@@ -9,7 +10,9 @@ mod imp {
     #[derive(Debug, Default, glib::Properties)]
     #[properties(wrapper_type = super::SteamApplication)]
     pub struct SteamApplication {
+        #[property(get, set)]
         pub id: Cell<u64>,
+        #[property(get, set)]
         pub name: RefCell<String>,
     }
 

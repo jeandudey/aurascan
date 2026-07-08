@@ -41,8 +41,8 @@
       <summary>Use Steam Proton when the Wine output is selected</summary>
       <description>Send head pose information to Steam Proton applications</description>
     </key>
-    <key name="steam-application-id" type="s">
-      <default>""</default>
+    <key name="steam-application-id" type="t">
+      <default>0</default>
       <summary>The ID of the Steam application to send head pose information</summary>
       <description>The ID of the Steam application to send head pose information</description>
     </key>

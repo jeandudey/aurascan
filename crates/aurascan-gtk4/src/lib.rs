@@ -9,7 +9,7 @@ mod camera;
 mod device_provider;
 mod head_pose_view;
 mod pipeline_tee;
-mod proton_application;
+mod steam_application;
 mod viewfinder;
 mod wgpu_area;
 
@@ -17,7 +17,7 @@ pub use camera::Camera;
 pub use device_provider::{DeviceProvider, DeviceProviderError};
 pub use head_pose_view::HeadPoseView;
 pub use pipeline_tee::PipelineTee;
-pub use proton_application::ProtonApplication;
+pub use steam_application::SteamApplication;
 pub use viewfinder::{Viewfinder, ViewfinderState};
 pub use wgpu_area::WGPUArea;
 
@@ -67,6 +67,7 @@ pub fn init() {
         DeviceProvider::static_type();
         HeadPoseView::static_type();
         PipelineTee::static_type();
+        SteamApplication::static_type();
         Viewfinder::static_type();
         WGPUArea::static_type();
     });

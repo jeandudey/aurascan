@@ -1,6 +1,6 @@
-use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::{fs::File, path::PathBuf};
 
 use eyre::Context;
 use serde::{Deserialize, Deserializer};
@@ -41,11 +41,10 @@ impl AppManifest {
             .wrap_err("Failed to deserialize app manifest")
     }
 
-    pub fn has_wine_prefix(&self, steam_dir: impl AsRef<Path>) -> bool {
+    pub fn wine_prefix(&self, steam_dir: impl AsRef<Path>) -> PathBuf {
         steam_dir
             .as_ref()
             .join(format!("steamapps/compatdata/{}/pfx", self.app_id))
-            .exists()
     }
 
     pub fn config_info(&self, steam_dir: impl AsRef<Path>) -> eyre::Result<Option<ConfigInfo>> {

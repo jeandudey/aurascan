@@ -213,7 +213,7 @@ mod imp {
 
             for app in manifests
                 .iter()
-                .filter(|manifest| manifest.1.has_wine_prefix(&library_folder.path))
+                .filter(|(_, manifest)| manifest.wine_prefix(&library_folder.path).exists())
                 .map(|(&app_id, manifest)| {
                     aurascan_gtk4::SteamApplication::new(app_id, &manifest.name)
                 })

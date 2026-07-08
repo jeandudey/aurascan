@@ -41,6 +41,13 @@ impl AppManifest {
             .wrap_err("Failed to deserialize app manifest")
     }
 
+    pub fn has_wine_prefix(&self, steam_dir: impl AsRef<Path>) -> bool {
+        steam_dir
+            .as_ref()
+            .join(format!("steamapps/compatdata/{}/pfx", self.app_id))
+            .exists()
+    }
+
     pub fn config_info(&self, steam_dir: impl AsRef<Path>) -> eyre::Result<Option<ConfigInfo>> {
         let path = steam_dir
             .as_ref()

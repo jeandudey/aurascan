@@ -81,21 +81,42 @@ machine vision neural network model for estimating the head pose of a 224x224 im
 of a face.")
     (license license:expat)))
 
-(define-public freetrackwinebridge
+(define-public freetrackwinebridge64
   (package
-    (name "freetrackwinebridge")
+    (name "freetrackwinebridge64")
     (version "0.1.0")
     (source (local-file "wine/freetrackwinebridge" "freetrackwinebridge"
                         #:recursive? #t
                         #:select? (git-predicate (dirname (current-filename)))))
     (build-system meson-build-system)
     (arguments
-     (list #:phases
+     (list #:configure-flags #~(list "--cross-file=../source/cross.txt")
+           #:phases
            #~(modify-phases %standard-phases
-               (add-before 'configure 'set-env
+               (add-before 'configure 'cross-file
                  (lambda _
-                   (setenv "CC" "winegcc")
-                   (setenv "CXX" "wineg++"))))))
+                   (call-with-output-file "cross.txt"
+                     (lambda (port)
+                       (format port "\
+[binaries]
+c = 'winegcc'
+cpp = 'wineg++'
+ar = 'ar'
+strip = 'strip'
+pkg-config = 'pkg-config'
+
+[properties]
+need_exe_wrapper = true
+
+[built-in options]
+c_args = ['-I~a']
+
+[host_machine]
+system = 'linux'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
+" (string-append #$(this-package-native-input "freetrackclient64") "/include/wine/wine/windows")))))))))
     (native-inputs
      (list freetrackclient64
            (wine-for-system)))
@@ -108,8 +129,7 @@ write tracking information to a POSIX shared memory.")
     ;; TODO: Choose license.
     (license #f)))
 
-(list ;;freetrackclient
+(list freetrackclient
       freetrackclient64
-      ;;freetrackwinebridge
-      ;;python-sixdrepnet360
-      )
+      freetrackwinebridge64
+      python-sixdrepnet360)

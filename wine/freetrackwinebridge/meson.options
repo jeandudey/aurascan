@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+# SPDX-License-Identifier: MIT
+
+option(
+  'freetrackclient-libdir',
+  type: 'string',
+  description: 'The full path to the directory where freetrackclient.dll or freetrackclient64.dll is found',
+)

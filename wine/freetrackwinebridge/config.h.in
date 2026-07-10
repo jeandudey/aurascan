@@ -1,0 +1,6 @@
+#ifndef __FREETRACKWINEBRIDGE_CONFIG_H__
+#define __FREETRACKWINEBRIDGE_CONFIG_H__
+
+#define FREETRACKCLIENT_LIBDIR "@freetrackclient-libdir@"
+
+#endif /* __FREETRACKWINEBRIDGE_CONFIG_H__ */

@@ -9,6 +9,16 @@ version_dep = cc.find_library('version')
 
 is_wine = get_option('wine')
 
+arch_dir_prefix = target_machine.cpu_family() == 'x86_64' ? 'x86_64' : 'i386'
+
+if is_wine
+  headerdir = get_option('includedir') / 'wine/wine/windows'
+  bindir = get_option('libdir') / 'wine' / arch_dir_prefix + '-windows'
+else
+  headerdir = get_option('includedir')
+  bindir = get_option('bindir')
+endif
+
 conf = configuration_data({ 'dllversion': meson.project_version() })
 freetrackclient_rc = configure_file(
   input: 'freetrackclient.rc.in',
@@ -29,6 +39,7 @@ dll = shared_library(
   name_prefix: '',
   dependencies: version_dep,
   install: true,
+  install_dir: bindir,
 )
 
 test_exe = executable('freetrackclient_test', 'freetrackclient_test.c')
@@ -45,4 +56,10 @@ executable(
   'freetrackclient_test_ui.c',
   ui_res,
   install: true,
+  install_dir: bindir,
+)
+
+install_headers(
+  'freetrackclient.h',
+  install_dir: headerdir,
 )

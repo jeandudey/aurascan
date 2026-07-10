@@ -29,15 +29,16 @@
           #:phases
           #~(modify-phases %standard-phases
               (add-before 'check 'create-wineprefix
-                (lambda _
-                  (let ((wineprefix (string-append (getcwd) "/.wine"))
-                        (home (string-append (getcwd) "/.home")))
-                    (mkdir-p wineprefix)
-                    (mkdir-p home)
-                    (setenv "HOME" home)
-                    (setenv "WINEPREFIX" wineprefix)
-                    (setenv "WINEDEBUG" "-all")
-                    (invoke "wineboot" "--init")))))))
+                (lambda* (#:key tests? #:allow-other-keys)
+                  (when tests?
+                    (let ((wineprefix (string-append (getcwd) "/.wine"))
+                          (home (string-append (getcwd) "/.home")))
+                      (mkdir-p wineprefix)
+                      (mkdir-p home)
+                      (setenv "HOME" home)
+                      (setenv "WINEPREFIX" wineprefix)
+                      (setenv "WINEDEBUG" "-all")
+                      (invoke "wineboot" "--init"))))))))
    (native-inputs (list wine64))
    (home-page "https://github.com/jeandudey/aurascan")
    (synopsis "FreeTrack protocol dynamic library for Windows")
@@ -80,6 +81,35 @@ machine vision neural network model for estimating the head pose of a 224x224 im
 of a face.")
     (license license:expat)))
 
-(list freetrackclient
+(define-public freetrackwinebridge
+  (package
+    (name "freetrackwinebridge")
+    (version "0.1.0")
+    (source (local-file "wine/freetrackwinebridge" "freetrackwinebridge"
+                        #:recursive? #t
+                        #:select? (git-predicate (dirname (current-filename)))))
+    (build-system meson-build-system)
+    (arguments
+     (list #:phases
+           #~(modify-phases %standard-phases
+               (add-before 'configure 'set-env
+                 (lambda _
+                   (setenv "CC" "winegcc")
+                   (setenv "CXX" "wineg++"))))))
+    (native-inputs
+     (list freetrackclient64
+           (wine-for-system)))
+    (home-page "https://github.com/jeandudey/aurascan")
+    (synopsis "Bridge between for Wine programs using FreeTrack")
+    (description "This package provides a bridge for the FreeTrack protocol
+for Wine to be able to send head pose and location information from POSIX
+operating systems to applications using FreeTrack on Wine.  Applications can
+write tracking information to a POSIX shared memory.")
+    ;; TODO: Choose license.
+    (license #f)))
+
+(list ;;freetrackclient
       freetrackclient64
-      python-sixdrepnet360)
+      ;;freetrackwinebridge
+      ;;python-sixdrepnet360
+      )

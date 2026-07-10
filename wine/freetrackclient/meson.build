@@ -7,6 +7,8 @@ cc = meson.get_compiler('c')
 python3 = find_program('python3')
 version_dep = cc.find_library('version')
 
+is_wine = get_option('wine')
+
 conf = configuration_data({ 'dllversion': meson.project_version() })
 freetrackclient_rc = configure_file(
   input: 'freetrackclient.rc.in',

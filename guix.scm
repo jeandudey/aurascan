@@ -1,8 +1,12 @@
 ;;; SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (gnu packages wine)
+(use-modules (gnu packages machine-learning)
+             (gnu packages python-build)
+             (gnu packages speech)
+             (gnu packages wine)
              (guix build-system meson)
+             (guix build-system pyproject)
              (guix gexp)
              (guix git-download)
              (guix packages)
@@ -50,5 +54,32 @@ FreeTrack protocol.")
        ((#:target _ #f) "i686-w64-mingw32")))
     (native-inputs (list wine))))
 
+(define-public python-sixdrepnet360
+  (package
+    (name "python-sixdrepnet360")
+    (version "0.1.0")
+    (source (local-file "models/sixdrepnet360" "sixdrepnet360"
+                        #:recursive? #t
+                        #:select? (git-predicate (dirname (current-filename)))))
+    (build-system pyproject-build-system)
+    (arguments
+     (list #:build-backend "setuptools.build_meta"
+           ;; NOTE: No tests.
+           #:tests? #f))
+    (native-inputs
+     (list python-setuptools))
+    (propagated-inputs
+     (list onnx
+           python-onnxscript
+           python-pytorch
+           python-torchvision))
+    (home-page "https://github.com/jeandudey/aurascan")
+    (synopsis "Head pose estimation machine vision neural network model")
+    (description "This package provides a Python implementation of the 6DRepNet360
+machine vision neural network model for estimating the head pose of a 224x224 image
+of a face.")
+    (license license:expat)))
+
 (list freetrackclient
-      freetrackclient64)
+      freetrackclient64
+      python-sixdrepnet360)

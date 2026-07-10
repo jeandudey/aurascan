@@ -3,6 +3,7 @@
 
 #include "freetrackclient.h"
 #include "freetrackwinebridge.h"
+#include "config.h"
 
 #define WINDOW_CLASS_NAME "FreetrackWineBridge"
 
@@ -12,18 +13,61 @@ static volatile FreeTrackData *FTData;
 static volatile HANDLE *FTHandle;
 static volatile LPSTR FTProgramName;
 
+static BOOL
+RegisterLibrary (VOID)
+{
+  HKEY Key;
+  WCHAR *Path;
+  DWORD Len;
+
+  Path = wine_get_dos_file_name (FREETRACKCLIENT_LIBDIR);
+  if (!Path)
+    {
+      fprintf (stderr,
+	       "Failed to convert freetrackclient unix path to dos (path is %s).\n",
+	       FREETRACKCLIENT_LIBDIR);
+      return FALSE;
+    }
+
+  if (RegCreateKeyExW
+      (HKEY_CURRENT_USER, L"Software\\Freetrack\\FreetrackClient", 0, NULL, 0,
+       KEY_WRITE, NULL, &Key, NULL) != ERROR_SUCCESS)
+    {
+      fprintf (stderr,
+	       "Failed to create Software\\Freetrack\\FreetrackClient registry key.\n");
+      HeapFree (GetProcessHeap (), 0, Path);
+      return FALSE;
+    }
+
+  Len = (lstrlenW (Path) + 1) * sizeof (WCHAR);
+  if (RegSetValueExW (Key, L"Path", 0, REG_SZ, (const BYTE *) Path, Len) !=
+      ERROR_SUCCESS)
+    {
+      fprintf (stderr,
+	       "Failed to set Path on Software\\Freetrack\\FreetrackClient registry key.\n");
+      RegCloseKey (Key);
+      HeapFree (GetProcessHeap (), 0, Path);
+      return FALSE;
+    }
+
+  HeapFree (GetProcessHeap (), 0, Path);
+  return TRUE;
+}
+
 LRESULT CALLBACK
 WndProc (HWND Window, UINT Msg, WPARAM Wp, LPARAM Lp)
 {
   if (Msg == RegisterWindowMessageA (FT_PROGRAMID))
     {
       printf ("Received ProgramName: %s\n", FTProgramName);
-      if (bridge_lock () && WaitForSingleObject (FTMutex, INFINITE) == WAIT_OBJECT_0)
-        {
-          CopyMemory ((void *)bridge_ptr()->program_name, FTProgramName, 100);
-          ReleaseMutex (FTMutex);
-          bridge_unlock ();
-        }
+      if (bridge_lock ()
+	  && WaitForSingleObject (FTMutex, INFINITE) == WAIT_OBJECT_0)
+	{
+	  CopyMemory ((void *) bridge_ptr ()->program_name, FTProgramName,
+		      100);
+	  ReleaseMutex (FTMutex);
+	  bridge_unlock ();
+	}
     }
 
   return DefWindowProc (Window, Msg, Wp, Lp);
@@ -31,7 +75,7 @@ WndProc (HWND Window, UINT Msg, WPARAM Wp, LPARAM Lp)
 
 int APIENTRY
 WinMain (HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CmdLine,
-         int ShowCmd)
+	 int ShowCmd)
 {
   HWND Window;
   WNDCLASSEXA WindowClass = { sizeof (WNDCLASSEX) };
@@ -50,7 +94,7 @@ WinMain (HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CmdLine,
     }
 
   Window = CreateWindowExA (0, WINDOW_CLASS_NAME, "", 0, 0, 0, 0, 0,
-                            HWND_MESSAGE, NULL, Instance, NULL);
+			    HWND_MESSAGE, NULL, Instance, NULL);
 
   FTMutex = CreateMutexA (NULL, FALSE, FREETRACK_MUTEX);
   if (!FTMutex)
@@ -73,7 +117,7 @@ WinMain (HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CmdLine,
 
   MapLen = sizeof (FreeTrackData) + sizeof (HANDLE) + 100;
   FTMemMap = CreateFileMappingA (INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
-                                 0, MapLen, FT_MM_DATA);
+				 0, MapLen, FT_MM_DATA);
   if (!FTMemMap)
     {
       fprintf (stderr, "Failed to create file memory map.\n");
@@ -109,29 +153,41 @@ WinMain (HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CmdLine,
       UnregisterClassA (WINDOW_CLASS_NAME, Instance);
       ReleaseMutex (FTMutex);
       CloseHandle (FTMutex);
+      return 1;
+    }
+
+  if (!RegisterLibrary ())
+    {
+      fprintf (stderr, "Failed to register freetrack client library.\n");
+      DestroyWindow (Window);
+      UnregisterClassA (WINDOW_CLASS_NAME, Instance);
+      ReleaseMutex (FTMutex);
+      CloseHandle (FTMutex);
+      bridge_close ();
+      return 1;
     }
 
   while (1)
     {
       while (PeekMessage (&Msg, NULL, 0, 0, PM_REMOVE))
-        {
-          TranslateMessage (&Msg);
-          DispatchMessage (&Msg);
-        }
+	{
+	  TranslateMessage (&Msg);
+	  DispatchMessage (&Msg);
+	}
 
       if (!bridge_lock ())
-        continue;
+	continue;
 
       ptr = bridge_ptr ();
 
       if (ptr->stop != 0)
-        {
-          bridge_unlock ();
-          break;
-        }
+	{
+	  bridge_unlock ();
+	  break;
+	}
 
       if (WaitForSingleObject (FTMutex, INFINITE) != WAIT_OBJECT_0)
-        continue;
+	continue;
 
       FTData->CamWidth = ptr->cam_width;
       FTData->CamHeight = ptr->cam_height;
@@ -163,7 +219,7 @@ WinMain (HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CmdLine,
 
   *FTHandle = NULL;
 
-  UnmapViewOfFile ((LPCVOID)FTData);
+  UnmapViewOfFile ((LPCVOID) FTData);
   CloseHandle (FTMemMap);
   CloseHandle (FTMutex);
   DestroyWindow (Window);

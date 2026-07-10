@@ -90,7 +90,11 @@ of a face.")
                         #:select? (git-predicate (dirname (current-filename)))))
     (build-system meson-build-system)
     (arguments
-     (list #:configure-flags #~(list "--cross-file=../source/cross.txt")
+     (list #:configure-flags
+           #~(list "--cross-file=../source/cross.txt"
+                   (string-append "-Dfreetrackclient-libdir="
+                                  #$(this-package-native-input "freetrackclient64")
+                                  "/lib/wine/x86_64-windows"))
            #:phases
            #~(modify-phases %standard-phases
                (add-before 'configure 'cross-file

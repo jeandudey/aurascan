@@ -14,3 +14,6 @@ crates/gst-plugin-aurascan/target
 *.onnx.data
 .venv*
 builddir*
+
+buck-out
+.direnv

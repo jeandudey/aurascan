@@ -1,0 +1,16 @@
+rust_library(
+    name = "sixdrepnet360-burn",
+    srcs = [
+        "src/block.rs",
+        "src/lib.rs",
+        "src/sixdrepnet360.rs",
+        "src/weights.rs",
+    ],
+    # TODO: Make this not default.
+    features = ["pretrained"],
+    deps = [
+        "//third-party/rust:burn",
+        "//third-party/rust:burn-store",
+        "//third-party/rust:dirs",
+    ],
+)

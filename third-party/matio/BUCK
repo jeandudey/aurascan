@@ -1,0 +1,25 @@
+C_SRCS = [
+    "src/endian.c",
+    "src/inflate.c",
+    "src/io.c",
+    "src/mat.c",
+    "src/mat5.c",
+    "src/mat73.c",
+    "src/matvar_cell.c",
+    "src/matvar_struct.c",
+    "src/read_data.c",
+]
+
+http_archive(
+    name = "matio.tar.gz",
+    urls = ["https://github.com/tbeu/matio/releases/download/v1.5.30/matio-1.5.30.tar.gz"],
+    sha256 = "8bd3b9477042ecc00dd71c04762fa58468e14cccc32fd8c6826c2da1e8bc3107",
+    strip_prefix = "matio-1.5.30",
+    sub_targets = C_SRCS,
+)
+
+cxx_library(
+    name = "matio",
+    srcs = [":matio.tar.gz[{}]".format(src) for src in C_SRCS],
+    visibility = ["PUBLIC"],
+)

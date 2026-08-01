@@ -1,3 +1,6 @@
 [submodule "models/insightface"]
 	path = models/insightface
 	url = https://github.com/deepinsight/insightface
+[submodule "prelude"]
+	path = prelude
+	url = https://github.com/facebook/buck2-prelude.git

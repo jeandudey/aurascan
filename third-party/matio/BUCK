@@ -20,6 +20,11 @@ http_archive(
 
 cxx_library(
     name = "matio",
+    header_namespace = "",
     srcs = [":matio.tar.gz[{}]".format(src) for src in C_SRCS],
+    headers = [
+        "matio_pubconf.h",
+        "matioConfig.h",
+    ],
     visibility = ["PUBLIC"],
 )

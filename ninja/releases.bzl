@@ -1,0 +1,8 @@
+releases = {
+    "1.13.2": {
+        "linux-x86_64": {
+            "url": "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip",
+            "sha256": "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6",
+        },
+    },
+}

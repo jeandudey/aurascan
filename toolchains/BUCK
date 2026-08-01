@@ -1,6 +1,8 @@
 load("@prelude//toolchains:python.bzl", "remote_python_toolchain", "system_python_wheel_toolchain")
 load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
 load("@toolchains//bootlin:defs.bzl", "cxx_bootlin_toolchain", "download_bootlin_distribution")
+load("@root//cmake:toolchain.bzl", "cmake_toolchain", "download_cmake_distribution")
+load("@root//ninja:toolchain.bzl", "ninja_toolchain", "download_ninja_distribution")
 
 download_bootlin_distribution(
     name = "bootlin",
@@ -28,5 +30,28 @@ remote_python_toolchain(
 
 system_python_wheel_toolchain(
     name = "python_wheel",
+    visibility = ["PUBLIC"],
+)
+
+# TODO: Ninja toolchain
+download_ninja_distribution(
+    name = "ninja-distribution",
+    version = "1.13.2",
+)
+
+ninja_toolchain(
+    name = "ninja",
+    distribution = ":ninja-distribution",
+    visibility = ["PUBLIC"],
+)
+
+download_cmake_distribution(
+    name = "cmake-distribution",
+    version = "4.4.2",
+)
+
+cmake_toolchain(
+    name = "cmake",
+    distribution = ":cmake-distribution",
     visibility = ["PUBLIC"],
 )

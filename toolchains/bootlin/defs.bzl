@@ -81,8 +81,11 @@ def _tuple(arch: str) -> str:
 
     return "{}-linux".format(tuple_arch)
 
-def _tool(dist: Artifact, triple: str, tool: str) -> Artifact:
-    return dist.project("bin/{}-{}".format(triple, tool))
+def _tool(dist: Artifact, triple: str, tool: str) -> cmd_args:
+    return cmd_args(
+        dist.project("bin/{}-{}".format(triple, tool)),
+        hidden = [dist],
+    )
 
 def _bootlin_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     dist = ctx.attrs.distribution[DefaultInfo].default_outputs[0]

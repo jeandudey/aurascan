@@ -1,0 +1,21 @@
+load("//cmake:defs.bzl", "cmake_project")
+
+git_fetch(
+    name = "opencv.git",
+    repo = "https://github.com/opencv/opencv/",
+    rev = "40738fb16ceddb5fb3fea747585f7ce6abb0605b", # 5.0.0
+)
+
+cmake_project(
+    name = "opencv",
+    source = ":opencv.git",
+    flags = [
+        "-DWITH_GSTREAMER=OFF",
+        "-DWITH_GTK=OFF",
+        "-DWITH_GTK_2_X=OFF",
+        "-DWITH_WAYLAND=OFF",
+        "-DWITH_VULKAN=OFF",
+        "-DWITH_OPENGL=OFF",
+        "-DWITH_QT=OFF",
+    ],
+)

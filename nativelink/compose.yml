@@ -1,0 +1,8 @@
+services:
+  nativelink:
+    image: ghcr.io/tracemachina/nativelink:v1.6.1
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./basic_cas.json5:/config:ro
+    command: config

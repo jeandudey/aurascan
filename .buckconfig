@@ -24,3 +24,9 @@
 
 [build]
   execution_platforms = prelude//platforms:default
+
+[buck2_re_client]
+  engine_address = grpc://localhost:50051
+  action_cache_address = grpc://localhost:50051
+  cas_address = grpc://localhost:50051
+  instance_name = main

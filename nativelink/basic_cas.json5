@@ -3,8 +3,8 @@
     {
       name: "AC_MAIN_STORE",
       filesystem: {
-        content_path: "/tmp/nativelink/data-worker-test/content_path-ac",
-        temp_path: "/tmp/nativelink/data-worker-test/tmp_path-ac",
+        content_path: "/data/nativelink/data-worker-test/content_path-ac",
+        temp_path: "/data/nativelink/data-worker-test/tmp_path-ac",
         eviction_policy: {
           // 1gb.
           max_bytes: 1000000000,
@@ -18,8 +18,8 @@
         // hardlinks on disk to a directory where the jobs are running.
         fast: {
           filesystem: {
-            content_path: "/tmp/nativelink/data-worker-test/content_path-cas",
-            temp_path: "/tmp/nativelink/data-worker-test/tmp_path-cas",
+            content_path: "/data/nativelink/data-worker-test/content_path-cas",
+            temp_path: "/data/nativelink/data-worker-test/tmp_path-cas",
             eviction_policy: {
               // 10gb.
               max_bytes: 10000000000,
@@ -75,7 +75,7 @@
         upload_action_result: {
           ac_store: "AC_MAIN_STORE",
         },
-        work_directory: "/tmp/nativelink/work",
+        work_directory: "/data/nativelink/work",
         additional_environment: {
           foo: "from_environment",
           bar: {

@@ -1,0 +1,23 @@
+rust_library(
+    name = "aurascan-headposeview",
+    srcs = [
+        "src/lib.rs",
+    ],
+    deps = [
+        "//third-party/rust:bytemuck",
+        "//third-party/rust:glam",
+        "//third-party/rust:wgpu",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "run",
+    srcs = ["examples/run.rs"],
+    deps = [
+        ":aurascan-headposeview",
+        "//third-party/rust:pollster",
+        "//third-party/rust:winit",
+        "//third-party/rust:wgpu",
+    ]
+)

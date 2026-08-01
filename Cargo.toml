@@ -46,7 +46,7 @@ opencv = { version = "0.99", features = ["clang-runtime"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 tracing-subscriber = "0.3"
-wgpu = "29.0"
+wgpu = "30"
 zerocopy = { version = "0.8", features = ["derive"] }
 
 # Local dependencies

@@ -1,0 +1,36 @@
+[workspace]
+
+[package]
+name = "rust-third-party"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "top"
+path = "top/main.rs"
+
+[dependencies]
+bytemuck = "1"
+edgefirst-tracker = "0.24"
+eyre = "0.6"
+chrono = "0.4"
+glam = "0.33"
+gst = { package = "gstreamer", version = "0.25", features = ["v1_28"] }
+gst-analytics = { package = "gstreamer-analytics", version = "0.25", features = ["v1_28"] }
+gst-app = { package = "gstreamer-app", version = "0.25" }
+gst-base = { package = "gstreamer-base", version = "0.25", features = ["v1_28"] }
+gst-plugin-gtk4 = "0.15.2"
+gst-plugin-version-helper = "0.8.4"
+gst-video = { package = "gstreamer-video", version = "0.25", features = ["v1_28"] }
+keyvalues-serde = "0.2"
+log = "0.4"
+opencv = { version = "0.99", features = ["clang-runtime"] }
+pollster = "0.4"
+serde = { version = "1", features = ["derive"] }
+winit = "0.30"
+wayland-client = { version = "0.31", features = ["dlopen"] }
+wgpu = "30"
+
+
+[patch.crates-io]

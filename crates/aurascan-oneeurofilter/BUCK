@@ -1,0 +1,12 @@
+rust_library(
+    name = "aurascan-oneeurofilter",
+    srcs = [
+        "src/head_pose_filter.rs",
+        "src/lib.rs",
+        "src/low_pass_filter.rs",
+        "src/one_euro_filter.rs",
+        "src/quat_filter.rs",
+        "src/vec3_filter.rs",
+    ],
+    visibility = ["PUBLIC"],
+)

@@ -43,6 +43,7 @@ impl Gpu {
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
+            color_space: wgpu::SurfaceColorSpace::Auto,
             width: w,
             height: h,
             present_mode: caps.present_modes[0],
@@ -108,10 +109,12 @@ impl Gpu {
             &self.queue,
             &color_view,
             &self.depth_view,
-            t,
-            aspect,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         );
-        frame.present();
+        self.queue.present(frame);
     }
 }
 

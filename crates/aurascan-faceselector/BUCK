@@ -1,0 +1,7 @@
+rust_library(
+    name = "aurascan-faceselector",
+    srcs = [
+        "src/lib.rs",
+    ],
+    visibility = ["PUBLIC"],
+)

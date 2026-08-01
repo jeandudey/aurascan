@@ -1,0 +1,17 @@
+rust_library(
+    name = "aurascan-steam",
+    srcs = [
+        "src/app_manifest.rs",
+        "src/config_info.rs",
+        "src/lib.rs",
+        "src/library_folders.rs",
+    ],
+    deps = [
+        "//third-party/rust:eyre",
+        "//third-party/rust:chrono",
+        "//third-party/rust:keyvalues-serde",
+        "//third-party/rust:log",
+        "//third-party/rust:serde",
+    ],
+    visibility = ["PUBLIC"],
+)

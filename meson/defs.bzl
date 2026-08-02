@@ -98,6 +98,7 @@ def _meson_project_impl(ctx: AnalysisContext) -> list[Provider]:
                 cross.as_output(),
                 "--prefix",
                 cmd_args(install.as_output(), format = "$PWD/{}"),
+                "--wrap-mode=nofallback",
                 delimiter = " ",
             ),
             cmd_args(ninja, "-C", build.as_output(), "-j{}".format(str(ctx.attrs.jobs)), delimiter = " "),

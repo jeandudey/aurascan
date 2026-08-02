@@ -14,7 +14,7 @@ def _execution_platforms_impl(ctx):
         executor_config = CommandExecutorConfig(
             local_enabled = True,
             remote_enabled = True,
-            use_limited_hybrid = False,
+            use_limited_hybrid = True,
             remote_execution_properties = {
                 "OSFamily": "linux",
                 "container-image": "",

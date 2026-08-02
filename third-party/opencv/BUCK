@@ -18,4 +18,5 @@ cmake_project(
         "-DWITH_OPENGL=OFF",
         "-DWITH_QT=OFF",
     ],
+    visibility = ["PUBLIC"],
 )

@@ -10,6 +10,7 @@ download_bootlin_distribution(
     arch = "x86-64",
     libc = "glibc",
     version = "stable-2025.08-1",
+    visibility = ["PUBLIC"],
 )
 
 cxx_bootlin_toolchain(

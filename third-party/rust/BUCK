@@ -943,6 +943,7 @@ cargo.rust_library(
     edition = "2024",
     features = [
         "burn-wgpu",
+        "dataset",
         "default",
         "std",
         "wgpu",
@@ -1985,9 +1986,6 @@ cargo.rust_library(
     crate = "clang_sys",
     crate_root = "clang-sys-1.9.1.crate/src/lib.rs",
     edition = "2021",
-    env = {
-        "OUT_DIR": "$(location :clang-sys-1-build-script-run[out_dir])",
-    },
     features = [
         "clang_3_5",
         "clang_3_6",
@@ -2003,60 +2001,12 @@ cargo.rust_library(
         "libloading",
         "runtime",
     ],
-    rustc_flags = ["@$(location :clang-sys-1-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":glob-0.3",
         ":libc-0.2",
         ":libloading-0.8",
     ],
-)
-
-cargo.rust_binary(
-    name = "clang-sys-1-build-script-build",
-    srcs = [":clang-sys-1.9.1.crate"],
-    crate = "build_script_build",
-    crate_root = "clang-sys-1.9.1.crate/build.rs",
-    edition = "2021",
-    features = [
-        "clang_3_5",
-        "clang_3_6",
-        "clang_3_7",
-        "clang_3_8",
-        "clang_3_9",
-        "clang_4_0",
-        "clang_5_0",
-        "clang_6_0",
-        "clang_7_0",
-        "clang_8_0",
-        "clang_9_0",
-        "libloading",
-        "runtime",
-    ],
-    visibility = [],
-    deps = [":glob-0.3"],
-)
-
-buildscript_run(
-    name = "clang-sys-1-build-script-run",
-    package_name = "clang-sys",
-    buildscript_rule = ":clang-sys-1-build-script-build",
-    features = [
-        "clang_3_5",
-        "clang_3_6",
-        "clang_3_7",
-        "clang_3_8",
-        "clang_3_9",
-        "clang_4_0",
-        "clang_5_0",
-        "clang_6_0",
-        "clang_7_0",
-        "clang_8_0",
-        "clang_9_0",
-        "libloading",
-        "runtime",
-    ],
-    version = "1.9.1",
 )
 
 http_archive(
@@ -9095,6 +9045,13 @@ buildscript_run(
     package_name = "opencv",
     buildscript_rule = ":opencv-0.99-build-script-build",
     env = {
+        "CLANG_PATH": "$(location //third-party/llvm:llvm[bin/clang])",
+        "LIBCLANG_PATH": "$(location //third-party/llvm:llvm[lib])",
+        "OPENCV_CLANG_ARGS": "--target=x86_64-buildroot-linux-gnu --gcc-toolchain=$(location toolchains//:bootlin) --sysroot=$(location toolchains//:bootlin[sysroot])",
+        "OPENCV_DISABLE_PROBES": "pkg_config,cmake,vcpkg,vcpkg_cmake",
+        "OPENCV_INCLUDE_PATHS": "$(location //third-party/opencv:opencv)/include/opencv5",
+        "OPENCV_LINK_LIBS": "opencv_core,opencv_imgproc,opencv_imgcodecs,opencv_highgui,opencv_videoio",
+        "OPENCV_LINK_PATHS": "$(location //third-party/opencv:opencv)/lib",
         "OPT_LEVEL": "3",
     },
     features = [

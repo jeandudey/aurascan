@@ -73,13 +73,14 @@ def _get_bootlin_release(version: str, arch: str, libc: str) -> BootlinReleaseIn
         prefix = bootlin_libc["prefix"],
     )
 
-def _tuple(arch: str) -> str:
+def _arch(arch: str) -> str:
     if arch == "x86-64":
-        tuple_arch = "x86_64"
+        return "x86_64"
     else:
         fail("Unsupported arch")
 
-    return "{}-linux".format(tuple_arch)
+def _tuple(arch: str) -> str:
+    return "{}-linux".format(_arch(arch))
 
 def _tool(dist: Artifact, triple: str, tool: str) -> cmd_args:
     return cmd_args(
@@ -89,10 +90,19 @@ def _tool(dist: Artifact, triple: str, tool: str) -> cmd_args:
 
 def _bootlin_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     dist = ctx.attrs.distribution[DefaultInfo].default_outputs[0]
-    triple = _tuple("x86-64")
+    triple = _tuple(ctx.attrs.arch)
 
     return [
-        ctx.attrs.distribution[DefaultInfo],
+        DefaultInfo(
+            default_outputs = [dist],
+            sub_targets = {
+                "sysroot": [
+                    DefaultInfo(
+                        default_outputs = [dist.project("{}-buildroot-linux-gnu/sysroot".format(_arch(ctx.attrs.arch)))]
+                    ),
+                ],
+            },
+        ),
         BootlinDistributionInfo(
             arch = ctx.attrs.arch,
             gcc = RunInfo(args = _tool(dist, triple, "gcc")),
@@ -113,7 +123,7 @@ bootlin_distribution = rule(
     },
 )
 
-def download_bootlin_distribution(name: str, version: str, arch: str, libc: str):
+def download_bootlin_distribution(name: str, version: str, arch: str, libc: str, **kwargs):
     release_info = _get_bootlin_release(version, arch, libc)
     archive_name = "bootlin-{}-{}-{}".format(release_info.version, release_info.arch, release_info.libc)
 
@@ -128,6 +138,7 @@ def download_bootlin_distribution(name: str, version: str, arch: str, libc: str)
         name = name,
         arch = release_info.arch,
         distribution = ":{}".format(archive_name),
+        **kwargs,
     )
 
 def _bootlin_cxx_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:

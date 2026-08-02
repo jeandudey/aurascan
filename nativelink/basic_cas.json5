@@ -80,13 +80,6 @@
           PATH: {
             value: "/usr/local/bin:/usr/bin:/bin",
           },
-          foo: "from_environment",
-          bar: {
-            value: "something",
-          },
-          baz: "timeout_millis",
-          channel: "side_channel_file",
-          action: "action_directory",
         },
         platform_properties: {
           cpu_count: {

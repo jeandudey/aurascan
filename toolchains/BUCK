@@ -3,6 +3,7 @@ load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
 load("@toolchains//bootlin:defs.bzl", "cxx_bootlin_toolchain", "download_bootlin_distribution")
 load("@root//cmake:toolchain.bzl", "cmake_toolchain", "download_cmake_distribution")
 load("@root//ninja:toolchain.bzl", "ninja_toolchain", "download_ninja_distribution")
+load(":rust.bzl", "rust_toolchain")
 
 download_bootlin_distribution(
     name = "bootlin",
@@ -17,9 +18,18 @@ cxx_bootlin_toolchain(
     visibility = ["PUBLIC"],
 )
 
-system_rust_toolchain(
+# Rust
+http_archive(
+    name = "rust-1.97.0-x86_64-unknown-linux-gnu.tar.gz",
+    urls = ["https://static.rust-lang.org/dist/rust-1.97.0-x86_64-unknown-linux-gnu.tar.gz"],
+    sha256 = "eb89b20287153391c49ebcdb7fd91b683a12438d129bfb92eadcc495545af3a7",
+    strip_prefix = "rust-1.97.0-x86_64-unknown-linux-gnu",
+)
+
+rust_toolchain(
     name = "rust",
     default_edition = "2024",
+    distribution = ":rust-1.97.0-x86_64-unknown-linux-gnu.tar.gz",
     visibility = ["PUBLIC"],
 )
 
@@ -33,7 +43,6 @@ system_python_wheel_toolchain(
     visibility = ["PUBLIC"],
 )
 
-# TODO: Ninja toolchain
 download_ninja_distribution(
     name = "ninja-distribution",
     version = "1.13.2",

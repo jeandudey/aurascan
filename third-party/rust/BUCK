@@ -904,6 +904,40 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "built-0.8.1.crate",
+    sha256 = "5c0e531d93d39c34eef561e929e8a7f86d77a5af08aac4f6d6e39976c51858e9",
+    strip_prefix = "built-0.8.1",
+    urls = ["https://static.crates.io/crates/built/0.8.1/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "built-0.8",
+    srcs = [":built-0.8.1.crate"],
+    crate = "built",
+    crate_root = "built-0.8.1.crate/src/lib.rs",
+    edition = "2024",
+    env = {
+        "CARGO_BIN_NAME": "built",
+        "CARGO_CRATE_NAME": "built",
+        "CARGO_MANIFEST_DIR": "built-0.8.1.crate",
+        "CARGO_PKG_AUTHORS": "Lukas Lueg <lukas.lueg@gmail.com>",
+        "CARGO_PKG_DESCRIPTION": "Provides a crate with information from the time it was built.",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "built",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/lukaslueg/built",
+        "CARGO_PKG_RUST_VERSION": "1.87",
+        "CARGO_PKG_VERSION": "0.8.1",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "8",
+        "CARGO_PKG_VERSION_PATCH": "1",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    visibility = [],
+)
+
+http_archive(
     name = "bumpalo-3.20.3.crate",
     sha256 = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649",
     strip_prefix = "bumpalo-3.20.3",
@@ -1010,6 +1044,23 @@ cargo.rust_library(
     crate = "burn_core",
     crate_root = "burn-core-0.21.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "CARGO_BIN_NAME": "burn_core",
+        "CARGO_CRATE_NAME": "burn_core",
+        "CARGO_MANIFEST_DIR": "burn-core-0.21.0.crate",
+        "CARGO_PKG_AUTHORS": "nathanielsimard <nathaniel.simard.42@gmail.com>",
+        "CARGO_PKG_DESCRIPTION": "Flexible and Comprehensive Deep Learning Framework in Rust",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "burn-core",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/tracel-ai/burn/tree/main/crates/burn-core",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.21.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "21",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
     features = [
         "burn-dataset",
         "dataset",
@@ -1724,6 +1775,32 @@ cargo.rust_library(
         ":find-msvc-tools-0.1",
         ":jobserver-0.1",
         ":shlex-2",
+    ],
+)
+
+http_archive(
+    name = "cfg-expr-0.20.8.crate",
+    sha256 = "fb693542bcafa528e198be0ebd9d3632ca5b7c93dbe7237460e199910835997c",
+    strip_prefix = "cfg-expr-0.20.8",
+    urls = ["https://static.crates.io/crates/cfg-expr/0.20.8/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "cfg-expr-0.20",
+    srcs = [":cfg-expr-0.20.8.crate"],
+    crate = "cfg_expr",
+    crate_root = "cfg-expr-0.20.8.crate/src/lib.rs",
+    edition = "2024",
+    features = [
+        "default",
+        "target-lexicon",
+        "targets",
+    ],
+    visibility = [],
+    deps = [
+        ":smallvec-1",
+        ":target-lexicon-0.13",
     ],
 )
 
@@ -2504,6 +2581,36 @@ cargo.rust_library(
     crate = "cubecl",
     crate_root = "cubecl-0.10.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :cubecl-0.10-build-script-run[out_dir])",
+    },
+    features = [
+        "cubecl-std",
+        "cubecl-wgpu",
+        "default",
+        "std",
+        "stdlib",
+        "tracing",
+        "wgpu",
+    ],
+    rustc_flags = ["@$(location :cubecl-0.10-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [
+        ":cubecl-core-0.10",
+        ":cubecl-ir-0.10",
+        ":cubecl-runtime-0.10",
+        ":cubecl-std-0.10",
+        ":cubecl-wgpu-0.10",
+        ":half-2",
+    ],
+)
+
+cargo.rust_binary(
+    name = "cubecl-0.10-build-script-build",
+    srcs = [":cubecl-0.10.0.crate"],
+    crate = "build_script_build",
+    crate_root = "cubecl-0.10.0.crate/build.rs",
+    edition = "2024",
     features = [
         "cubecl-std",
         "cubecl-wgpu",
@@ -2514,14 +2621,22 @@ cargo.rust_library(
         "wgpu",
     ],
     visibility = [],
-    deps = [
-        ":cubecl-core-0.10",
-        ":cubecl-ir-0.10",
-        ":cubecl-runtime-0.10",
-        ":cubecl-std-0.10",
-        ":cubecl-wgpu-0.10",
-        ":half-2",
+)
+
+buildscript_run(
+    name = "cubecl-0.10-build-script-run",
+    package_name = "cubecl",
+    buildscript_rule = ":cubecl-0.10-build-script-build",
+    features = [
+        "cubecl-std",
+        "cubecl-wgpu",
+        "default",
+        "std",
+        "stdlib",
+        "tracing",
+        "wgpu",
     ],
+    version = "0.10.0",
 )
 
 http_archive(
@@ -2538,6 +2653,24 @@ cargo.rust_library(
     crate = "cubecl_common",
     crate_root = "cubecl-common-0.10.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "CARGO_BIN_NAME": "cubecl_common",
+        "CARGO_CRATE_NAME": "cubecl_common",
+        "CARGO_MANIFEST_DIR": "cubecl-common-0.10.0.crate",
+        "CARGO_PKG_AUTHORS": "Dilshod Tadjibaev (@antimora):Nathaniel Simard (@nathanielsimard)",
+        "CARGO_PKG_DESCRIPTION": "Common crate for CubeCL",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "cubecl-common",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/tracel-ai/cubecl/tree/main/crates/cubecl-common",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.10.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "10",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": "",
+        "OUT_DIR": "$(location :cubecl-common-0.10-build-script-run[out_dir])",
+    },
     features = [
         "backtrace",
         "cache",
@@ -2560,6 +2693,7 @@ cargo.rust_library(
         "tracing",
         "xxhash-rust",
     ],
+    rustc_flags = ["@$(location :cubecl-common-0.10-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":backtrace-0.3",
@@ -2591,6 +2725,96 @@ cargo.rust_library(
         ":web-time-1",
         ":xxhash-rust-0.8",
     ],
+)
+
+cargo.rust_binary(
+    name = "cubecl-common-0.10-build-script-build",
+    srcs = [":cubecl-common-0.10.0.crate"],
+    crate = "build_script_build",
+    crate_root = "cubecl-common-0.10.0.crate/build.rs",
+    edition = "2024",
+    env = {
+        "CARGO_BIN_NAME": "build-script-build",
+        "CARGO_CRATE_NAME": "build_script_build",
+        "CARGO_MANIFEST_DIR": "cubecl-common-0.10.0.crate",
+        "CARGO_PKG_AUTHORS": "Dilshod Tadjibaev (@antimora):Nathaniel Simard (@nathanielsimard)",
+        "CARGO_PKG_DESCRIPTION": "Common crate for CubeCL",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "cubecl-common",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/tracel-ai/cubecl/tree/main/crates/cubecl-common",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.10.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "10",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    features = [
+        "backtrace",
+        "cache",
+        "default",
+        "dirs",
+        "float4",
+        "float8",
+        "fp4",
+        "fp8",
+        "futures-lite",
+        "hash",
+        "oneshot",
+        "parking_lot",
+        "sanitize-filename",
+        "serde",
+        "serde_bytes",
+        "serde_json",
+        "shared-bytes",
+        "std",
+        "tracing",
+        "xxhash-rust",
+    ],
+    visibility = [],
+    deps = [":cfg_aliases-0.2"],
+)
+
+buildscript_run(
+    name = "cubecl-common-0.10-build-script-run",
+    package_name = "cubecl-common",
+    buildscript_rule = ":cubecl-common-0.10-build-script-build",
+    env = {
+        "CARGO_PKG_AUTHORS": "Dilshod Tadjibaev (@antimora):Nathaniel Simard (@nathanielsimard)",
+        "CARGO_PKG_DESCRIPTION": "Common crate for CubeCL",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/tracel-ai/cubecl/tree/main/crates/cubecl-common",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "10",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    features = [
+        "backtrace",
+        "cache",
+        "default",
+        "dirs",
+        "float4",
+        "float8",
+        "fp4",
+        "fp8",
+        "futures-lite",
+        "hash",
+        "oneshot",
+        "parking_lot",
+        "sanitize-filename",
+        "serde",
+        "serde_bytes",
+        "serde_json",
+        "shared-bytes",
+        "std",
+        "tracing",
+        "xxhash-rust",
+    ],
+    version = "0.10.0",
 )
 
 http_archive(
@@ -2690,7 +2914,11 @@ cargo.rust_library(
     crate = "cubecl_macros",
     crate_root = "cubecl-macros-0.10.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :cubecl-macros-0.10-build-script-run[out_dir])",
+    },
     proc_macro = True,
+    rustc_flags = ["@$(location :cubecl-macros-0.10-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":cubecl-common-0.10",
@@ -2703,6 +2931,22 @@ cargo.rust_library(
         ":quote-1",
         ":syn-2",
     ],
+)
+
+cargo.rust_binary(
+    name = "cubecl-macros-0.10-build-script-build",
+    srcs = [":cubecl-macros-0.10.0.crate"],
+    crate = "build_script_build",
+    crate_root = "cubecl-macros-0.10.0.crate/build.rs",
+    edition = "2024",
+    visibility = [],
+)
+
+buildscript_run(
+    name = "cubecl-macros-0.10-build-script-run",
+    package_name = "cubecl-macros",
+    buildscript_rule = ":cubecl-macros-0.10-build-script-build",
+    version = "0.10.0",
 )
 
 http_archive(
@@ -2743,6 +2987,9 @@ cargo.rust_library(
     crate = "cubecl_runtime",
     crate_root = "cubecl-runtime-0.10.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :cubecl-runtime-0.10-build-script-run[out_dir])",
+    },
     features = [
         "channel-cell",
         "channel-mpsc",
@@ -2754,6 +3001,7 @@ cargo.rust_library(
         "toml",
         "tracing",
     ],
+    rustc_flags = ["@$(location :cubecl-runtime-0.10-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":ahash-0.8",
@@ -2778,6 +3026,45 @@ cargo.rust_library(
         ":tracing-0.1",
         ":web-time-1",
     ],
+)
+
+cargo.rust_binary(
+    name = "cubecl-runtime-0.10-build-script-build",
+    srcs = [":cubecl-runtime-0.10.0.crate"],
+    crate = "build_script_build",
+    crate_root = "cubecl-runtime-0.10.0.crate/build.rs",
+    edition = "2024",
+    features = [
+        "channel-cell",
+        "channel-mpsc",
+        "channel-mutex",
+        "default",
+        "dirs",
+        "std",
+        "storage-bytes",
+        "toml",
+        "tracing",
+    ],
+    visibility = [],
+    deps = [":cfg_aliases-0.2"],
+)
+
+buildscript_run(
+    name = "cubecl-runtime-0.10-build-script-run",
+    package_name = "cubecl-runtime",
+    buildscript_rule = ":cubecl-runtime-0.10-build-script-build",
+    features = [
+        "channel-cell",
+        "channel-mpsc",
+        "channel-mutex",
+        "default",
+        "dirs",
+        "std",
+        "storage-bytes",
+        "toml",
+        "tracing",
+    ],
+    version = "0.10.0",
 )
 
 http_archive(
@@ -5375,16 +5662,47 @@ cargo.rust_library(
     crate = "gobject_sys",
     crate_root = "gobject-sys-0.22.6.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :gobject-sys-0.22-build-script-run[out_dir])",
+    },
+    features = [
+        "v2_58",
+        "v2_62",
+        "v2_66",
+    ],
+    rustc_flags = ["@$(location :gobject-sys-0.22-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [
+        ":glib-sys-0.22",
+        ":libc-0.2",
+    ],
+)
+
+cargo.rust_binary(
+    name = "gobject-sys-0.22-build-script-build",
+    srcs = [":gobject-sys-0.22.6.crate"],
+    crate = "build_script_build",
+    crate_root = "gobject-sys-0.22.6.crate/build.rs",
+    edition = "2024",
     features = [
         "v2_58",
         "v2_62",
         "v2_66",
     ],
     visibility = [],
-    deps = [
-        ":glib-sys-0.22",
-        ":libc-0.2",
+    deps = [":system-deps-7"],
+)
+
+buildscript_run(
+    name = "gobject-sys-0.22-build-script-run",
+    package_name = "gobject-sys",
+    buildscript_rule = ":gobject-sys-0.22-build-script-build",
+    features = [
+        "v2_58",
+        "v2_62",
+        "v2_66",
     ],
+    version = "0.22.6",
 )
 
 http_archive(
@@ -5765,16 +6083,45 @@ cargo.rust_library(
     crate = "gstreamer_analytics_sys",
     crate_root = "gstreamer-analytics-sys-0.25.2.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :gstreamer-analytics-sys-0.25-build-script-run[out_dir])",
+    },
     features = [
         "v1_26",
         "v1_28",
     ],
+    rustc_flags = ["@$(location :gstreamer-analytics-sys-0.25-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":glib-sys-0.22",
         ":gstreamer-sys-0.25",
         ":libc-0.2",
     ],
+)
+
+cargo.rust_binary(
+    name = "gstreamer-analytics-sys-0.25-build-script-build",
+    srcs = [":gstreamer-analytics-sys-0.25.2.crate"],
+    crate = "build_script_build",
+    crate_root = "gstreamer-analytics-sys-0.25.2.crate/build.rs",
+    edition = "2024",
+    features = [
+        "v1_26",
+        "v1_28",
+    ],
+    visibility = [],
+    deps = [":system-deps-7"],
+)
+
+buildscript_run(
+    name = "gstreamer-analytics-sys-0.25-build-script-run",
+    package_name = "gstreamer-analytics-sys",
+    buildscript_rule = ":gstreamer-analytics-sys-0.25-build-script-build",
+    features = [
+        "v1_26",
+        "v1_28",
+    ],
+    version = "0.25.2",
 )
 
 alias(
@@ -5826,6 +6173,10 @@ cargo.rust_library(
     crate = "gstreamer_app_sys",
     crate_root = "gstreamer-app-sys-0.25.0.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :gstreamer-app-sys-0.25-build-script-run[out_dir])",
+    },
+    rustc_flags = ["@$(location :gstreamer-app-sys-0.25-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":glib-sys-0.22",
@@ -5833,6 +6184,23 @@ cargo.rust_library(
         ":gstreamer-sys-0.25",
         ":libc-0.2",
     ],
+)
+
+cargo.rust_binary(
+    name = "gstreamer-app-sys-0.25-build-script-build",
+    srcs = [":gstreamer-app-sys-0.25.0.crate"],
+    crate = "build_script_build",
+    crate_root = "gstreamer-app-sys-0.25.0.crate/build.rs",
+    edition = "2024",
+    visibility = [],
+    deps = [":system-deps-7"],
+)
+
+buildscript_run(
+    name = "gstreamer-app-sys-0.25-build-script-run",
+    package_name = "gstreamer-app-sys",
+    buildscript_rule = ":gstreamer-app-sys-0.25-build-script-build",
+    version = "0.25.0",
 )
 
 alias(
@@ -5893,6 +6261,36 @@ cargo.rust_library(
     crate = "gstreamer_base_sys",
     crate_root = "gstreamer-base-sys-0.25.3.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :gstreamer-base-sys-0.25-build-script-run[out_dir])",
+    },
+    features = [
+        "v1_14_1",
+        "v1_14_3",
+        "v1_16",
+        "v1_18",
+        "v1_20",
+        "v1_22",
+        "v1_24",
+        "v1_26",
+        "v1_28",
+    ],
+    rustc_flags = ["@$(location :gstreamer-base-sys-0.25-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [
+        ":glib-sys-0.22",
+        ":gobject-sys-0.22",
+        ":gstreamer-sys-0.25",
+        ":libc-0.2",
+    ],
+)
+
+cargo.rust_binary(
+    name = "gstreamer-base-sys-0.25-build-script-build",
+    srcs = [":gstreamer-base-sys-0.25.3.crate"],
+    crate = "build_script_build",
+    crate_root = "gstreamer-base-sys-0.25.3.crate/build.rs",
+    edition = "2024",
     features = [
         "v1_14_1",
         "v1_14_3",
@@ -5905,12 +6303,25 @@ cargo.rust_library(
         "v1_28",
     ],
     visibility = [],
-    deps = [
-        ":glib-sys-0.22",
-        ":gobject-sys-0.22",
-        ":gstreamer-sys-0.25",
-        ":libc-0.2",
+    deps = [":system-deps-7"],
+)
+
+buildscript_run(
+    name = "gstreamer-base-sys-0.25-build-script-run",
+    package_name = "gstreamer-base-sys",
+    buildscript_rule = ":gstreamer-base-sys-0.25-build-script-build",
+    features = [
+        "v1_14_1",
+        "v1_14_3",
+        "v1_16",
+        "v1_18",
+        "v1_20",
+        "v1_22",
+        "v1_24",
+        "v1_26",
+        "v1_28",
     ],
+    version = "0.25.3",
 )
 
 http_archive(
@@ -6004,6 +6415,36 @@ cargo.rust_library(
     crate = "gstreamer_sys",
     crate_root = "gstreamer-sys-0.25.2.crate/src/lib.rs",
     edition = "2024",
+    env = {
+        "OUT_DIR": "$(location :gstreamer-sys-0.25-build-script-run[out_dir])",
+    },
+    features = [
+        "v1_16",
+        "v1_18",
+        "v1_18_3",
+        "v1_20",
+        "v1_20_4",
+        "v1_22",
+        "v1_24",
+        "v1_26",
+        "v1_28",
+    ],
+    rustc_flags = ["@$(location :gstreamer-sys-0.25-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [
+        ":cfg-if-1",
+        ":glib-sys-0.22",
+        ":gobject-sys-0.22",
+        ":libc-0.2",
+    ],
+)
+
+cargo.rust_binary(
+    name = "gstreamer-sys-0.25-build-script-build",
+    srcs = [":gstreamer-sys-0.25.2.crate"],
+    crate = "build_script_build",
+    crate_root = "gstreamer-sys-0.25.2.crate/build.rs",
+    edition = "2024",
     features = [
         "v1_16",
         "v1_18",
@@ -6016,12 +6457,25 @@ cargo.rust_library(
         "v1_28",
     ],
     visibility = [],
-    deps = [
-        ":cfg-if-1",
-        ":glib-sys-0.22",
-        ":gobject-sys-0.22",
-        ":libc-0.2",
+    deps = [":system-deps-7"],
+)
+
+buildscript_run(
+    name = "gstreamer-sys-0.25-build-script-run",
+    package_name = "gstreamer-sys",
+    buildscript_rule = ":gstreamer-sys-0.25-build-script-build",
+    features = [
+        "v1_16",
+        "v1_18",
+        "v1_18_3",
+        "v1_20",
+        "v1_20_4",
+        "v1_22",
+        "v1_24",
+        "v1_26",
+        "v1_28",
     ],
+    version = "0.25.2",
 )
 
 alias(
@@ -7064,6 +7518,11 @@ http_archive(
     name = "libsqlite3-sys-0.35.0.crate",
     sha256 = "133c182a6a2c87864fe97778797e46c7e999672690dc9fa3ee8e241aa4a9c13f",
     strip_prefix = "libsqlite3-sys-0.35.0",
+    sub_targets = [
+        "sqlite3/sqlite3.c",
+        "sqlite3/sqlite3.h",
+        "sqlite3/sqlite3ext.h",
+    ],
     urls = ["https://static.crates.io/crates/libsqlite3-sys/0.35.0/download"],
     visibility = [],
 )
@@ -7074,6 +7533,9 @@ cargo.rust_library(
     crate = "libsqlite3_sys",
     crate_root = "libsqlite3-sys-0.35.0.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "OUT_DIR": "$(location //third-party/rust/fixups/libsqlite3-sys:out_dir)",
+    },
     features = [
         "bundled",
         "bundled_bindings",
@@ -7082,6 +7544,22 @@ cargo.rust_library(
         "min_sqlite_version_3_14_0",
         "pkg-config",
         "vcpkg",
+    ],
+    visibility = [],
+    deps = [":libsqlite3-sys-0.35-sqlite3"],
+)
+
+cxx_library(
+    name = "libsqlite3-sys-0.35-sqlite3",
+    srcs = [":libsqlite3-sys-0.35.0.crate[sqlite3/sqlite3.c]"],
+    headers = [
+        ":libsqlite3-sys-0.35.0.crate[sqlite3/sqlite3.h]",
+        ":libsqlite3-sys-0.35.0.crate[sqlite3/sqlite3ext.h]",
+    ],
+    preprocessor_flags = [
+        "-DSQLITE_ENABLE_COLUMN_METADATA",
+        "-DSQLITE_ENABLE_FTS3",
+        "-DSQLITE_ENABLE_RTREE",
     ],
     visibility = [],
 )
@@ -9742,12 +10220,40 @@ cargo.rust_library(
     crate = "proc_macro2",
     crate_root = "proc-macro2-1.0.107.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :proc-macro2-1-build-script-run[out_dir])",
+    },
+    features = [
+        "default",
+        "proc-macro",
+    ],
+    rustc_flags = ["@$(location :proc-macro2-1-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [":unicode-ident-1"],
+)
+
+cargo.rust_binary(
+    name = "proc-macro2-1-build-script-build",
+    srcs = [":proc-macro2-1.0.107.crate"],
+    crate = "build_script_build",
+    crate_root = "proc-macro2-1.0.107.crate/build.rs",
+    edition = "2021",
     features = [
         "default",
         "proc-macro",
     ],
     visibility = [],
-    deps = [":unicode-ident-1"],
+)
+
+buildscript_run(
+    name = "proc-macro2-1-build-script-run",
+    package_name = "proc-macro2",
+    buildscript_rule = ":proc-macro2-1-build-script-build",
+    features = [
+        "default",
+        "proc-macro",
+    ],
+    version = "1.0.107",
 )
 
 http_archive(
@@ -9809,6 +10315,24 @@ cargo.rust_library(
     crate = "pulp",
     crate_root = "pulp-0.22.3.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_BIN_NAME": "pulp",
+        "CARGO_CRATE_NAME": "pulp",
+        "CARGO_MANIFEST_DIR": "pulp-0.22.3.crate",
+        "CARGO_PKG_AUTHORS": "sarah quiñones <sarah@veganb.tw>",
+        "CARGO_PKG_DESCRIPTION": "safe generic simd",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "pulp",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/sarah-quinones/pulp/",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.22.3",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "22",
+        "CARGO_PKG_VERSION_PATCH": "3",
+        "CARGO_PKG_VERSION_PRE": "",
+        "OUT_DIR": "$(location :pulp-0.22-build-script-run[out_dir])",
+    },
     features = [
         "default",
         "relaxed-simd",
@@ -9829,6 +10353,7 @@ cargo.rust_library(
             deps = [":raw-cpuid-11"],
         ),
     },
+    rustc_flags = ["@$(location :pulp-0.22-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":bytemuck-1",
@@ -9839,6 +10364,64 @@ cargo.rust_library(
         ":pulp-wasm-simd-flag-0.1",
         ":reborrow-0.5",
     ],
+)
+
+cargo.rust_binary(
+    name = "pulp-0.22-build-script-build",
+    srcs = [":pulp-0.22.3.crate"],
+    crate = "build_script_build",
+    crate_root = "pulp-0.22.3.crate/build.rs",
+    edition = "2021",
+    env = {
+        "CARGO_BIN_NAME": "build-script-build",
+        "CARGO_CRATE_NAME": "build_script_build",
+        "CARGO_MANIFEST_DIR": "pulp-0.22.3.crate",
+        "CARGO_PKG_AUTHORS": "sarah quiñones <sarah@veganb.tw>",
+        "CARGO_PKG_DESCRIPTION": "safe generic simd",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "pulp",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/sarah-quinones/pulp/",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.22.3",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "22",
+        "CARGO_PKG_VERSION_PATCH": "3",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    features = [
+        "default",
+        "relaxed-simd",
+        "std",
+        "x86-v3",
+    ],
+    visibility = [],
+    deps = [":version_check-0.9"],
+)
+
+buildscript_run(
+    name = "pulp-0.22-build-script-run",
+    package_name = "pulp",
+    buildscript_rule = ":pulp-0.22-build-script-build",
+    env = {
+        "CARGO_PKG_AUTHORS": "sarah quiñones <sarah@veganb.tw>",
+        "CARGO_PKG_DESCRIPTION": "safe generic simd",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/sarah-quinones/pulp/",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "22",
+        "CARGO_PKG_VERSION_PATCH": "3",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    features = [
+        "default",
+        "relaxed-simd",
+        "std",
+        "x86-v3",
+    ],
+    version = "0.22.3",
 )
 
 http_archive(
@@ -9948,12 +10531,40 @@ cargo.rust_library(
     crate = "quote",
     crate_root = "quote-1.0.47.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :quote-1-build-script-run[out_dir])",
+    },
+    features = [
+        "default",
+        "proc-macro",
+    ],
+    rustc_flags = ["@$(location :quote-1-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [":proc-macro2-1"],
+)
+
+cargo.rust_binary(
+    name = "quote-1-build-script-build",
+    srcs = [":quote-1.0.47.crate"],
+    crate = "build_script_build",
+    crate_root = "quote-1.0.47.crate/build.rs",
+    edition = "2021",
     features = [
         "default",
         "proc-macro",
     ],
     visibility = [],
-    deps = [":proc-macro2-1"],
+)
+
+buildscript_run(
+    name = "quote-1-build-script-run",
+    package_name = "quote",
+    buildscript_rule = ":quote-1-build-script-build",
+    features = [
+        "default",
+        "proc-macro",
+    ],
+    version = "1.0.47",
 )
 
 http_archive(
@@ -10099,10 +10710,29 @@ cargo.rust_library(
     crate = "rav1e",
     crate_root = "rav1e-0.8.1.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_BIN_NAME": "rav1e",
+        "CARGO_CRATE_NAME": "rav1e",
+        "CARGO_MANIFEST_DIR": "rav1e-0.8.1.crate",
+        "CARGO_PKG_AUTHORS": "Thomas Daede <tdaede@xiph.org>",
+        "CARGO_PKG_DESCRIPTION": "The fastest and safest AV1 encoder",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "rav1e",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/xiph/rav1e/",
+        "CARGO_PKG_RUST_VERSION": "1.83.0",
+        "CARGO_PKG_VERSION": "0.8.1",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "8",
+        "CARGO_PKG_VERSION_PATCH": "1",
+        "CARGO_PKG_VERSION_PRE": "",
+        "OUT_DIR": "$(location :rav1e-0.8-build-script-run[out_dir])",
+    },
     features = ["threading"],
     named_deps = {
         "rayon": ":maybe-rayon-0.1",
     },
+    rustc_flags = ["@$(location :rav1e-0.8-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":aligned-vec-0.6",
@@ -10125,6 +10755,60 @@ cargo.rust_library(
         ":thiserror-2",
         ":v_frame-0.3",
     ],
+)
+
+cargo.rust_binary(
+    name = "rav1e-0.8-build-script-build",
+    srcs = [":rav1e-0.8.1.crate"],
+    crate = "build_script_build",
+    crate_root = "rav1e-0.8.1.crate/build.rs",
+    edition = "2021",
+    env = {
+        "CARGO_BIN_NAME": "build-script-build",
+        "CARGO_CRATE_NAME": "build_script_build",
+        "CARGO_MANIFEST_DIR": "rav1e-0.8.1.crate",
+        "CARGO_PKG_AUTHORS": "Thomas Daede <tdaede@xiph.org>",
+        "CARGO_PKG_DESCRIPTION": "The fastest and safest AV1 encoder",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_NAME": "rav1e",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/xiph/rav1e/",
+        "CARGO_PKG_RUST_VERSION": "1.83.0",
+        "CARGO_PKG_VERSION": "0.8.1",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "8",
+        "CARGO_PKG_VERSION_PATCH": "1",
+        "CARGO_PKG_VERSION_PRE": "",
+    },
+    features = ["threading"],
+    visibility = [],
+    deps = [":built-0.8"],
+)
+
+buildscript_run(
+    name = "rav1e-0.8-build-script-run",
+    package_name = "rav1e",
+    buildscript_rule = ":rav1e-0.8-build-script-build",
+    env = {
+        "CARGO_PKG_AUTHORS": "Thomas Daede <tdaede@xiph.org>",
+        "CARGO_PKG_DESCRIPTION": "The fastest and safest AV1 encoder",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_LICENSE": "BSD-2-Clause",
+        "CARGO_PKG_README": "README.md",
+        "CARGO_PKG_REPOSITORY": "https://github.com/xiph/rav1e/",
+        "CARGO_PKG_RUST_VERSION": "1.83.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "8",
+        "CARGO_PKG_VERSION_PATCH": "1",
+        "CARGO_PKG_VERSION_PRE": "",
+        "DEBUG": "false",
+        "NUM_JOBS": "1",
+        "OPT_LEVEL": "3",
+        "PROFILE": "release",
+        "RUSTDOC": "rustdoc",
+    },
+    features = ["threading"],
+    version = "0.8.1",
 )
 
 http_archive(
@@ -11300,12 +11984,16 @@ cargo.rust_library(
     crate = "serde_json",
     crate_root = "serde_json-1.0.151.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :serde_json-1-build-script-run[out_dir])",
+    },
     features = [
         "alloc",
         "default",
         "raw_value",
         "std",
     ],
+    rustc_flags = ["@$(location :serde_json-1-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
         ":itoa-1",
@@ -11313,6 +12001,34 @@ cargo.rust_library(
         ":serde_core-1",
         ":zmij-1",
     ],
+)
+
+cargo.rust_binary(
+    name = "serde_json-1-build-script-build",
+    srcs = [":serde_json-1.0.151.crate"],
+    crate = "build_script_build",
+    crate_root = "serde_json-1.0.151.crate/build.rs",
+    edition = "2021",
+    features = [
+        "alloc",
+        "default",
+        "raw_value",
+        "std",
+    ],
+    visibility = [],
+)
+
+buildscript_run(
+    name = "serde_json-1-build-script-run",
+    package_name = "serde_json",
+    buildscript_rule = ":serde_json-1-build-script-build",
+    features = [
+        "alloc",
+        "default",
+        "raw_value",
+        "std",
+    ],
+    version = "1.0.151",
 )
 
 http_archive(
@@ -11889,6 +12605,30 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "system-deps-7.0.8.crate",
+    sha256 = "396a35feb67335377e0251fcbc1092fc85c484bd4e3a7a54319399da127796e7",
+    strip_prefix = "system-deps-7.0.8",
+    urls = ["https://static.crates.io/crates/system-deps/7.0.8/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "system-deps-7",
+    srcs = [":system-deps-7.0.8.crate"],
+    crate = "system_deps",
+    crate_root = "system-deps-7.0.8.crate/src/lib.rs",
+    edition = "2018",
+    visibility = [],
+    deps = [
+        ":cfg-expr-0.20",
+        ":heck-0.5",
+        ":pkg-config-0.3",
+        ":toml-1",
+        ":version-compare-0.2",
+    ],
+)
+
+http_archive(
     name = "tar-0.4.46.crate",
     sha256 = "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
     strip_prefix = "tar-0.4.46",
@@ -11934,6 +12674,46 @@ cargo.rust_library(
     },
     visibility = [],
     deps = [":filetime-0.2"],
+)
+
+http_archive(
+    name = "target-lexicon-0.13.5.crate",
+    sha256 = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca",
+    strip_prefix = "target-lexicon-0.13.5",
+    urls = ["https://static.crates.io/crates/target-lexicon/0.13.5/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "target-lexicon-0.13",
+    srcs = [":target-lexicon-0.13.5.crate"],
+    crate = "target_lexicon",
+    crate_root = "target-lexicon-0.13.5.crate/src/lib.rs",
+    edition = "2018",
+    env = {
+        "OUT_DIR": "$(location :target-lexicon-0.13-build-script-run[out_dir])",
+    },
+    features = ["default"],
+    rustc_flags = ["@$(location :target-lexicon-0.13-build-script-run[rustc_flags])"],
+    visibility = [],
+)
+
+cargo.rust_binary(
+    name = "target-lexicon-0.13-build-script-build",
+    srcs = [":target-lexicon-0.13.5.crate"],
+    crate = "build_script_build",
+    crate_root = "target-lexicon-0.13.5.crate/build.rs",
+    edition = "2018",
+    features = ["default"],
+    visibility = [],
+)
+
+buildscript_run(
+    name = "target-lexicon-0.13-build-script-run",
+    package_name = "target-lexicon",
+    buildscript_rule = ":target-lexicon-0.13-build-script-build",
+    features = ["default"],
+    version = "0.13.5",
 )
 
 http_archive(
@@ -12998,6 +13778,40 @@ cargo.rust_library(
     srcs = [":vcpkg-0.2.15.crate"],
     crate = "vcpkg",
     crate_root = "vcpkg-0.2.15.crate/src/lib.rs",
+    edition = "2015",
+    visibility = [],
+)
+
+http_archive(
+    name = "version-compare-0.2.1.crate",
+    sha256 = "03c2856837ef78f57382f06b2b8563a2f512f7185d732608fd9176cb3b8edf0e",
+    strip_prefix = "version-compare-0.2.1",
+    urls = ["https://static.crates.io/crates/version-compare/0.2.1/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "version-compare-0.2",
+    srcs = [":version-compare-0.2.1.crate"],
+    crate = "version_compare",
+    crate_root = "version-compare-0.2.1.crate/src/lib.rs",
+    edition = "2021",
+    visibility = [],
+)
+
+http_archive(
+    name = "version_check-0.9.5.crate",
+    sha256 = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+    strip_prefix = "version_check-0.9.5",
+    urls = ["https://static.crates.io/crates/version_check/0.9.5/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "version_check-0.9",
+    srcs = [":version_check-0.9.5.crate"],
+    crate = "version_check",
+    crate_root = "version_check-0.9.5.crate/src/lib.rs",
     edition = "2015",
     visibility = [],
 )

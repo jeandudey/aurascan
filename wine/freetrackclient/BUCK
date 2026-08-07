@@ -1,0 +1,10 @@
+windows_resource(
+    name = "resources",
+    srcs = ["freetrackclient.rc.in"],
+)
+
+cxx_library(
+    name = "freetrackclient",
+    srcs = ["freetrackclient.c"],
+    headers = ["freetrackclient.h"],
+)

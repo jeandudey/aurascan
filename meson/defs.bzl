@@ -1,5 +1,6 @@
 load("@prelude//cxx:cxx_toolchain_types.bzl", "CxxToolchainInfo")
 load("@prelude//decls:toolchains_common.bzl", "toolchains_common")
+load("@root//external-cxx/info.bzl", "ExternalCxxInfo", "make_external_cxx_tset")
 load("@root//ninja:toolchain.bzl", "NinjaToolchainInfo")
 load(":toolchain.bzl", "MesonToolchainInfo")
 
@@ -69,16 +70,17 @@ def meson_cross_file(
     return ctx.actions.write("cross.txt.in", content, with_inputs = True)
 
 def _meson_project_impl(ctx: AnalysisContext) -> list[Provider]:
-    cxx_toolchain = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     meson_toolchain = ctx.attrs._meson_toolchain[MesonToolchainInfo]
-    ninja_toolchain = ctx.attrs._ninja_toolchain[NinjaToolchainInfo]
-
     meson = meson_toolchain.meson
+
+    ninja_toolchain = ctx.attrs._ninja_toolchain[NinjaToolchainInfo]
     ninja = ninja_toolchain.ninja
-    bins = cxx_toolchain.binary_utilities_info
+
+    cxx_toolchain = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     cc = cxx_toolchain.c_compiler_info
     cxx = cxx_toolchain.cxx_compiler_info
     ld = cxx_toolchain.linker_info
+    bins = cxx_toolchain.binary_utilities_info
 
     template = meson_cross_file(ctx, cxx_toolchain)
     cross = ctx.actions.declare_output("cross.txt")
@@ -92,6 +94,7 @@ def _meson_project_impl(ctx: AnalysisContext) -> list[Provider]:
             cmd_args("sed \"s|{project_root}|$PWD|g\"", template, ">", cross.as_output(), delimiter = " "),
             cmd_args(
                 meson,
+                "setup",
                 ctx.attrs.source,
                 build.as_output(),
                 "--cross-file",
@@ -142,6 +145,10 @@ meson_project = rule(
     impl = _meson_project_impl,
     attrs = {
         "source": attrs.source(),
+        "deps": attrs.list(
+            attrs.dep(providers = [ExternalCxxInfo]),
+            default = [],
+        ),
         "jobs": attrs.int(default = 8),
         "_meson_toolchain": attrs.default_only(attrs.toolchain_dep(providers = [MesonToolchainInfo], default = "toolchains//:meson")),
         "_ninja_toolchain": attrs.default_only(attrs.toolchain_dep(providers = [NinjaToolchainInfo], default = "toolchains//:ninja")),

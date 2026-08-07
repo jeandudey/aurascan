@@ -1,0 +1,13 @@
+load("//meson:defs.bzl", "meson_project")
+
+http_archive(
+    name = "gstreamer-source",
+    urls = ["https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-1.29.2.tar.xz"],
+    sha256 = "e4e1dccc92cb4be7c34dc513216f0ffc3610fe071d87e28ceecf784b43d6ccf3",
+    strip_prefix = "gstreamer-1.29.2",
+)
+
+meson_project(
+    name = "gstreamer",
+    source = ":gstreamer-source",
+)

@@ -1,0 +1,16 @@
+load("//meson:defs.bzl", "meson_project")
+
+http_archive(
+    name = "glib-2.0-source",
+    urls = ["https://download.gnome.org/sources/glib/2.89/glib-2.89.3.tar.xz"],
+    sha256 = "09fd1e99f991067749ad66090e482ec4bd6514ad53abb4e9fbbdc2a4d2753532",
+    strip_prefix = "glib-2.89.3",
+)
+
+meson_project(
+    name = "glib-2.0",
+    source = ":glib-2.0-source",
+    deps = [
+        "//third-party/pcre2:pcre2",
+    ],
+)

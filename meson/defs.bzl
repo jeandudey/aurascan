@@ -2,10 +2,12 @@ load("@prelude//cxx:cxx_toolchain_types.bzl", "CxxToolchainInfo")
 load("@prelude//decls:toolchains_common.bzl", "toolchains_common")
 load("@root//external-cxx/info.bzl", "ExternalCxxInfo", "make_external_cxx_tset")
 load("@root//ninja:toolchain.bzl", "NinjaToolchainInfo")
+load("@root//rules/pkg_config:toolchain.bzl", "PkgConfigToolchainInfo")
 load(":toolchain.bzl", "MesonToolchainInfo")
 
 def meson_cross_file(
     ctx: AnalysisContext,
+    pkg_config_toolchain: PkgConfigToolchainInfo,
     cxx_toolchain: CxxToolchainInfo,
     system: str = "linux",
     cpu_family: str = "x86_64",
@@ -37,6 +39,7 @@ def meson_cross_file(
         _entry("c", cc.compiler),
         _entry("cpp", cxx.compiler),
         _entry("ar", ld.archiver),
+        _entry("pkg-config", pkg_config_toolchain.pkg_config),
         delimiter = "\n",
     )
     for key, tool in [
@@ -76,13 +79,15 @@ def _meson_project_impl(ctx: AnalysisContext) -> list[Provider]:
     ninja_toolchain = ctx.attrs._ninja_toolchain[NinjaToolchainInfo]
     ninja = ninja_toolchain.ninja
 
+    pkg_config_toolchain = ctx.attrs._pkg_config_toolchain[PkgConfigToolchainInfo]
+
     cxx_toolchain = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     cc = cxx_toolchain.c_compiler_info
     cxx = cxx_toolchain.cxx_compiler_info
     ld = cxx_toolchain.linker_info
     bins = cxx_toolchain.binary_utilities_info
 
-    template = meson_cross_file(ctx, cxx_toolchain)
+    template = meson_cross_file(ctx, pkg_config_toolchain, cxx_toolchain)
     cross = ctx.actions.declare_output("cross.txt")
     build = ctx.actions.declare_output("build", dir = True)
     install = ctx.actions.declare_output("install", dir = True)
@@ -146,12 +151,13 @@ meson_project = rule(
     attrs = {
         "source": attrs.source(),
         "deps": attrs.list(
-            attrs.dep(providers = [ExternalCxxInfo]),
+            attrs.dep(providers = [DefaultInfo]),
             default = [],
         ),
         "jobs": attrs.int(default = 8),
         "_meson_toolchain": attrs.default_only(attrs.toolchain_dep(providers = [MesonToolchainInfo], default = "toolchains//:meson")),
         "_ninja_toolchain": attrs.default_only(attrs.toolchain_dep(providers = [NinjaToolchainInfo], default = "toolchains//:ninja")),
+        "_pkg_config_toolchain": attrs.default_only(attrs.toolchain_dep(providers = [PkgConfigToolchainInfo], default = "toolchains//:pkg_config")),
         "_cxx_toolchain": toolchains_common.cxx(),
     },
 )

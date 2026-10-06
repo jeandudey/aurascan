@@ -1,6 +1,12 @@
 load("@prelude//cxx:cxx_toolchain_types.bzl", "CxxToolchainInfo")
+load(
+    "@prelude//cxx:preprocessor.bzl",
+    "CPreprocessor",
+    "CPreprocessorArgs",
+    "cxx_merge_cpreprocessors",
+)
 load("@prelude//decls:toolchains_common.bzl", "toolchains_common")
-load("@root//external-cxx/info.bzl", "ExternalCxxInfo", "make_external_cxx_tset")
+load("@prelude//rules.bzl", "prebuilt_cxx_library")
 load(":toolchain.bzl", "AutotoolsToolchainInfo")
 
 def _flags(x):
@@ -91,13 +97,14 @@ def _autotools_project_impl(ctx: AnalysisContext) -> list[Provider]:
         identifier = ctx.label.name,
     )
 
-    tset = make_external_cxx_tset(ctx, destdir)
+    sub_targets = {}
+    for name in ctx.attrs.sub_targets:
+        sub_targets[name] = [DefaultInfo(default_output = destdir.project(name))]
 
     return [
-        DefaultInfo(default_output = destdir),
-        ExternalCxxInfo(
-            prefix = destdir,
-            tset = tset,
+        DefaultInfo(
+            default_output = destdir,
+            sub_targets = sub_targets,
         ),
     ]
 
@@ -106,8 +113,9 @@ autotools_project = rule(
     attrs = {
         "source": attrs.source(),
         "jobs": attrs.int(default = 8),
+        "sub_targets": attrs.list(attrs.string(), default = []),
         "deps": attrs.list(
-            attrs.dep(providers = [ExternalCxxInfo]),
+            attrs.dep(providers = [DefaultInfo]),
             default = [],
         ),
         "_autotools_toolchain": attrs.default_only(

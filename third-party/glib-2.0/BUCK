@@ -13,4 +13,5 @@ meson_project(
     deps = [
         "//third-party/pcre2:pcre2",
     ],
+    visibility = ["PUBLIC"],
 )

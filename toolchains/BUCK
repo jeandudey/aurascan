@@ -5,6 +5,7 @@ load("@toolchains//bootlin:defs.bzl", "cxx_bootlin_toolchain", "download_bootlin
 load("@root//autotools:toolchain.bzl", "system_autotools_toolchain")
 load("@root//cmake:toolchain.bzl", "cmake_toolchain", "download_cmake_distribution")
 load("@root//ninja:toolchain.bzl", "ninja_toolchain", "download_ninja_distribution")
+load("@root//rules/pkg_config:toolchain.bzl", "system_pkg_config_toolchain")
 load(":meson.bzl", "system_meson_toolchain")
 load(":rust.bzl", "rust_toolchain")
 
@@ -50,6 +51,12 @@ remote_python_toolchain(
 
 system_python_wheel_toolchain(
     name = "python_wheel",
+    visibility = ["PUBLIC"],
+)
+
+# pkg-config
+system_pkg_config_toolchain(
+    name = "pkg_config",
     visibility = ["PUBLIC"],
 )
 

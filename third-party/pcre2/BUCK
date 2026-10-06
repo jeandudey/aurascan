@@ -1,4 +1,5 @@
 load("//autotools:defs.bzl", "autotools_project")
+load("//rules/pkg_config:defs.bzl", "pkg_config_pc")
 
 http_archive(
     name = "pcre2-source",
@@ -10,5 +11,32 @@ http_archive(
 autotools_project(
     name = "pcre2",
     source = ":pcre2-source",
+    sub_targets = [
+        "include",
+        "lib/libpcre2-8.a",
+        "lib/libpcre2-8.so",
+        "lib/libpcre2-posix.a",
+        "lib/libpcre2-posix.so",
+    ],
     visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "libpcre2",
+    static_lib = ":pcre2[lib/libpcre2-8.a]",
+    shared_lib = ":pcre2[lib/libpcre2-8.so]",
+    header_dirs = [":pcre2[include]"],
+)
+
+pkg_config_pc(
+    name = "libpcre2.pc",
+    library = ":libpcre2",
+)
+
+prebuilt_cxx_library(
+    name = "libpcre2-posix",
+    static_lib = ":pcre2[lib/libpcre2-posix.a]",
+    shared_lib = ":pcre2[lib/libpcre2-posix.so]",
+    header_dirs = [":pcre2[include]"],
+    deps = [":libpcre2"],
 )

@@ -17,3 +17,6 @@ builddir*
 
 buck-out
 .direnv
+# pixi environments
+.pixi/*
+!.pixi/config.toml

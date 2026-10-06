@@ -9,6 +9,14 @@ version = "0.1.0"
 
 [dependencies]
 python = ">=3.14.7,<3.15"
+gtk4 = ">=4.24.1,<5"
+gstreamer = ">=1.28.7,<2"
+libadwaita = ">=1.10.0,<2"
+glib = ">=2.90.0,<3"
+gst-plugins-base = ">=1.28.7,<2"
+gst-plugins-bad = ">=1.28.7,<2"
+gst-plugins-good = ">=1.28.7,<2"
+gst-plugins-ugly = ">=1.28.7,<2"
 
 [pypi-dependencies]
 sixdrepnet360 = { git = "https://github.com/jeandudey/pytorch-sixdrepnet360/", branch = "master", extras = ["export"] }

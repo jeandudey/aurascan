@@ -1,9 +1,0 @@
-cargo_env = true
-
-[buildscript.run.env]
-CARGO_PKG_LICENSE = "BSD-2-Clause"
-PROFILE = "release"
-RUSTDOC = "rustdoc"
-OPT_LEVEL = "3"
-NUM_JOBS = "1"
-DEBUG = "false"

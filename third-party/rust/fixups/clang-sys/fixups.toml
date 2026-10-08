@@ -1,3 +1,0 @@
-buildscript.run = false
-features = ["runtime"]
-omit_features = ["static"]

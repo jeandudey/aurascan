@@ -1,9 +1,0 @@
-[buildscript.run.env]
-OPT_LEVEL = "3"
-CLANG_PATH = "$(location //third-party/llvm:llvm[bin/clang])"
-LIBCLANG_PATH = "$(location //third-party/llvm:llvm[lib])"
-OPENCV_CLANG_ARGS = "--target=x86_64-buildroot-linux-gnu --gcc-toolchain=$(location toolchains//:bootlin) --sysroot=$(location toolchains//:bootlin[sysroot])"
-OPENCV_LINK_LIBS = "opencv_core,opencv_imgproc,opencv_imgcodecs,opencv_highgui,opencv_videoio"
-OPENCV_LINK_PATHS = "$(location //third-party/opencv:opencv)/lib"
-OPENCV_INCLUDE_PATHS = "$(location //third-party/opencv:opencv)/include/opencv5"
-OPENCV_DISABLE_PROBES = "pkg_config,cmake,vcpkg,vcpkg_cmake"

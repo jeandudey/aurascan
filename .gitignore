@@ -3,7 +3,6 @@ app/aurascan/target
 datasets
 artifacts
 cubecl.toml
-.workshop.lock
 *.png
 crates/gst-plugin-aurascan/target
 **/*/dot
@@ -15,7 +14,6 @@ crates/gst-plugin-aurascan/target
 .venv*
 builddir*
 
-buck-out
 .direnv
 # pixi environments
 .pixi/*

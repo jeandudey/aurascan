@@ -1,7 +1,0 @@
-rust_library(
-    name = "aurascan-smoothedcrop",
-    srcs = [
-        "src/lib.rs",
-    ],
-    visibility = ["PUBLIC"],
-)

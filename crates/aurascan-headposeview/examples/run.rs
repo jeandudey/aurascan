@@ -112,7 +112,7 @@ impl Gpu {
             0.0,
             0.0,
             0.0,
-            0.0,
+            aspect,
         );
         self.queue.present(frame);
     }

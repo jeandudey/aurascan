@@ -1,3 +1,5 @@
+use glam::camera::rh::view::look_at_mat4;
+use glam::camera::rh::proj::opengl::perspective;
 use glam::{Mat4, Quat, Vec3};
 use wgpu::util::DeviceExt;
 
@@ -277,8 +279,8 @@ impl Renderer {
 }
 
 fn build_vp(aspect: f32) -> Mat4 {
-    let proj = Mat4::perspective_rh(60f32.to_radians(), aspect, 0.1, 100.0);
-    let view = Mat4::look_at_rh(Vec3::new(0.0, 2.0, 6.0), Vec3::ZERO, Vec3::Y);
+    let proj = perspective(60f32.to_radians(), aspect, 0.1, 100.0);
+    let view = look_at_mat4(Vec3::new(0.0, 2.0, 6.0), Vec3::ZERO, Vec3::Y);
     let flip_y = Mat4::from_scale(Vec3::new(1.0, -1.0, 1.0)); // TODO: Feels wrong...
     flip_y * proj * view
 }

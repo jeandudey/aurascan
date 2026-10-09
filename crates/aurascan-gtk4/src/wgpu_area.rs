@@ -143,6 +143,7 @@ mod imp {
                             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                             view_formats: &[],
                         },
+                        wgpu::TextureUses::UNINITIALIZED,
                     )
             }
         }
@@ -189,6 +190,7 @@ mod imp {
                             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                             view_formats: &[],
                         },
+                        wgpu::TextureUses::UNINITIALIZED,
                     )
             }
         }

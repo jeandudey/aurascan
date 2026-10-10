@@ -11,7 +11,6 @@ preview = ["pixi-build"]
 
 [tasks.build]
 cmd = "cargo build --release"
-env = { RUSTFLAGS = "-C link-arg=-Wl,-rpath,$CONDA_PREFIX/lib" }
 
 [dependencies]
 expat = ">=2.8.5,<3"
@@ -34,6 +33,7 @@ opencv = ">=5.0.0,<6"
 python = ">=3.14.7,<3.15"
 pkg-config = ">=0.29.2,<0.30"
 libglib = ">=2.90.0,<3"
+reuse = ">=6.2.0,<7"
 rust = ">=1.98.1,<1.99"
 zlib = ">=1.3.2,<2"
 

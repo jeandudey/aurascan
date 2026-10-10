@@ -31,7 +31,6 @@ mod imp {
     use std::sync::LazyLock;
 
     use glib::Properties;
-    use gst::prelude::*;
 
     use super::*;
 

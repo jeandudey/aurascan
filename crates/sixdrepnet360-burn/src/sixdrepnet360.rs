@@ -31,27 +31,27 @@ use std::path::PathBuf;
 
 /// 6DRepNet360 model.
 #[derive(Debug, Module)]
-pub struct SixDRepNet360<B: Backend> {
-    conv1: Conv2d<B>,
-    bn1: BatchNorm<B>,
+pub struct SixDRepNet360 {
+    conv1: Conv2d,
+    bn1: BatchNorm,
     relu: Relu,
     maxpool: MaxPool2d,
-    layer1: LayerBlock<B>,
-    layer2: LayerBlock<B>,
-    layer3: LayerBlock<B>,
-    layer4: LayerBlock<B>,
+    layer1: LayerBlock,
+    layer2: LayerBlock,
+    layer3: LayerBlock,
+    layer4: LayerBlock,
     avgpool: AvgPool2d,
-    linear_reg: Linear<B>,
+    linear_reg: Linear,
 }
 
-impl<B: Backend> SixDRepNet360<B> {
+impl SixDRepNet360 {
     /// Creates a new [`SixDRepNet360`] model with the specified number of
     /// layers and device.
-    pub fn new(layers: [usize; 4], device: &B::Device) -> Self {
+    pub fn new(layers: [usize; 4], device: &Device) -> Self {
         SixDRepNet360Config::new(layers).init(device)
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 3> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<3> {
         let out = self.conv1.forward(input);
         let out = self.bn1.forward(out);
         let out = self.relu.forward(out);
@@ -73,23 +73,23 @@ impl<B: Backend> SixDRepNet360<B> {
     /// Detect the Euler angles from the input image using the model.
     ///
     /// Format is in `[x, y, z]`.
-    pub fn detect(&self, input: Tensor<B, 4>) -> Vec<[f32; 3]> {
+    pub fn detect(&self, input: Tensor<4>) -> Vec<[f32; 3]> {
         let euler = compute_euler_angles_from_rotation_matrices(self.forward(input))
             .mul_scalar(180.0 / std::f32::consts::PI);
 
         let batch = euler.dims()[0];
-        let flat: Vec<f32> = euler.into_data().to_vec().unwrap();
+        let flat: Vec<f32> = euler.into_data().try_to_vec().unwrap();
         (0..batch)
             .map(|i| [flat[i * 3], flat[i * 3 + 1], flat[i * 3 + 2]])
             .collect()
     }
 }
 
-impl<B: Backend> SixDRepNet360<B> {
+impl SixDRepNet360 {
     /// Creates a new [`SixDRepNet360`] model from a PyTorch checkpoint file.
     pub fn from_file(
         torch_weights: impl Into<PathBuf>,
-        device: &B::Device,
+        device: &Device,
     ) -> Result<Self, PytorchStoreError> {
         let mut model = Self::new([3, 4, 6, 3], device);
         Self::load_weights(&mut model, torch_weights)?;
@@ -114,10 +114,10 @@ impl<B: Backend> SixDRepNet360<B> {
 }
 
 #[cfg(feature = "pretrained")]
-impl<B: Backend> SixDRepNet360<B> {
+impl SixDRepNet360 {
     /// Download a pretrained 6DRepNet360 model from a PyTorch weights file.
     #[cfg(feature = "pretrained")]
-    pub fn pretrained(device: &B::Device) -> Result<Self, PytorchStoreError> {
+    pub fn pretrained(device: &Device) -> Result<Self, PytorchStoreError> {
         let mut model = Self::new([3, 4, 6, 3], device);
         Self::download_weights(&mut model)?;
         Ok(model)
@@ -145,7 +145,7 @@ impl SixDRepNet360Config {
     }
 
     /// Initialize the model with the given device.
-    pub fn init<B: Backend>(&self, device: &B::Device) -> SixDRepNet360<B> {
+    pub fn init(&self, device: &Device) -> SixDRepNet360 {
         const EXPANSION: usize = 4;
 
         SixDRepNet360 {
@@ -185,13 +185,13 @@ impl SixDRepNet360Config {
     }
 }
 
-fn normalize_vector<B: Backend>(v: Tensor<B, 2>) -> Tensor<B, 2> {
+fn normalize_vector(v: Tensor<2>) -> Tensor<2> {
     let v_mag = v.clone().powf_scalar(2.0).sum_dim(1).sqrt(); // [B, 1]
     let v_mag = v_mag.clamp_min(1e-8).expand(v.dims());
     v / v_mag
 }
 
-fn cross_product<B: Backend>(u: Tensor<B, 2>, v: Tensor<B, 2>) -> Tensor<B, 2> {
+fn cross_product(u: Tensor<2>, v: Tensor<2>) -> Tensor<2> {
     let u0 = u.clone().narrow(1, 0, 1);
     let u1 = u.clone().narrow(1, 1, 1);
     let u2 = u.narrow(1, 2, 1);
@@ -205,7 +205,7 @@ fn cross_product<B: Backend>(u: Tensor<B, 2>, v: Tensor<B, 2>) -> Tensor<B, 2> {
     Tensor::cat(vec![i, j, k], 1)
 }
 
-fn compute_rotation_matrix_from_ortho6d<B: Backend>(poses: Tensor<B, 2>) -> Tensor<B, 3> {
+fn compute_rotation_matrix_from_ortho6d(poses: Tensor<2>) -> Tensor<3> {
     let batch = poses.dims()[0];
 
     let x_raw = poses.clone().narrow(1, 0, 3); // [batch, 3]
@@ -221,7 +221,7 @@ fn compute_rotation_matrix_from_ortho6d<B: Backend>(poses: Tensor<B, 2>) -> Tens
     Tensor::cat(vec![x, y, z], 2) // [batch, 3, 3]
 }
 
-fn compute_euler_angles_from_rotation_matrices<B: Backend>(r: Tensor<B, 3>) -> Tensor<B, 2> {
+fn compute_euler_angles_from_rotation_matrices(r: Tensor<3>) -> Tensor<2> {
     let batch = r.dims()[0];
 
     // Element accessor: slice [batch, i, j] -> [batch, 1]

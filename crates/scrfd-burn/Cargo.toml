@@ -8,15 +8,15 @@ name = "inference"
 required-features = ["example"]
 
 [features]
-example = ["burn/flex", "burn/vulkan", "burn/rocm", "image", "imageproc"]
+example = ["embedded", "burn/flex", "burn/vulkan", "burn/rocm", "image", "imageproc"]
 embedded = []
 
 [dependencies]
-burn = { version = "0.21.0", features = ["train", "vision"] }
-burn-store = "0.21.0"
-thiserror = "2.0.18"
+burn = { workspace = true, features = ["train", "vision"] }
+burn-store.workspace = true
+thiserror.workspace = true
 image = { version = "0.25", optional = true }
 imageproc = { version = "0.26", optional = true }
 
 [build-dependencies]
-burn-onnx = "0.21"
+burn-onnx.workspace = true

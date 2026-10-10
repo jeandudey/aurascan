@@ -22,7 +22,7 @@ fn main() {
     for model in MODELS {
         ModelGen::new()
             .input(&format!("model/scrfd_{}.onnx", model))
-            .out_dir(&format!("scrfd_{}/", model))
+            .out_dir("models")
             .load_strategy(load_strategy)
             .run_from_script();
     }

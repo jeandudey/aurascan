@@ -40,29 +40,29 @@ pub enum ModelType {
 }
 
 /// The SCRFD model.
-pub enum Model<B: Backend> {
-    Scrfd1g(Scrfd1g<B>),
-    Scrfd2_5g(Scrfd2_5g<B>),
-    Scrfd2_5gKps(Scrfd2_5gKps<B>),
-    Scrfd10g(Scrfd10g<B>),
-    Scrfd10gKps(Scrfd10gKps<B>),
-    Scrfd34g(Scrfd34g<B>),
-    Scrfd500m(Scrfd500m<B>),
-    Scrfd500mKps(Scrfd500mKps<B>),
+pub enum Model {
+    Scrfd1g(Scrfd1g),
+    Scrfd2_5g(Scrfd2_5g),
+    Scrfd2_5gKps(Scrfd2_5gKps),
+    Scrfd10g(Scrfd10g),
+    Scrfd10gKps(Scrfd10gKps),
+    Scrfd34g(Scrfd34g),
+    Scrfd500m(Scrfd500m),
+    Scrfd500mKps(Scrfd500mKps),
 }
 
-impl<B: Backend> Model<B> {
+impl Model {
     #[cfg(feature = "embedded")]
-    pub fn from_embedded(kind: ModelType, device: &B::Device) -> Self {
+    pub fn from_embedded(kind: ModelType, device: &Device) -> Self {
         match kind {
-            ModelType::Scrfd1g => Self::Scrfd1g(Scrfd1g::<B>::from_embedded(device)),
-            ModelType::Scrfd2_5g => Self::Scrfd2_5g(Scrfd2_5g::<B>::from_embedded(device)),
-            ModelType::Scrfd2_5gKps => Self::Scrfd2_5gKps(Scrfd2_5gKps::<B>::from_embedded(device)),
-            ModelType::Scrfd10g => Self::Scrfd10g(Scrfd10g::<B>::from_embedded(device)),
-            ModelType::Scrfd10gKps => Self::Scrfd10gKps(Scrfd10gKps::<B>::from_embedded(device)),
-            ModelType::Scrfd34g => Self::Scrfd34g(Scrfd34g::<B>::from_embedded(device)),
-            ModelType::Scrfd500m => Self::Scrfd500m(Scrfd500m::<B>::from_embedded(device)),
-            ModelType::Scrfd500mKps => Self::Scrfd500mKps(Scrfd500mKps::<B>::from_embedded(device)),
+            ModelType::Scrfd1g => Self::Scrfd1g(Scrfd1g::from_embedded(device)),
+            ModelType::Scrfd2_5g => Self::Scrfd2_5g(Scrfd2_5g::from_embedded(device)),
+            ModelType::Scrfd2_5gKps => Self::Scrfd2_5gKps(Scrfd2_5gKps::from_embedded(device)),
+            ModelType::Scrfd10g => Self::Scrfd10g(Scrfd10g::from_embedded(device)),
+            ModelType::Scrfd10gKps => Self::Scrfd10gKps(Scrfd10gKps::from_embedded(device)),
+            ModelType::Scrfd34g => Self::Scrfd34g(Scrfd34g::from_embedded(device)),
+            ModelType::Scrfd500m => Self::Scrfd500m(Scrfd500m::from_embedded(device)),
+            ModelType::Scrfd500mKps => Self::Scrfd500mKps(Scrfd500mKps::from_embedded(device)),
         }
     }
 
@@ -74,8 +74,8 @@ impl<B: Backend> Model<B> {
     }
 }
 
-impl<B: Backend> Model<B> {
-    pub fn forward(&self, image: Tensor<B, 4>) -> Vec<Tensor<B, 3>> {
+impl Model {
+    pub fn forward(&self, image: Tensor<4>) -> Vec<Tensor<3>> {
         match self {
             Model::Scrfd1g(model) => {
                 let (s8, s16, s32, b8, b16, b32) = model.forward(image);
@@ -113,13 +113,8 @@ impl<B: Backend> Model<B> {
     }
 }
 
-impl<B: Backend> Model<B> {
-    pub fn detect(
-        &self,
-        image: Tensor<B, 4>,
-        score_threshold: f32,
-        nms_threshold: f32,
-    ) -> Vec<Face> {
+impl Model {
+    pub fn detect(&self, image: Tensor<4>, score_threshold: f32, nms_threshold: f32) -> Vec<Face> {
         let [_, _, h, w] = image.dims();
         let outputs = self.forward(image);
 
@@ -159,13 +154,13 @@ impl<B: Backend> Model<B> {
 }
 
 #[cfg(feature = "image")]
-impl<B: Backend> Model<B> {
+impl Model {
     pub fn detect_image(
         &self,
         image: image::DynamicImage,
         score_threshold: f32,
         nms_threshold: f32,
-        device: &B::Device,
+        device: &Device,
     ) -> Vec<Face> {
         const INPUT_W: u32 = 640;
         const INPUT_H: u32 = 640;
@@ -212,10 +207,10 @@ impl<B: Backend> Model<B> {
     }
 
     /// HWC u8 image -> normalized NCHW tensor (RGB, (x-127.5)/128).
-    fn image_to_tensor(img: &image::RgbImage, device: &B::Device) -> Tensor<B, 4> {
+    fn image_to_tensor(img: &image::RgbImage, device: &Device) -> Tensor<4> {
         let (w, h) = (img.width() as usize, img.height() as usize);
         let data = img.as_raw().iter().map(|&b| b as f32).collect::<Vec<_>>();
-        Tensor::<B, 1>::from_floats(data.as_slice(), device)
+        Tensor::<1>::from_floats(data.as_slice(), device)
             .reshape([1, h, w, 3])
             .permute([0, 3, 1, 2]) // NHWC -> NCHW
             .sub_scalar(127.5f32)
@@ -293,19 +288,19 @@ fn anchor_centers(stride: usize, input_w: usize, input_h: usize) -> Vec<(f32, f3
     centers
 }
 
-fn decode_stride<B: Backend>(
-    scores: Tensor<B, 3>,
-    bbox: Tensor<B, 3>,
-    kps: Option<Tensor<B, 3>>,
+fn decode_stride(
+    scores: Tensor<3>,
+    bbox: Tensor<3>,
+    kps: Option<Tensor<3>>,
     stride: usize,
     input_w: usize,
     input_h: usize,
     score_threshold: f32,
 ) -> Vec<Face> {
     let n = scores.dims()[1];
-    let scores: Vec<f32> = scores.into_data().to_vec().unwrap();
-    let bbox: Vec<f32> = bbox.into_data().to_vec().unwrap();
-    let kps: Option<Vec<f32>> = kps.map(|v| v.into_data().to_vec().unwrap());
+    let scores: Vec<f32> = scores.into_data().try_to_vec().unwrap();
+    let bbox: Vec<f32> = bbox.into_data().try_to_vec().unwrap();
+    let kps: Option<Vec<f32>> = kps.map(|v| v.into_data().try_to_vec().unwrap());
     let centers = anchor_centers(stride, input_w, input_h);
 
     let mut out = Vec::new();

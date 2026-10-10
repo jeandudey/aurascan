@@ -1,5 +1,4 @@
-use burn::backend::Rocm;
-use burn::backend::rocm::RocmDevice;
+use burn::prelude::*;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_filled_circle_mut, draw_hollow_rect_mut};
 use imageproc::rect::Rect;
@@ -9,8 +8,8 @@ fn main() {
     let image_path = std::env::args().nth(1).unwrap();
     let orig_image = image::open(&image_path).unwrap();
 
-    let device = RocmDevice::default();
-    let model = Model::<Rocm>::from_embedded(ModelType::Scrfd500mKps, &device);
+    let device = Device::rocm(0);
+    let model = Model::from_embedded(ModelType::Scrfd500mKps, &device);
 
     let faces = model.detect_image(orig_image.clone(), 0.3, 0.4, &device);
     let mut result = orig_image.into_rgb8();

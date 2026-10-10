@@ -1,4 +1,1 @@
-include!(concat!(
-    env!("OUT_DIR"),
-    "/scrfd_500m_bnkps/scrfd_500m_bnkps.rs"
-));
+include!(concat!(env!("OUT_DIR"), "/models/scrfd_500m_bnkps.rs"));

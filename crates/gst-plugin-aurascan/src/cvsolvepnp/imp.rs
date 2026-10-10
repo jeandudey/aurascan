@@ -5,8 +5,8 @@ use gst::prelude::*;
 use gst::subclass::prelude::*;
 use gst_base::subclass::prelude::BaseTransformImpl;
 
-use opencv::calib3d;
 use opencv::core::{CV_64F, Point2f, Point3f, Vector};
+use opencv::geometry;
 use opencv::prelude::*;
 
 use eyre::Context;
@@ -47,7 +47,7 @@ impl SolvePnp {
         let mut rvec = Mat::default();
         let mut tvec = Mat::default();
 
-        let ok = calib3d::solve_pnp(
+        let ok = geometry::solve_pnp(
             object_points,
             image_points,
             &camera_matrix,

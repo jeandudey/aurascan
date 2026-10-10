@@ -7,8 +7,9 @@ use gst::subclass::prelude::*;
 use gst_video::prelude::*;
 use gst_video::subclass::prelude::*;
 
+use burn::Tensor;
+use burn::prelude::*;
 use burn::tensor::TensorData;
-use burn::{Dispatch, DispatchDevice, Tensor};
 
 use crate::BackendType;
 use crate::scrfd::{
@@ -459,9 +460,9 @@ impl BaseTransformImpl for ScrfdInference {
 
         let output = state.model.forward(input, width, height);
 
-        let into_gst_tensor = |name: &'static glib::GStr, burn_tensor: Tensor<Dispatch, 3>| {
+        let into_gst_tensor = |name: &'static glib::GStr, burn_tensor: Tensor<3>| {
             let dims = burn_tensor.dims();
-            let tensor_data = burn_tensor.into_data().into_vec::<f32>().unwrap();
+            let tensor_data = burn_tensor.into_data().try_into_vec::<f32>().unwrap();
             let tensor_data = gst::Buffer::from_slice(VecWrapper(tensor_data));
             gst_analytics::Tensor::new_simple(
                 glib::Quark::from_static_str(name),
@@ -506,8 +507,8 @@ fn set_width_and_height_caps(caps: &mut gst::Caps) {
 }
 
 struct Model {
-    model: scrfd_burn::Model<Dispatch>,
-    device: DispatchDevice,
+    model: scrfd_burn::Model,
+    device: Device,
 }
 
 impl Model {
@@ -517,36 +518,24 @@ impl Model {
 
     fn load_model(settings: &Settings) -> eyre::Result<Box<Self>> {
         let device = match settings.backend_type {
-            BackendType::Flex => DispatchDevice::Flex(Default::default()),
+            BackendType::Flex => Device::flex(),
             #[cfg(feature = "vulkan")]
-            BackendType::Vulkan => {
-                use burn::tensor::backend::{Device, DeviceId};
-                match (settings.cubecl_type_id, settings.cubecl_index_id) {
-                    (u32::MAX, _) => DispatchDevice::Vulkan(Default::default()),
-                    (type_id, index_id) => DispatchDevice::from_id(DeviceId {
-                        type_id: type_id as u16,
-                        index_id: index_id as u16,
-                    }),
-                }
-            }
+            BackendType::Vulkan => match (settings.cubecl_type_id, settings.cubecl_index_id) {
+                (u32::MAX, _) => Device::vulkan(Default::default()),
+                (type_id, index_id) => Device::vulkan(DeviceKind::DefaultDevice),
+            },
             #[cfg(feature = "rocm")]
-            BackendType::Rocm => {
-                use burn::tensor::backend::{Device, DeviceId};
-                match (settings.cubecl_type_id, settings.cubecl_index_id) {
-                    (u32::MAX, _) => DispatchDevice::Rocm(Default::default()),
-                    (type_id, index_id) => DispatchDevice::from_id(DeviceId {
-                        type_id: type_id as u16,
-                        index_id: index_id as u16,
-                    }),
-                }
-            }
+            BackendType::Rocm => match (settings.cubecl_type_id, settings.cubecl_index_id) {
+                (u32::MAX, _) => Device::rocm(DeviceIndex::Default),
+                (type_id, index_id) => Device::rocm(index_id as u32),
+            },
         };
 
         Self::load_model_internal(settings, device)
     }
 
     #[allow(unused_variables)]
-    fn load_model_internal(settings: &Settings, device: DispatchDevice) -> eyre::Result<Box<Self>> {
+    fn load_model_internal(settings: &Settings, device: Device) -> eyre::Result<Box<Self>> {
         match settings.weights_path {
             Some(_) => unimplemented!(),
             None => {
@@ -568,9 +557,9 @@ impl Model {
         }
     }
 
-    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Vec<Tensor<Dispatch, 3>> {
+    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Vec<Tensor<3>> {
         let data = TensorData::new(input, [1, height, width, 3]).convert::<f32>();
-        let tensor = Tensor::<Dispatch, 4>::from_data(data, &self.device)
+        let tensor = Tensor::<4>::from_data(data, &self.device)
             .permute([0, 3, 1, 2])
             .sub_scalar(127.5f32)
             .div_scalar(128.0f32);

@@ -9,8 +9,9 @@ use gst::subclass::prelude::*;
 use gst_base::subclass::prelude::*;
 use gst_video::prelude::*;
 
+use burn::Tensor;
+use burn::prelude::*;
 use burn::tensor::TensorData;
-use burn::{Dispatch, DispatchDevice, Tensor};
 use sixdrepnet360_burn::sixdrepnet360;
 
 use eyre::Context;
@@ -387,7 +388,7 @@ impl BaseTransformImpl for SixDRepNet360Inference {
         let output = state.model.forward(input, width, height);
 
         let dims = output.dims();
-        let tensor_data = output.into_data().into_vec::<f32>().unwrap();
+        let tensor_data = output.into_data().try_into_vec::<f32>().unwrap();
         let tensor_data = gst::Buffer::from_slice(VecWrapper(tensor_data));
         let tensor = gst_analytics::Tensor::new_simple(
             glib::Quark::from_static_str(SIXDREPNET360_TENSOR_ID),
@@ -405,49 +406,35 @@ impl BaseTransformImpl for SixDRepNet360Inference {
 }
 
 struct Model {
-    model: sixdrepnet360::SixDRepNet360<Dispatch>,
-    std: Tensor<Dispatch, 4>,
-    mean: Tensor<Dispatch, 4>,
-    device: DispatchDevice,
+    model: sixdrepnet360::SixDRepNet360,
+    std: Tensor<4>,
+    mean: Tensor<4>,
+    device: Device,
 }
 
 impl Model {
     fn load_model(settings: &Settings) -> eyre::Result<Box<Self>> {
         let device = match settings.backend_type {
-            BackendType::Flex => DispatchDevice::Flex(Default::default()),
+            BackendType::Flex => Device::flex(),
             #[cfg(feature = "vulkan")]
-            BackendType::Vulkan => {
-                use burn::tensor::backend::{Device, DeviceId};
-                match (settings.cubecl_type_id, settings.cubecl_index_id) {
-                    (u32::MAX, _) => DispatchDevice::Vulkan(Default::default()),
-                    (type_id, index_id) => DispatchDevice::from_id(DeviceId {
-                        type_id: type_id as u16,
-                        index_id: index_id as u16,
-                    }),
-                }
-            }
+            BackendType::Vulkan => match (settings.cubecl_type_id, settings.cubecl_index_id) {
+                (u32::MAX, _) => Device::vulkan(Default::default()),
+                (type_id, index_id) => Device::vulkan(DeviceKind::DefaultDevice),
+            },
             #[cfg(feature = "rocm")]
-            BackendType::Rocm => {
-                use burn::tensor::backend::{Device, DeviceId};
-                match (settings.cubecl_type_id, settings.cubecl_index_id) {
-                    (u32::MAX, _) => DispatchDevice::Rocm(Default::default()),
-                    (type_id, index_id) => DispatchDevice::from_id(DeviceId {
-                        type_id: type_id as u16,
-                        index_id: index_id as u16,
-                    }),
-                }
-            }
+            BackendType::Rocm => match (settings.cubecl_type_id, settings.cubecl_index_id) {
+                (u32::MAX, _) => Device::rocm(DeviceIndex::Default),
+                (type_id, index_id) => Device::rocm(index_id as u32),
+            },
         };
 
         Self::load_model_internal(settings, device)
     }
 
     #[allow(unused_variables)]
-    fn load_model_internal(settings: &Settings, device: DispatchDevice) -> eyre::Result<Box<Self>> {
-        let mean =
-            Tensor::<Dispatch, 1>::from_data([0.485, 0.485, 0.406], &device).reshape([1, 3, 1, 1]);
-        let std =
-            Tensor::<Dispatch, 1>::from_data([0.229, 0.224, 0.225], &device).reshape([1, 3, 1, 1]);
+    fn load_model_internal(settings: &Settings, device: Device) -> eyre::Result<Box<Self>> {
+        let mean = Tensor::<1>::from_data([0.485, 0.485, 0.406], &device).reshape([1, 3, 1, 1]);
+        let std = Tensor::<1>::from_data([0.229, 0.224, 0.225], &device).reshape([1, 3, 1, 1]);
         match &settings.weights_path {
             Some(torch_weights) => Ok(Box::new(Self {
                 model: sixdrepnet360::SixDRepNet360::from_file(&torch_weights, &device)
@@ -475,7 +462,7 @@ impl Model {
         }
     }
 
-    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Tensor<Dispatch, 3> {
+    fn forward(&self, input: Vec<u8>, width: usize, height: usize) -> Tensor<3> {
         let data = TensorData::new(input, [1, height, width, 3]).convert::<f32>();
         let tensor = Tensor::from_data(data, &self.device)
             .permute([0, 3, 1, 2])

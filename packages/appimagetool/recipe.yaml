@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: appimagetool
+  version: "2026.10.10"
+
+source:
+  git: https://github.com/AppImage/appimagetool
+  rev: "854e19e951900cf141245b384d45735942521abe"
+
+build:
+  number: 0
+  script: |
+    cmake $CMAKE_ARGS \
+      -GNinja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$PREFIX \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DBUILD_SHARED_LIBS=ON \
+      -DARGP_H=$BUILD_PREFIX/$HOST/sysroot/usr/include/argp.h \
+      -B $SRC_DIR/../build \
+      -S .
+
+    cmake --build $SRC_DIR/../build --target install
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - git
+    - pkg-config
+  host:
+    - glib
+    - gpgme
+    - libcurl
+    - libgcrypt
+    - zlib
+  run:
+    - squashfs-tools
+
+about:
+  homepage: https://github.com/AppImage/appimagetool
+  license: MIT
+  summary: Tool for creating an AppImage from an existing AppDir.
+  description: |
+    This tool allows you to create an AppImage from an existing AppDir.
+  repository: https://github.com/AppImage/appimagetool
+  documentation: https://github.com/AppImage/appimagetool

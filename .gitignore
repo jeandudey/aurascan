@@ -14,7 +14,7 @@ crates/gst-plugin-aurascan/target
 .venv*
 builddir*
 
-.direnv
-# pixi environments
+# Pixi
+*.conda
 .pixi/*
 !.pixi/config.toml

@@ -1,0 +1,49 @@
+
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: linuxdeploy-plugin-appimage
+  version: "2026.10.10"
+
+source:
+  git: https://github.com/linuxdeploy/linuxdeploy-plugin-appimage
+  rev: "536b068787179ea901964bd7dabc7bf61e4941c3"
+
+build:
+  number: 0
+  script: |
+    sed -i 's/ -Werror//' CMakeLists.txt
+    sed -i '/^ -static$/d' src/CMakeLists.txt
+    cmake $CMAKE_ARGS \
+      -GNinja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$PREFIX \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+      -DUSE_CCACHE=OFF \
+      -B $SRC_DIR/../build \
+      -S .
+
+    cmake --build $SRC_DIR/../build --target install
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - git
+  run:
+    - appimagetool
+
+about:
+  homepage: https://github.com/linuxdeploy/linuxdeploy-plugin-appimage
+  license: MIT
+  summary: Tool for creating an AppImage.
+  description: |
+    This tool allows you to create an AppImage from an existing AppDir.
+  repository: https://github.com/linuxdeploy/linuxdeploy-plugin-appimage
+  documentation: https://github.com/linuxdeploy/linuxdeploy-plugin-appimage

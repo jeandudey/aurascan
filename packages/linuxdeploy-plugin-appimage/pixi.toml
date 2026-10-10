@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+# SPDX-License-Identifier: MIT
+
+[package.build]
+backend = { name = "pixi-build-rattler-build", version = "0.*" }
+
+[package.run-dependencies]
+appimagetool = { path = "../appimagetool" }

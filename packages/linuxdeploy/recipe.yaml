@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: linuxdeploy
+  version: "2026.10.10"
+
+source:
+  git: https://github.com/linuxdeploy/linuxdeploy
+  rev: "07333c6e942c7d71782b66be924c5d867f9dfdfc"
+
+build:
+  number: 0
+  script: |
+    cmake $CMAKE_ARGS \
+      -GNinja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$PREFIX \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DBUILD_TESTING=OFF \
+      -DUSE_CCACHE=OFF \
+      -B $SRC_DIR/../build \
+      -S .
+
+    cmake --build $SRC_DIR/../build --target install
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+    - git
+    - pkg-config
+  host:
+    - cimg
+    - libjpeg-turbo
+    - libpng
+    - zlib
+
+about:
+  homepage: https://github.com/linuxdeploy/linuxdeploy
+  license: MIT
+  summary: Tool for creating an AppDir.
+  description: |
+    This tool allows you to create and manage an AppDir.
+  repository: https://github.com/linuxdeploy/linuxdeploy
+  documentation: https://github.com/linuxdeploy/linuxdeploy

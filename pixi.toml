@@ -36,3 +36,6 @@ expat = ">=2.8.5,<3"
 sixdrepnet360 = { git = "https://github.com/jeandudey/pytorch-sixdrepnet360/", branch = "master", extras = [
     "export",
 ] }
+
+[activation.env]
+LD_LIBRARY_PATH = "$CONDA_PREFIX/lib"

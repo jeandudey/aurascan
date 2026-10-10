@@ -12,6 +12,9 @@ preview = ["pixi-build"]
 [tasks.build]
 cmd = "cargo build --release"
 
+[tasks.appimage]
+cmd = "linuxdeploy --appdir target/release/AppDir --executable target/release/aurascan --desktop-file data/tech.jeandudey.Aurascan.desktop --icon-file data/tech.jeandudey.Aurascan.svg  --output appimage"
+
 [dependencies]
 expat = ">=2.8.5,<3"
 gtk4 = ">=4.24.1,<5"

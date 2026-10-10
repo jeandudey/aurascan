@@ -18,6 +18,7 @@ crates/gst-plugin-aurascan/target
 builddir*
 
 # Pixi
+*.AppImage
 *.conda
 .pixi/*
 !.pixi/config.toml

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Aurascan
 Exec=aurascan
-Icon=@APP_ID@
+Icon=tech.jeandudey.Aurascan
 Terminal=false
 Type=Application
 DBusActivatable=true

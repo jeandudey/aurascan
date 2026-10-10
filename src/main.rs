@@ -3,14 +3,13 @@ mod config;
 mod widgets;
 
 use crate::application::Application;
-use crate::config::{app_id, resources_file};
+use crate::config::app_id;
 use gtk::gio::prelude::ApplicationExtManual;
 use gtk::{gio, glib};
 
 fn main() -> glib::ExitCode {
-    let res = gio::Resource::load(resources_file()).expect("Could not load gresource file");
-    gio::resources_register(&res);
-
+    gio::resources_register_include!("tech.jeandudey.Aurascan.gresource")
+        .expect("Failed to register resources");
     let app = Application::new();
     app.run()
 }

@@ -31,6 +31,7 @@ dirs = "6.0.0"
 futures-channel = "0.3"
 glam = "0.33"
 glib = { version = "0.22", features = ["v2_68"] }
+glib-build-tools = "0.22"
 glow = "0.18"
 gst = { package = "gstreamer", version = "0.25", features = ["v1_28"] }
 gst-analytics = { package = "gstreamer-analytics", version = "0.25", features = ["v1_28"] }
@@ -88,6 +89,9 @@ gst-video.workspace = true
 log.workspace = true
 tracing-subscriber.workspace = true
 wgpu.workspace = true
+
+[build-dependencies]
+glib-build-tools.workspace = true
 
 [profile.release]
 debug = true

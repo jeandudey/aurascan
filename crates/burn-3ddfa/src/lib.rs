@@ -1,17 +1,19 @@
-use crate::downloader::{download_300w_lp_as_file, extract_zip};
-use burn::data::dataset::transform::{Mapper, MapperDataset};
-use burn::data::dataset::{Dataset, InMemDataset};
-use burn::data::network::downloader::download_file_as_bytes;
-use image::{DynamicImage, ImageError};
-use matio::{Value, Var};
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use burn::data::dataset::transform::{Mapper, MapperDataset};
+use burn::data::dataset::{Dataset, DatasetError, InMemDataset};
+use burn::data::network::downloader::download_file_as_bytes;
+
+use image::{DynamicImage, ImageError};
 use thiserror::Error;
 use tracing::{Level, event, span};
 use walkdir::WalkDir;
 use zip::result::ZipError;
+
+use crate::downloader::{download_300w_lp_as_file, extract_zip};
 
 mod downloader;
 
@@ -254,7 +256,7 @@ pub struct PoseDataset {
 }
 
 impl Dataset<PoseDatasetItem> for PoseDataset {
-    fn get(&self, index: usize) -> Option<PoseDatasetItem> {
+    fn get(&self, index: usize) -> Result<PoseDatasetItem, DatasetError> {
         self.dataset.get(index)
     }
 

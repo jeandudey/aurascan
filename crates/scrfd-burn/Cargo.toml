@@ -15,7 +15,7 @@ embedded = []
 burn = { workspace = true, features = ["train", "vision"] }
 burn-store.workspace = true
 thiserror.workspace = true
-image = { version = "0.25", optional = true }
+image = { workspace = true, optional = true }
 imageproc = { version = "0.26", optional = true }
 
 [build-dependencies]

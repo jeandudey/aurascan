@@ -41,6 +41,7 @@ gst-plugin-gtk4 = "0.15.2"
 gst-plugin-version-helper = "0.8.4"
 gst-video = { package = "gstreamer-video", version = "0.25", features = ["v1_28"] }
 gtk = { package = "gtk4", version = "0.11.3", features = ["v4_16"] }
+image = "0.25.10"
 keyvalues-serde = "0.2"
 log = "0.4"
 opencv = { version = "0.101", features = ["clang-runtime"] }

@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: linuxdeploy-plugin-gtk
+  version: "2026.10.11"
+
+source:
+  git: https://github.com/linuxdeploy/linuxdeploy-plugin-gtk
+  rev: "7a3fbc31a9e5075073ff8790f26effbac5f84453"
+
+build:
+  number: 0
+  noarch: generic
+  script: |
+    install -Dm755 linuxdeploy-plugin-gtk.sh $PREFIX/bin/linuxdeploy-plugin-gtk.sh
+
+
+requirements:
+  run:
+    - findutils
+    - glib-tools
+    - pkg-config
+
+about:
+  homepage: https://github.com/linuxdeploy/linuxdeploy-plugin-gtk
+  license: MIT
+  summary: Plugin for integrating GTK with linuxdeploy.
+  description: |
+    This plugin allows you to integrate GTK with linuxdeploy.
+  repository: https://github.com/linuxdeploy/linuxdeploy-plugin-gtk
+  documentation: https://github.com/linuxdeploy/linuxdeploy-plugin-gtk

@@ -13,7 +13,15 @@ preview = ["pixi-build"]
 cmd = "cargo build --release"
 
 [tasks.appimage]
-cmd = "linuxdeploy --appdir target/release/AppDir --executable target/release/aurascan --desktop-file data/tech.jeandudey.Aurascan.desktop --icon-file data/tech.jeandudey.Aurascan.svg  --output appimage"
+cmd = [
+    "linuxdeploy",
+    "--appdir", "target/release/AppDir",
+    "--executable", "target/release/aurascan",
+    "--desktop-file", "data/tech.jeandudey.Aurascan.desktop",
+    "--icon-file", "data/tech.jeandudey.Aurascan.svg",
+    "--plugin", "gtk",
+    "--output", "appimage",
+]
 
 [dependencies]
 expat = ">=2.8.5,<3"
@@ -32,6 +40,7 @@ libadwaita = ">=1.10.0,<2"
 libmatio = ">=1.5.6,<2"
 linuxdeploy = { path = "packages/linuxdeploy" }
 linuxdeploy-plugin-appimage = { path = "packages/linuxdeploy-plugin-appimage" }
+linuxdeploy-plugin-gtk = { path = "packages/linuxdeploy-plugin-gtk" }
 opencv = ">=5.0.0,<6"
 python = ">=3.14.7,<3.15"
 pkg-config = ">=0.29.2,<0.30"

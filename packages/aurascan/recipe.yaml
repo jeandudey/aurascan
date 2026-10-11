@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: aurascan
+  version: "0.1.0"
+
+source:
+  path: ../../
+
+build:
+  number: 0
+  script: |
+    for v in $(compgen -e | grep CFLAGS); do
+      export "$v=${!v//-O2/}"
+    done
+    cargo install --locked --no-track --root $PREFIX --path .
+    install -Dm644 data/tech.jeandudey.Aurascan.gschema.xml -t $PREFIX/share/glib-2.0/schemas
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('rust') }}
+  host:
+    - expat
+    - freetype
+    - gstreamer
+    - gst-plugins-base
+    - gst-plugins-bad
+    - gst-plugins-good
+    - gst-plugins-ugly
+    - gtk4
+    - harfbuzz
+    - libadwaita
+    - libglib
+    - opencv
+    - openssl
+    - zlib

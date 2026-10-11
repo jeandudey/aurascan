@@ -13,6 +13,7 @@ preview = ["pixi-build"]
 cmd = "cargo build --release"
 
 [tasks.appimage]
+depends-on = ["build"]
 cmd = [
     "linuxdeploy",
     "--appdir", "target/release/AppDir",

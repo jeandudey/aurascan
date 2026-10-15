@@ -1,0 +1,21 @@
+
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[modelinfo]
+version=1.0
+group-id=sixdrepnet360
+
+[image]
+id=sixdrepnet360-in
+type=float32
+dims=-1,3,224,224
+dir=input
+ranges=PLACEHOLDER-RANGES-REQUIRED
+
+[rotation_matrix]
+id=sixdrepnet360-out
+type=float32
+dims=-1,3,3
+dir=output

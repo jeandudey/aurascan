@@ -12,6 +12,35 @@ preview = ["pixi-build"]
 [tasks.build]
 cmd = "cargo build --release"
 
+[tasks.export-scrfd]
+cmd = [
+    "scrfd-export", "scrfd_500m",
+    "--snapshot", "models/scrfd_500m.pth",
+    "--output", "models/scrfd_500m.onnx",
+    "--opset", "18",
+]
+
+[tasks.export-sixdrepnet360]
+cmd = [
+    "sixdrepnet360-export",
+    "--output", "models/sixdrepnet360.onnx",
+    "--opset", "18",
+]
+
+[tasks.export]
+depends-on = ["export-scrfd", "export-sixdrepnet360"]
+
+[tasks.modelinfo-scrfd]
+depends-on = ["export-scrfd"]
+cmd = ["modelinfo-generator", "models/scrfd_500m.onnx"]
+
+[tasks.modelinfo-sixdrepnet360]
+depends-on = ["export-sixdrepnet360"]
+cmd = ["modelinfo-generator", "models/sixdrepnet360.onnx"]
+
+[tasks.models]
+depends-on = ["modelinfo-scrfd", "modelinfo-sixdrepnet360"]
+
 [tasks.appimage]
 depends-on = ["build"]
 cmd = [

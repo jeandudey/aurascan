@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: modelinfo-helper
+  version: "1.28.8"
+
+source:
+  git: https://gitlab.freedesktop.org/gstreamer/gstreamer
+  tag: "1.28.8"
+
+build:
+  number: 0
+  noarch: python
+  script:
+    - cp subprojects/gst-devtools/modelinfo-helper/modelinfo-generator.py $SP_DIR/modelinfo_generator.py
+  python:
+    entry_points:
+      - modelinfo-generator = modelinfo_generator:main
+
+requirements:
+  host:
+    - python >=3.9
+  run:
+    - onnx
+    - python >=3.9
+
+tests:
+  - script:
+      - if: unix
+        then: test -x $PREFIX/bin/modelinfo-helper
+

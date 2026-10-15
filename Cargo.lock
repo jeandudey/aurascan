@@ -8410,6 +8410,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rocjpeg"
+version = "0.1.0"
+
+[[package]]
+name = "rocjpeg-sys"
+version = "0.1.0"
+dependencies = [
+ "bindgen 0.72.1",
+]
+
+[[package]]
 name = "rstest"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

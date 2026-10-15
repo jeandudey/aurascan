@@ -9,6 +9,10 @@ platforms = ["linux-64"]
 version = "0.1.0"
 preview = ["pixi-build"]
 
+[workspace.build-variants]
+hip_compiler = ["hip-rocm-clang"]
+hip_compiler_version = ["7.2"]
+
 [tasks.build]
 cmd = "cargo build --release"
 
@@ -74,6 +78,7 @@ linuxdeploy-plugin-gtk = { path = "packages/linuxdeploy-plugin-gtk" }
 modelinfo-helper = { path = "packages/modelinfo-helper" }
 opencv = ">=5.0.0,<6"
 python = ">=3.14.7,<3.15"
+rocjpeg = { path = "packages/rocjpeg" }
 pkg-config = ">=0.29.2,<0.30"
 libglib = ">=2.90.0,<3"
 reuse = ">=6.2.0,<7"

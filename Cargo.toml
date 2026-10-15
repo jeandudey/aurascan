@@ -12,6 +12,8 @@ members = [
     "crates/gst-plugin-aurascan",
     "crates/matio",
     "crates/matio-sys",
+    "crates/rocjpeg",
+    "crates/rocjpeg-sys",
     "crates/scrfd-burn",
     "crates/sixdrepnet360-burn",
 ]

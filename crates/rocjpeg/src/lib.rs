@@ -93,11 +93,11 @@ pub enum Backend {
     Hybrid,
 }
 
-impl Backend {
-    fn to_ffi(self) -> ffi::RocJpegBackend {
-        match self {
-            Backend::Hardware => ffi::RocJpegBackend::ROCJPEG_BACKEND_HARDWARE,
-            Backend::Hybrid => ffi::RocJpegBackend::ROCJPEG_BACKEND_HYBRID,
+impl From<Backend> for ffi::RocJpegBackend {
+    fn from(backend: Backend) -> Self {
+        match backend {
+            Backend::Hardware => Self::ROCJPEG_BACKEND_HARDWARE,
+            Backend::Hybrid => Self::ROCJPEG_BACKEND_HYBRID,
         }
     }
 }
@@ -145,15 +145,14 @@ pub enum OutputFormat {
     RgbPlanar,
 }
 
-impl OutputFormat {
-    fn to_ffi(self) -> ffi::RocJpegOutputFormat {
-        use ffi::RocJpegOutputFormat as O;
-        match self {
-            Self::Native => O::ROCJPEG_OUTPUT_NATIVE,
-            Self::YuvPlanar => O::ROCJPEG_OUTPUT_YUV_PLANAR,
-            Self::Y => O::ROCJPEG_OUTPUT_Y,
-            Self::Rgb => O::ROCJPEG_OUTPUT_RGB,
-            Self::RgbPlanar => O::ROCJPEG_OUTPUT_RGB_PLANAR,
+impl From<OutputFormat> for ffi::RocJpegOutputFormat {
+    fn from(format: OutputFormat) -> Self {
+        match format {
+            OutputFormat::Native => Self::ROCJPEG_OUTPUT_NATIVE,
+            OutputFormat::YuvPlanar => Self::ROCJPEG_OUTPUT_YUV_PLANAR,
+            OutputFormat::Y => Self::ROCJPEG_OUTPUT_Y,
+            OutputFormat::Rgb => Self::ROCJPEG_OUTPUT_RGB,
+            OutputFormat::RgbPlanar => Self::ROCJPEG_OUTPUT_RGB_PLANAR,
         }
     }
 }
@@ -181,18 +180,20 @@ impl DecodeParams {
             crop: None,
         }
     }
+}
 
-    fn to_ffi(self) -> ffi::RocJpegDecodeParams {
+impl From<DecodeParams> for ffi::RocJpegDecodeParams {
+    fn from(params: DecodeParams) -> Self {
         // SAFETY: all fields are integers or enums with a valid zero value.
-        let mut params: ffi::RocJpegDecodeParams = unsafe { std::mem::zeroed() };
-        params.output_format = self.output_format.to_ffi();
-        if let Some(crop) = self.crop {
-            params.crop_rectangle.left = crop.left;
-            params.crop_rectangle.top = crop.top;
-            params.crop_rectangle.right = crop.right;
-            params.crop_rectangle.bottom = crop.bottom;
+        let mut ffi_params: Self = unsafe { std::mem::zeroed() };
+        ffi_params.output_format = params.output_format.into();
+        if let Some(crop) = params.crop {
+            ffi_params.crop_rectangle.left = crop.left;
+            ffi_params.crop_rectangle.top = crop.top;
+            ffi_params.crop_rectangle.right = crop.right;
+            ffi_params.crop_rectangle.bottom = crop.bottom;
         }
-        params
+        ffi_params
     }
 }
 
@@ -289,11 +290,13 @@ impl Image {
         self.channel[index] = device_ptr;
         self.pitch[index] = pitch;
     }
+}
 
-    fn to_ffi(self) -> ffi::RocJpegImage {
-        ffi::RocJpegImage {
-            channel: self.channel,
-            pitch: self.pitch,
+impl From<Image> for ffi::RocJpegImage {
+    fn from(image: Image) -> Self {
+        Self {
+            channel: image.channel,
+            pitch: image.pitch,
         }
     }
 }
@@ -348,7 +351,7 @@ unsafe impl Send for Decoder {}
 impl Decoder {
     pub fn new(backend: Backend, device_id: i32) -> Result<Self> {
         let mut handle = std::ptr::null_mut();
-        check(unsafe { ffi::rocJpegCreate(backend.to_ffi(), device_id, &mut handle) })?;
+        check(unsafe { ffi::rocJpegCreate(backend.into(), device_id, &mut handle) })?;
         Ok(Self { handle })
     }
 
@@ -389,8 +392,8 @@ impl Decoder {
         params: &DecodeParams,
         destination: &mut Image,
     ) -> Result<()> {
-        let params = params.to_ffi();
-        let mut image = destination.to_ffi();
+        let params = (*params).into();
+        let mut image = (*destination).into();
         check(unsafe { ffi::rocJpegDecode(self.handle, stream.handle, &params, &mut image) })
     }
 }

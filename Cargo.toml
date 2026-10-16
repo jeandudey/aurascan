@@ -10,6 +10,7 @@ members = [
     "crates/burn-3ddfa",
     "crates/epoxy-sys",
     "crates/gst-plugin-aurascan",
+    "crates/gstreamer-hip-sys",
     "crates/matio",
     "crates/matio-sys",
     "crates/rocjpeg",

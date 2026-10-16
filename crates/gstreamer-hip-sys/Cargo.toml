@@ -1,0 +1,27 @@
+[package]
+name = "gstreamer-hip-sys"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[package.metadata.system-deps.gstreamer_hip_1_0]
+name = "gstreamer-hip-1.0"
+version = "1.28"
+
+[lib]
+name = "gstreamer_hip_sys"
+
+[dependencies]
+libc = "0.2"
+glib-sys = "0.22"
+gobject-sys = "0.22"
+gst_sys = { package = "gstreamer-sys", version = "0.25" }
+gst_base_sys = { package = "gstreamer-base-sys", version = "0.25" }
+gst_video_sys = { package = "gstreamer-video-sys", version = "0.25" }
+
+[build-dependencies]
+system-deps = "7"
+
+[dev-dependencies]
+shell-words = "1.0.0"
+tempfile = "3"

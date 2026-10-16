@@ -1,0 +1,9 @@
+[options]
+library = "GstHip"
+version = "1.0"
+min_cfg_version = "1.28"
+target_path = "."
+work_mode = "sys"
+girs_directories = ["../../girs"]
+single_version_file = true
+external_libraries = ["GLib", "GObject", "Gst", "GstBase", "GstVideo"]

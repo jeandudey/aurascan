@@ -24,10 +24,6 @@ use libc::{dev_t, gid_t, pid_t, socklen_t, uid_t};
 #[allow(unused_imports)]
 use glib::{gboolean, gconstpointer, gpointer, GType};
 
-// HIP runtime handles (opaque pointers in <hip/hip_runtime_api.h>)
-pub type hipStream_t = gpointer;
-pub type hipTextureObject_t = gpointer;
-
 // Enums
 pub type GstHipVendor = c_int;
 pub const GST_HIP_VENDOR_UNKNOWN: GstHipVendor = 0;
@@ -340,7 +336,7 @@ unsafe extern "C" {
     pub fn gst_hip_event_get_device_id(event: *mut GstHipEvent) -> c_uint;
     pub fn gst_hip_event_get_vendor(event: *mut GstHipEvent) -> GstHipVendor;
     pub fn gst_hip_event_query(event: *mut GstHipEvent) -> c_int;
-    pub fn gst_hip_event_record(event: *mut GstHipEvent, stream: hipStream_t) -> c_int;
+    pub fn gst_hip_event_record(event: *mut GstHipEvent, stream: gpointer) -> c_int;
     pub fn gst_hip_event_ref(event: *mut GstHipEvent) -> *mut GstHipEvent;
     pub fn gst_hip_event_synchronize(event: *mut GstHipEvent) -> c_int;
     pub fn gst_hip_event_unref(event: *mut GstHipEvent);
@@ -350,16 +346,16 @@ unsafe extern "C" {
     //=========================================================================
     pub fn gst_hip_graphics_resource_get_type() -> GType;
     pub fn gst_hip_graphics_resource_get_mapped_pointer(resource: *mut GstHipGraphicsResource, dev_ptr: *mut *mut c_void, size: *mut size_t) -> c_int;
-    pub fn gst_hip_graphics_resource_map(resource: *mut GstHipGraphicsResource, stream: hipStream_t) -> c_int;
+    pub fn gst_hip_graphics_resource_map(resource: *mut GstHipGraphicsResource, stream: gpointer) -> c_int;
     pub fn gst_hip_graphics_resource_ref(resource: *mut GstHipGraphicsResource) -> *mut GstHipGraphicsResource;
-    pub fn gst_hip_graphics_resource_unmap(resource: *mut GstHipGraphicsResource, stream: hipStream_t) -> c_int;
+    pub fn gst_hip_graphics_resource_unmap(resource: *mut GstHipGraphicsResource, stream: gpointer) -> c_int;
     pub fn gst_hip_graphics_resource_unref(resource: *mut GstHipGraphicsResource);
 
     //=========================================================================
     // GstHipMemory
     //=========================================================================
     pub fn gst_hip_memory_get_stream(mem: *mut GstHipMemory) -> *mut GstHipStream;
-    pub fn gst_hip_memory_get_texture(mem: *mut GstHipMemory, plane: c_uint, filter_mode: c_int, address_mode: c_int, texture: *mut hipTextureObject_t) -> gboolean;
+    pub fn gst_hip_memory_get_texture(mem: *mut GstHipMemory, plane: c_uint, filter_mode: c_int, address_mode: c_int, texture: *mut gpointer) -> gboolean;
     pub fn gst_hip_memory_set_event(mem: *mut GstHipMemory, event: *mut GstHipEvent);
     pub fn gst_hip_memory_sync(mem: *mut GstHipMemory);
 
@@ -369,7 +365,7 @@ unsafe extern "C" {
     pub fn gst_hip_stream_get_type() -> GType;
     pub fn gst_hip_stream_new(vendor: GstHipVendor, device_id: c_uint) -> *mut GstHipStream;
     pub fn gst_hip_stream_get_device_id(stream: *mut GstHipStream) -> c_uint;
-    pub fn gst_hip_stream_get_handle(stream: *mut GstHipStream) -> hipStream_t;
+    pub fn gst_hip_stream_get_handle(stream: *mut GstHipStream) -> gpointer;
     pub fn gst_hip_stream_get_vendor(stream: *mut GstHipStream) -> GstHipVendor;
     pub fn gst_hip_stream_record_event(stream: *mut GstHipStream, event: *mut *mut GstHipEvent) -> gboolean;
     pub fn gst_hip_stream_ref(stream: *mut GstHipStream) -> *mut GstHipStream;

@@ -14,14 +14,18 @@ hip_compiler = ["hip-rocm-clang"]
 hip_compiler_version = ["7.2"]
 
 [tasks.update-girs]
-description = "Copy GstHip-1.0.gir (not in the gir-files submodules) from the pixi prefix into girs/"
-cmd = ["mkdir", "-p", "girs", "&&", "cp", "$CONDA_PREFIX/share/gir-1.0/GstHip-1.0.gir", "girs/"]
+description = "Copy GstHip-1.0.gir (not in the gir-files submodules) from the pixi prefix into girs/ and apply girs/fix.sh"
+cmd = [
+    "mkdir", "-p", "girs", "&&",
+    "cp", "$CONDA_PREFIX/share/gir-1.0/GstHip-1.0.gir", "girs/", "&&",
+    "pixi", "exec", "-s", "xmlstarlet", "bash", "girs/fix.sh",
+]
 
 [tasks.generate-gstreamer-hip-sys]
-description = "Regenerate crates/gstreamer-hip-sys from girs/ and re-apply the manual fixups"
+description = "Regenerate crates/gstreamer-hip-sys from girs/"
 depends-on = ["update-girs"]
 cwd = "crates/gstreamer-hip-sys"
-cmd = ["gir", "-c", "Gir.toml", "-o", ".", "&&", "git", "apply", "--whitespace=nowarn", "gir-fixups.patch"]
+cmd = ["gir", "-c", "Gir.toml", "-o", "."]
 
 [tasks.generate-gstreamer-hip]
 description = "Regenerate crates/gstreamer-hip from girs/"

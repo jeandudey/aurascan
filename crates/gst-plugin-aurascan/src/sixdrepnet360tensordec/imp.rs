@@ -175,6 +175,14 @@ impl BaseTransformImpl for SixDRepNet360TensorDec {
         }
 
         for angle in angles.into_iter() {
+            gst::debug!(
+                CAT,
+                imp = self,
+                "yaw={:.1} pitch={:.1} roll={:.1}",
+                angle.yaw,
+                angle.pitch,
+                angle.roll
+            );
             add_angle(buffer, angle);
         }
 

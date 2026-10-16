@@ -27,6 +27,8 @@ source:
   patches:
     # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3022
     - patches/disable_d3d11_in_nvcodec.patch
+    # Adds intra-op-threads and allow-spinning properties to onnxinference (not upstream)
+    - patches/add_onnxinference_thread_options.patch
 
 build:
   # Higher than conda-forge's builds so this is preferred over them.

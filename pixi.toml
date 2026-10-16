@@ -89,7 +89,7 @@ gir = { path = "packages/gir" }
 glib = ">=2.90.0,<3"
 gstreamer = ">=1.28.7,<2"
 gst-plugins-base = ">=1.28.7,<2"
-gst-plugins-bad = ">=1.28.7,<2"
+gst-plugins-bad = { path = "packages/gst-plugins-bad" }
 gst-plugins-good = ">=1.28.7,<2"
 gst-plugins-ugly = ">=1.28.7,<2"
 harfbuzz = ">=14.6.0,<15"

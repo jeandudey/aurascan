@@ -433,7 +433,7 @@ impl Model {
 
     #[allow(unused_variables)]
     fn load_model_internal(settings: &Settings, device: Device) -> eyre::Result<Box<Self>> {
-        let mean = Tensor::<1>::from_data([0.485, 0.485, 0.406], &device).reshape([1, 3, 1, 1]);
+        let mean = Tensor::<1>::from_data([0.485, 0.456, 0.406], &device).reshape([1, 3, 1, 1]);
         let std = Tensor::<1>::from_data([0.229, 0.224, 0.225], &device).reshape([1, 3, 1, 1]);
         match &settings.weights_path {
             Some(torch_weights) => Ok(Box::new(Self {

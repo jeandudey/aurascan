@@ -5,8 +5,7 @@ use std::marker::PhantomData;
 
 use rocjpeg_sys::RocJpegStatus;
 
-use crate::Error;
-use crate::IntoResult;
+use crate::{Error, result};
 
 /// A parsed JPEG stream.
 ///
@@ -23,26 +22,24 @@ unsafe impl Send for Stream<'_> {}
 impl<'a> Stream<'a> {
     /// Parses the headers of a JPEG image.
     pub fn parse(data: &'a [u8]) -> Result<Self, Error> {
-        let length = u32::try_from(data.len())
-            .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
-        let mut handle = std::ptr::null_mut();
-        let status = unsafe { rocjpeg_sys::rocJpegStreamCreate(&mut handle) };
-        status.into_result()?;
+        if u32::try_from(data.len()).is_err() {
+            return Err(Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER));
+        }
+        // SAFETY: the handle is destroyed by `Drop` and `data` is borrowed for `'a`.
+        let handle = unsafe { result::stream_create() }?;
         // From here on `Drop` releases the handle.
         let stream = Self {
             handle,
             _data: PhantomData,
         };
-        let status = unsafe {
-            rocjpeg_sys::rocJpegStreamParse(data.as_ptr(), length as usize, stream.handle)
-        };
-        status.into_result()?;
+        unsafe { result::stream_parse(stream.handle, data) }?;
         Ok(stream)
     }
 }
 
 impl Drop for Stream<'_> {
     fn drop(&mut self) {
-        unsafe { rocjpeg_sys::rocJpegStreamDestroy(self.handle) };
+        // SAFETY: the handle is live and not used afterwards.
+        let _ = unsafe { result::stream_destroy(self.handle) };
     }
 }

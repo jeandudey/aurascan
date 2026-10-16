@@ -25,7 +25,7 @@ impl Error {
         )
     }
 
-    /// Whether the hardware decoder isn't available (try [`Backend::Hybrid`]).
+    /// Whether the hardware decoder isn't available (try [`Backend::Hybrid`](crate::Backend::Hybrid)).
     pub fn is_hw_decoder_unsupported(&self) -> bool {
         matches!(
             self.0,

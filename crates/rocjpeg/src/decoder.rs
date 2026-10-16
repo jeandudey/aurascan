@@ -1,10 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 // SPDX-License-Identifier: MIT
 
-use crate::{
-    Backend, ChromaSubsampling, DecodeParams, Error, Image, ImageInfo, IntoResult, MAX_COMPONENTS,
-    Stream,
-};
+use crate::{Backend, ChromaSubsampling, DecodeParams, Error, Image, ImageInfo, Stream, result};
 
 /// A rocJPEG decoder bound to a GPU.
 ///
@@ -20,34 +17,20 @@ unsafe impl Send for Decoder {}
 
 impl Decoder {
     pub fn new(backend: Backend, device_id: i32) -> Result<Self, Error> {
-        let mut handle = std::ptr::null_mut();
-        let status = unsafe { rocjpeg_sys::rocJpegCreate(backend.into(), device_id, &mut handle) };
-        status.into_result()?;
+        // SAFETY: the handle is destroyed by `Drop`.
+        let handle = unsafe { result::create(backend.into(), device_id) }?;
         Ok(Self { handle })
     }
 
     /// Dimensions and format of a parsed JPEG.
     pub fn image_info(&self, stream: &Stream<'_>) -> Result<ImageInfo, Error> {
-        let mut num_components = 0u8;
-        let mut subsampling = rocjpeg_sys::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
-        let mut widths = [0u32; MAX_COMPONENTS];
-        let mut heights = [0u32; MAX_COMPONENTS];
-        let status = unsafe {
-            rocjpeg_sys::rocJpegGetImageInfo(
-                self.handle,
-                stream.handle,
-                &mut num_components,
-                &mut subsampling,
-                widths.as_mut_ptr(),
-                heights.as_mut_ptr(),
-            )
-        };
-        status.into_result()?;
+        // SAFETY: both handles are live and the stream is parsed.
+        let info = unsafe { result::get_image_info(self.handle, stream.handle) }?;
         Ok(ImageInfo {
-            num_components,
-            subsampling: ChromaSubsampling::from_ffi(subsampling),
-            widths,
-            heights,
+            num_components: info.num_components,
+            subsampling: ChromaSubsampling::from_ffi(info.subsampling),
+            widths: info.widths,
+            heights: info.heights,
         })
     }
 
@@ -66,14 +49,13 @@ impl Decoder {
     ) -> Result<(), Error> {
         let params = (*params).into();
         let mut image = (*destination).into();
-        let status =
-            unsafe { rocjpeg_sys::rocJpegDecode(self.handle, stream.handle, &params, &mut image) };
-        status.into_result()
+        unsafe { result::decode(self.handle, stream.handle, &params, &mut image) }
     }
 }
 
 impl Drop for Decoder {
     fn drop(&mut self) {
-        unsafe { rocjpeg_sys::rocJpegDestroy(self.handle) };
+        // SAFETY: the handle is live and not used afterwards.
+        let _ = unsafe { result::destroy(self.handle) };
     }
 }

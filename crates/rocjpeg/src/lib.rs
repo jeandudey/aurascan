@@ -36,6 +36,7 @@ mod image;
 mod image_info;
 mod output_format;
 mod plane_layout;
+pub mod result;
 mod stream;
 
 pub use backend::Backend;

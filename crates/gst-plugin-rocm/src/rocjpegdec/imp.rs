@@ -6,8 +6,8 @@ use std::sync::{LazyLock, Mutex};
 use gst::glib;
 use gst::prelude::*;
 use gst::subclass::prelude::*;
-use gst_hip::HipDevice;
 use gst_hip::prelude::*;
+use gst_hip::{HipDevice, HipVideoFrameRef};
 use gst_video::prelude::*;
 use gst_video::subclass::prelude::*;
 use gst_video::video_codec_state::Readable;
@@ -552,36 +552,28 @@ impl RocJpegDec {
         let layout = gst_hip::hip_memory_video_info(memory);
         debug_assert_eq!(layout.format(), format);
 
-        // Map the memory as device memory for writing.
-        let mut map_info = std::mem::MaybeUninit::<gst::ffi::GstMapInfo>::zeroed();
-        let mapped = unsafe {
-            gst::ffi::gst_memory_map(
-                memory.as_mut_ptr(),
-                map_info.as_mut_ptr(),
-                gst::ffi::GST_MAP_WRITE | gst_hip::ffi::GST_MAP_HIP,
-            )
-        };
-        if mapped == 0 {
-            gst::element_imp_error!(
-                self,
-                gst::CoreError::Failed,
-                ["Failed to map the HIP memory"]
-            );
-            return Err(gst::FlowError::Error.into());
-        }
-        let map_info = unsafe { map_info.assume_init() };
+        // Map the frame as device memory for writing.
+        let mut hip_frame =
+            HipVideoFrameRef::from_buffer_ref_writable(buffer, &layout).map_err(|_| {
+                gst::element_imp_error!(
+                    self,
+                    gst::CoreError::Failed,
+                    ["Failed to map the HIP memory"]
+                );
+                gst::FlowError::Error
+            })?;
 
-        let n_planes = layout.n_planes() as usize;
         let mut image = rocjpeg::Image::new();
-        for plane in 0..n_planes {
-            // SAFETY: the offsets are inside the mapped memory.
-            let ptr = unsafe { map_info.data.add(layout.offset()[plane]) };
-            image.set_plane(plane, ptr, layout.stride()[plane] as u32);
+        for plane in 0..layout.n_planes() {
+            let ptr = hip_frame
+                .plane_device_ptr_mut(plane)
+                .map_err(|_| gst::FlowError::Error)?;
+            image.set_plane(plane as usize, ptr, layout.stride()[plane as usize] as u32);
         }
 
         let result =
             unsafe { decoder.decode(&stream, &DecodeParams::new(output_format), &mut image) };
-        unsafe { gst::ffi::gst_memory_unmap(memory.as_mut_ptr(), &map_info as *const _ as *mut _) };
+        drop(hip_frame);
 
         result.map_err(|err| {
             if err.is_bad_jpeg() {

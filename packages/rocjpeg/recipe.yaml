@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+context:
+  name: rocjpeg
+  version: "7.2.4"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  # NOTE: ROCm/rocJPEG is deprecated, rocJPEG now lives in ROCm/rocm-systems
+  # (projects/rocjpeg). However, that repository only ships rocjpeg tarballs
+  # for the TheRock releases (>= 7.12), not for the ROCm 7.2.x series that
+  # conda-forge provides, so the old repository is used here.
+  url: https://github.com/ROCm/rocJPEG/archive/refs/tags/rocm-${{ version }}.tar.gz
+  sha256: be739859bcbb0d678b22af4b4bee4aad37cbee8c838198bbe71b49cf43640ccf
+
+build:
+  number: 0
+  script: |
+    cmake $CMAKE_ARGS \
+      -GNinja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$PREFIX \
+      -DCMAKE_PREFIX_PATH=$PREFIX \
+      -DROCM_PATH=$PREFIX \
+      -DCMAKE_CXX_COMPILER=$HIPCXX \
+      -DGPU_TARGETS="${CONDA_FORGE_DEFAULT_ROCM_GPU_TARGETS}" \
+      -DLIBVA_INCLUDE_DIR=$PREFIX/include \
+      -DLIBDRM_AMDGPU_INCLUDE_DIR=$PREFIX/include \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -B $SRC_DIR/../build \
+      -S .
+
+    cmake --build $SRC_DIR/../build --target install
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - ${{ compiler('cxx') }}
+    - ${{ compiler('hip') }}
+    - cmake
+    - ninja
+    - pkg-config
+  host:
+    - rocm-core ${{ version }}.*
+    - rocm-cmake
+    - hip-devel ${{ version }}.*
+    - hipcc ${{ version }}.*
+    - libva
+    - libdrm
+  run_exports:
+    - ${{ pin_subpackage(name, upper_bound='x.x') }}
+
+tests:
+  - package_contents:
+      include:
+        - rocjpeg/rocjpeg.h
+      lib:
+        - rocjpeg
+
+about:
+  homepage: https://github.com/ROCm/rocJPEG
+  license: MIT
+  license_file: LICENSE
+  summary: AMD ROCm JPEG decode library.
+  description: |
+    rocJPEG is a high performance JPEG decode SDK for AMD GPUs using the
+    VCN hardware engines through VA-API and HIP.
+  repository: https://github.com/ROCm/rocJPEG
+  documentation: https://rocm.docs.amd.com/projects/rocJPEG/

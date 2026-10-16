@@ -1,0 +1,142 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+# conda-forge's gst-plugins-bad (recipe adapted from
+# https://github.com/conda-forge/gst-plugins-bad-feedstock, Linux only, single
+# output) rebuilt with the `onnx` plugin (onnxinference), which conda-forge
+# does not enable because its recipe has no ONNX Runtime dependency.
+#
+# Unlike the feedstock this package is not split, the HIP elements are part of
+# gst-plugins-bad like in conda-forge's build 0, so conda-forge's
+# `gst-plugins-bad-hip` must not be installed next to it.
+
+schema_version: 1
+
+context:
+  name: gst-plugins-bad
+  version: "1.28.8"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: https://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-${{ version }}.tar.xz
+  sha256: 670d888bde8242579b0d8e91f60cf337aa7be20ca7c315ebfbdd6e5a9218d104
+  patches:
+    # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3022
+    - patches/disable_d3d11_in_nvcodec.patch
+
+build:
+  # Higher than conda-forge's builds so this is preferred over them.
+  number: 100
+  script:
+    content: |
+      set -ex
+
+      export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$PREFIX/lib/pkgconfig:$PREFIX/share/gir-1.0:$BUILD_PREFIX/lib/pkgconfig:$BUILD_PREFIX/share/gir-1.0
+
+      # conda-forge's onnxruntime-cpp does not ship a pkg-config file and puts
+      # its headers in include/onnxruntime/core/session.
+      ORT_VERSION=$(basename $PREFIX/lib/libonnxruntime.so.*.*.* | sed 's/^libonnxruntime\.so\.//')
+      mkdir -p $SRC_DIR/pkgconfig-shim
+      cat > $SRC_DIR/pkgconfig-shim/libonnxruntime.pc <<EOF
+      prefix=$PREFIX
+      libdir=\${prefix}/lib
+      includedir=\${prefix}/include/onnxruntime/core/session
+
+      Name: libonnxruntime
+      Description: ONNX Runtime
+      Version: $ORT_VERSION
+      Libs: -L\${libdir} -lonnxruntime
+      Cflags: -I\${includedir}
+      EOF
+      export PKG_CONFIG_PATH=$SRC_DIR/pkgconfig-shim:$PKG_CONFIG_PATH
+
+      mkdir -p build
+      cd build
+
+      meson_options=(
+        -Dexamples=disabled
+        -Dtests=disabled
+        -Dnvcomp=disabled
+        -Dnvdswrapper=disabled
+        -Dcuda-nvmm=disabled
+        -Dnvcodec=enabled
+        -Dhip=enabled
+        -Donnx=enabled
+      )
+
+      meson ${MESON_ARGS} \
+        --wrap-mode=nofallback \
+        "${meson_options[@]}" \
+        ..
+      ninja -j${CPU_COUNT}
+      ninja install
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - ${{ compiler('cxx') }}
+    - gettext-tools
+    - pkg-config
+    - perl
+    - libtool
+    - meson
+    - ninja
+    - zlib
+    - setuptools
+    - gobject-introspection
+    - gst-plugins-base ==${{ version }}
+  host:
+    - libgl-devel
+    - libegl-devel
+    - libdrm
+    - libxcb
+    - pthread-stubs
+    - xorg-xorgproto
+    - xorg-libx11
+    - xorg-libxfixes
+    - xorg-libxext
+    - xorg-libxrender
+    - xorg-libxdamage
+    - xorg-libxau
+    - xorg-libxxf86vm
+    - libiconv
+    - gstreamer ==${{ version }}
+    - gst-plugins-base ==${{ version }}
+    - gobject-introspection
+    - glib
+    - openssl
+    - libxml2-devel
+    - libsndfile
+    - libopus
+    - zlib
+    - expat
+    # ONNX Runtime for the onnx plugin (onnxinference).
+    - onnxruntime-cpp >=1.16.1 *_cpu
+  run:
+    # We want to pin harder than the run_export from gstreamer
+    - gstreamer ==${{ version }}
+    - onnxruntime-cpp >=1.16.1 *_cpu
+  run_exports:
+    - ${{ pin_subpackage('gst-plugins-bad', upper_bound='x.x') }}
+
+tests:
+  - package_contents:
+      files:
+        - lib/gstreamer-1.0/libgstonnx.so
+        - lib/gstreamer-1.0/libgsthip.so
+        - lib/gstreamer-1.0/libgstnvcodec.so
+  - script:
+      - gst-inspect-1.0 onnxinference
+      - gst-inspect-1.0 --plugin audiovisualizers
+
+about:
+  homepage: https://gstreamer.freedesktop.org/
+  repository: https://gitlab.freedesktop.org/gstreamer/gstreamer/-/tree/main/subprojects/gst-plugins-bad
+  license: LGPL-2.1-or-later
+  license_file: COPYING
+  summary: GStreamer Bad Plug-ins with the ONNX plugin enabled

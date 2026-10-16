@@ -15,7 +15,7 @@ PROFILE=${2:-debug}
 
 cargo build $([ "$PROFILE" = release ] && echo --release) -p gst-plugin-rocm -p gst-plugin-aurascan
 
-GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
+GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
     v4l2src device="$DEVICE" \
     ! image/jpeg,width=1920,height=1080,framerate=60/1 \
     ! jpegparse \

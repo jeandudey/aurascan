@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use rocjpeg_sys::RocJpegStatus;
 
 use crate::Error;
-use crate::error::check;
+use crate::IntoResult;
 
 /// A parsed JPEG stream.
 ///
@@ -26,15 +26,17 @@ impl<'a> Stream<'a> {
         let length = u32::try_from(data.len())
             .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
         let mut handle = std::ptr::null_mut();
-        check(unsafe { rocjpeg_sys::rocJpegStreamCreate(&mut handle) })?;
+        let status = unsafe { rocjpeg_sys::rocJpegStreamCreate(&mut handle) };
+        status.into_result()?;
         // From here on `Drop` releases the handle.
         let stream = Self {
             handle,
             _data: PhantomData,
         };
-        check(unsafe {
+        let status = unsafe {
             rocjpeg_sys::rocJpegStreamParse(data.as_ptr(), length as usize, stream.handle)
-        })?;
+        };
+        status.into_result()?;
         Ok(stream)
     }
 }

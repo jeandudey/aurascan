@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 // SPDX-License-Identifier: MIT
 
-use crate::error::check;
 use crate::{
-    Backend, ChromaSubsampling, DecodeParams, Error, Image, ImageInfo, MAX_COMPONENTS, Stream,
+    Backend, ChromaSubsampling, DecodeParams, Error, Image, ImageInfo, IntoResult, MAX_COMPONENTS,
+    Stream,
 };
 
 /// A rocJPEG decoder bound to a GPU.
@@ -21,7 +21,8 @@ unsafe impl Send for Decoder {}
 impl Decoder {
     pub fn new(backend: Backend, device_id: i32) -> Result<Self, Error> {
         let mut handle = std::ptr::null_mut();
-        check(unsafe { rocjpeg_sys::rocJpegCreate(backend.into(), device_id, &mut handle) })?;
+        let status = unsafe { rocjpeg_sys::rocJpegCreate(backend.into(), device_id, &mut handle) };
+        status.into_result()?;
         Ok(Self { handle })
     }
 
@@ -31,7 +32,7 @@ impl Decoder {
         let mut subsampling = rocjpeg_sys::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
         let mut widths = [0u32; MAX_COMPONENTS];
         let mut heights = [0u32; MAX_COMPONENTS];
-        check(unsafe {
+        let status = unsafe {
             rocjpeg_sys::rocJpegGetImageInfo(
                 self.handle,
                 stream.handle,
@@ -40,7 +41,8 @@ impl Decoder {
                 widths.as_mut_ptr(),
                 heights.as_mut_ptr(),
             )
-        })?;
+        };
+        status.into_result()?;
         Ok(ImageInfo {
             num_components,
             subsampling: ChromaSubsampling::from_ffi(subsampling),
@@ -64,9 +66,9 @@ impl Decoder {
     ) -> Result<(), Error> {
         let params = (*params).into();
         let mut image = (*destination).into();
-        check(unsafe {
-            rocjpeg_sys::rocJpegDecode(self.handle, stream.handle, &params, &mut image)
-        })
+        let status =
+            unsafe { rocjpeg_sys::rocJpegDecode(self.handle, stream.handle, &params, &mut image) };
+        status.into_result()
     }
 }
 

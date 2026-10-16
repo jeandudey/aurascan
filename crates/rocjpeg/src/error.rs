@@ -43,10 +43,18 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-pub(crate) fn check(status: RocJpegStatus) -> Result<(), Error> {
-    if status == RocJpegStatus::ROCJPEG_STATUS_SUCCESS {
-        Ok(())
-    } else {
-        Err(Error(status))
+/// Conversion of a rocJPEG status code into a [`Result`].
+pub trait IntoResult {
+    /// `Ok(())` for `ROCJPEG_STATUS_SUCCESS`, the status as an [`Error`] otherwise.
+    fn into_result(self) -> Result<(), Error>;
+}
+
+impl IntoResult for RocJpegStatus {
+    fn into_result(self) -> Result<(), Error> {
+        if self == RocJpegStatus::ROCJPEG_STATUS_SUCCESS {
+            Ok(())
+        } else {
+            Err(Error(self))
+        }
     }
 }

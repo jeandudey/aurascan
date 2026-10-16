@@ -42,7 +42,7 @@ pub use backend::Backend;
 pub use chroma_subsampling::ChromaSubsampling;
 pub use decode_params::{DecodeParams, Rect};
 pub use decoder::Decoder;
-pub use error::Error;
+pub use error::{Error, IntoResult};
 pub use image::Image;
 pub use image_info::ImageInfo;
 pub use output_format::OutputFormat;

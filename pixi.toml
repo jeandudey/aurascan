@@ -100,7 +100,25 @@ gst-plugins-good = ">=1.28.7,<2"
 gst-plugins-ugly = ">=1.28.7,<2"
 harfbuzz = ">=14.6.0,<15"
 hip-devel = ">=7.2.4,<8"
-hip-runtime-amd = ">=7.2.4,<8"
+# ############################################################################
+# TEMPORARY WORKAROUND, REMOVE WHEN ROCm IS UPDATED
+#
+# `hip-runtime-amd` is built locally from packages/hip-runtime-amd instead of
+# using conda-forge's 7.2.4 package, because that package has a HIP runtime bug
+# (leaked amd::MemObjMap entries for GL interop buffers, fixed upstream in
+# ROCm/rocm-systems 775707dbae, SWDEV-574221). It makes hipdownload's HIP to GL
+# copy fail and produces green/garbled frames when previewing HIP memory with
+# glimagesink.
+#
+# The fix is in TheRock >= 7.12 but not in any rocm-7.2.x release.
+#
+# TO REMOVE: once the ROCm packages (hip-devel, hipcc, ...) are updated to a
+# release that contains 775707dbae:
+#   1. replace the line below with `hip-runtime-amd = ">=X.Y.Z,<8"`,
+#   2. delete packages/hip-runtime-amd/,
+#   3. run `pixi install` to refresh pixi.lock.
+# ############################################################################
+hip-runtime-amd = { path = "packages/hip-runtime-amd" }
 hipcc = ">=7.2.4,<8"
 libadwaita = ">=1.10.0,<2"
 libmatio = ">=1.5.6,<2"

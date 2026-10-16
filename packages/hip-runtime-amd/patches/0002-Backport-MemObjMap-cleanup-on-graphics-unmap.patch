@@ -1,0 +1,54 @@
+From 775707dbaebf2b73daf15bf007f68726129416d7 Mon Sep 17 00:00:00 2001
+From: Jin Jung <jungx098@users.noreply.github.com>
+Date: Wed, 4 Feb 2026 12:09:45 -0800
+Subject: [PATCH] SWDEV-574221: Clean up MemObjMap entries when unmapping
+ graphics resources (#2503)
+
+* SWDEV-574221: Clean up MemObjMap entries when unmapping graphics resources
+
+* SWDEV-574221: Add validation to hipGraphicsUnmapResources
+
+* SWDEV-574221: Simplify device access and use HIP_RETURN macro
+---
+ hipamd/src/hip_gl.cpp | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/hipamd/src/hip_gl.cpp b/hipamd/src/hip_gl.cpp
+index 35a522d03a..6b6442c1d3 100644
+--- a/hipamd/src/hip_gl.cpp
++++ b/hipamd/src/hip_gl.cpp
+@@ -908,19 +908,26 @@ hipError_t hipGraphicsUnmapResources(int count, hipGraphicsResource_t* resources
+   if (as_cl(&command->event()) == nullptr) {
+     command->release();
+   }
++
++  hip::Device* device = hip::getCurrentDevice();
++  if (device == nullptr) {
++    HIP_RETURN(hipErrorNoDevice);
++  }
++
++  const amd::Device* curDev = device->devices()[0];
+   for (auto& mobj : memObjects) {
++    device::Memory* mem = reinterpret_cast<device::Memory*>(mobj->getDeviceMemory(*curDev));
++    if (mem) {
++      amd::MemObjMap::RemoveMemObj(reinterpret_cast<void*>(mem->virtualAddress()));
++    }
+     mobj->release();
+   }
+ 
+   // Remove mapping from registry
+-  hip::Device* device = hip::getCurrentDevice();
+-  if (device == nullptr) {
+-    return hipErrorNoDevice;
+-  }
+   for (uint8_t i = 0; i < count; i++) {
+     if (!device->mappedGraphics().remove(resources[i])) {
+       LogError("failed to unmap resource");
+-      return hipErrorUnknown;
++      HIP_RETURN(hipErrorUnknown);
+     }
+   }
+   HIP_RETURN(hipSuccess);
+-- 
+2.53.0
+

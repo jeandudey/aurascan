@@ -1,0 +1,148 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+# ############################################################################
+# TEMPORARY PACKAGE: REMOVE WHEN CONDA-FORGE SHIPS ROCm >= TheRock 7.12.
+#
+# This is conda-forge's `hip-runtime-amd` 7.2.4 (recipe copied from
+# https://github.com/conda-forge/hip-feedstock, runtime output only) plus one
+# backported upstream fix, see patches/0002-*.patch:
+#
+#   ROCm/rocm-systems 775707dbae (2026-02-04)
+#   "SWDEV-574221: Clean up MemObjMap entries when unmapping graphics resources"
+#
+# Without it hipGraphicsUnmapResources()/hipGraphicsUnregisterResource() leave a
+# dangling amd::MemObjMap entry for every GL buffer registered with HIP. When a
+# new GL buffer gets the same device address, HIP copies into it fail with
+# hipErrorInvalidValue (or crash). In GStreamer this makes hipdownload's HIP to
+# GL interop copy fail, which shows up as green/garbled frames in glimagesink.
+#
+# The fix is in TheRock >= 7.12 but not in rocm-7.2.x (checked up to 7.2.4).
+# When the ROCm packages are updated, delete this directory and the matching
+# entry in the root pixi.toml.
+# ############################################################################
+
+schema_version: 1
+
+context:
+  name: hip-runtime-amd
+  version: "7.2.4"
+  major_minor: "7.2"
+  llvm_major: "22"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  - url: https://github.com/ROCm/rocm-systems/releases/download/rocm-${{ version }}/hip.tar.gz
+    sha256: 76c3d6909e531f30b84c908984891559d221d8c427d44abc88be5dbb123f9ad6
+    target_directory: hip
+
+  - url: https://github.com/ROCm/rocm-systems/releases/download/rocm-${{ version }}/clr.tar.gz
+    sha256: c9670697ee47b2d33dde84e4c815a62f594061da9ff184b133b87a227a1a1f02
+    target_directory: clr
+    patches:
+      - patches/0001-Mark-raw-strings.patch
+      - patches/0002-Backport-MemObjMap-cleanup-on-graphics-unmap.patch
+
+build:
+  # Higher than conda-forge's build 0 so this is preferred over it.
+  number: 100
+  script: |
+    set -xeuo pipefail
+
+    export ROCM_LIBPATCH_VERSION=${PKG_VERSION//\./0}
+    export HIP_CLANG_PATH=${PREFIX}/bin
+
+    cd $SRC_DIR/clr
+    mkdir build
+    cd build
+
+    # rocclr includes the OpenCL headers even when the OpenCL runtime is not built.
+    export CXXFLAGS="$CXXFLAGS -I$SRC_DIR/clr/opencl/khronos/headers/opencl2.2 -I$SRC_DIR/clr/opencl/khronos/headers/opencl2.2/CL"
+
+    install $SRC_DIR/clr/rocclr/platform/prof_protocol.h $PREFIX/include
+
+    # HIP_PLATFORM is passed explicitly and HIPCC_BIN_DIR points to a missing
+    # directory: hipcc is not needed to build the runtime library (CLR only
+    # runs `hipconfig` to auto detect the platform when it is not given).
+    cmake -LAH \
+      ${CMAKE_ARGS} \
+      -DCLR_BUILD_HIP=ON \
+      -DCLR_BUILD_OCL=OFF \
+      -DHIP_PLATFORM=amd \
+      -DHIPCC_BIN_DIR=$SRC_DIR/no-hipcc \
+      -DHIP_COMMON_DIR=$SRC_DIR/hip \
+      -DAMD_OPENCL_INCLUDE_DIR=$SRC_DIR/clr/opencl/amdocl/ \
+      -DPython_EXECUTABLE=$BUILD_PREFIX/bin/python \
+      -DPython3_EXECUTABLE=$BUILD_PREFIX/bin/python \
+      -DROCM_PATH=$PREFIX \
+      -DHIP_ENABLE_ROCPROFILER_REGISTER=OFF \
+      -DHIP_CLANG_PATH=$PREFIX/bin \
+      -DCMAKE_DISABLE_FIND_PACKAGE_Git=ON \
+      ..
+
+    make VERBOSE=1 -j${CPU_COUNT}
+    make install
+  # Same files as the `hip-runtime-amd` output of the feedstock.
+  files:
+    - lib/.hipInfo
+    - lib/cmake/hip/hip-targets*.cmake
+    - lib/cmake/hip-lang/*.cmake
+    - lib/cmake/hiprtc/*.cmake
+    - lib/libamdhip64.so*
+    - lib/libhiprtc.so*
+    - lib/libhiprtc-builtins.so*
+    - share/doc/hip/LICENSE.md
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - make
+    - cppheaderparser
+    - python
+  host:
+    - clangdev ${{ llvm_major }}.*
+    - llvmdev ${{ llvm_major }}.*
+    - numactl
+    - rocm-core ${{ version }}.*
+    - rocm-comgr ${{ major_minor }}.*
+    - rocr-runtime ${{ major_minor }}.*
+    - rocm-cmake ${{ major_minor }}.*
+    - rocminfo ${{ major_minor }}.*
+    - zlib
+    - libgl-devel
+    - libopengl-devel
+    - libglx-devel
+    - libegl-devel
+  run:
+    - rocm-comgr ${{ major_minor }}.*
+    - rocr-runtime ${{ major_minor }}.*
+    - rocm-device-libs ${{ major_minor }}.*
+
+tests:
+  - package_contents:
+      files:
+        - lib/.hipInfo
+      lib:
+        - amdhip64
+        - hiprtc
+        - hiprtc-builtins
+
+about:
+  homepage: https://github.com/ROCm/HIP
+  repository: https://github.com/ROCm/rocm-systems
+  license: NCSA
+  license_file:
+    - clr/LICENSE.md
+    - hip/LICENSE.md
+  summary: 'HIP runtime (conda-forge 7.2.4 plus the MemObjMap graphics unmap fix)'
+  description: |
+    The HIP runtime library of conda-forge's hip-runtime-amd 7.2.4 rebuilt with
+    the upstream fix 775707dbae (SWDEV-574221) backported. Temporary: remove it
+    once ROCm is updated to a release that contains the fix.

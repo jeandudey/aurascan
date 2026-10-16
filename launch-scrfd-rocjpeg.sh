@@ -24,7 +24,7 @@ GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
     ! "video/x-raw(memory:HIPMemory),format=RGB,width=640,height=640" \
     ! hipdownload \
     ! video/x-raw,format=RGB \
-    ! onnxinference execution-provider=cpu optimization-level=enable-all model-file=models/scrfd_500m.onnx \
+    ! onnxinference execution-provider=cpu optimization-level=enable-all intra-op-threads=4 model-file=models/scrfd_500m.onnx \
     ! scrfdtensordec \
     ! bytetracker \
     ! faceselector \
@@ -35,6 +35,6 @@ GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
     t. ! queue leaky=downstream max-size-buffers=1 \
        ! videocropscale \
        ! video/x-raw,width=224,height=224 \
-       ! onnxinference execution-provider=cpu optimization-level=enable-all model-file=models/sixdrepnet360.onnx \
+       ! onnxinference execution-provider=cpu optimization-level=enable-all intra-op-threads=8 model-file=models/sixdrepnet360.onnx \
        ! sixdrepnet360tensordec \
        ! fpsdisplaysink sync=false

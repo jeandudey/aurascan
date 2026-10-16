@@ -34,6 +34,16 @@ depends-on = ["update-girs"]
 cwd = "crates/gstreamer-hip-sys"
 cmd = ["gir", "-c", "Gir.toml", "-o", ".", "&&", "git", "apply", "--whitespace=nowarn", "gir-fixups.patch"]
 
+[tasks.generate-gstreamer-hip]
+description = "Regenerate crates/gstreamer-hip from girs/"
+depends-on = ["update-girs"]
+cwd = "crates/gstreamer-hip"
+cmd = ["gir", "-c", "Gir.toml", "-o", "."]
+
+[tasks.generate-gir-bindings]
+description = "Regenerate all GIR based bindings"
+depends-on = ["generate-gstreamer-hip-sys", "generate-gstreamer-hip"]
+
 [tasks.build]
 cmd = "cargo build --release"
 

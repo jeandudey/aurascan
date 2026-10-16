@@ -10,6 +10,7 @@ members = [
     "crates/burn-3ddfa",
     "crates/epoxy-sys",
     "crates/gst-plugin-aurascan",
+    "crates/gstreamer-hip",
     "crates/gstreamer-hip-sys",
     "crates/matio",
     "crates/matio-sys",
@@ -64,6 +65,7 @@ aurascan-steam.path = "crates/aurascan-steam"
 burn-3ddfa.path = "crates/burn-3ddfa"
 bytetrack.path = "crates/bytetrack"
 epoxy-sys.path = "crates/epoxy-sys"
+gstreamer-hip.path = "crates/gstreamer-hip"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
 rocjpeg.path = "crates/rocjpeg"

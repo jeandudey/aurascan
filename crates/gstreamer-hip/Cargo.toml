@@ -1,0 +1,16 @@
+[package]
+name = "gstreamer-hip"
+description = "Safe bindings for GstHip (generated from GIR)"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "gst_hip"
+
+[dependencies]
+ffi = { package = "gstreamer-hip-sys", path = "../gstreamer-hip-sys" }
+glib = "0.22"
+gst = { package = "gstreamer", version = "0.25", features = ["v1_28"] }
+gst-base = { package = "gstreamer-base", version = "0.25", features = ["v1_28"] }
+gst-video = { package = "gstreamer-video", version = "0.25", features = ["v1_28"] }
+libc = "0.2"

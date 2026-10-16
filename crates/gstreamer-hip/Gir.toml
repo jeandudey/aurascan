@@ -1,0 +1,23 @@
+[options]
+library = "GstHip"
+version = "1.0"
+min_cfg_version = "1.28"
+target_path = "."
+girs_directories = ["../../girs"]
+work_mode = "normal"
+generate_safety_asserts = true
+single_version_file = true
+generate_display_trait = false
+external_libraries = ["GLib", "GObject", "Gst", "GstBase", "GstVideo"]
+
+generate = ["GstHip.HipVendor", "GstHip.HipDevice", "GstHip.HipBufferPool", "GstHip.HipAllocator", "GstHip.HipPoolAllocator"]
+manual = [
+    "GLib.Error",
+    "GObject.Object",
+    "Gst.Allocator",
+    "Gst.BufferPool",
+    "Gst.Object",
+    "GstHip.HipEvent",
+    "GstHip.HipMemory",
+    "GstHip.HipStream",
+]

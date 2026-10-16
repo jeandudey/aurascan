@@ -272,7 +272,7 @@ impl<'a> Stream<'a> {
     /// Parses the headers of a JPEG image.
     pub fn parse(data: &'a [u8]) -> Result<Self, Error> {
         let length = u32::try_from(data.len())
-            .map_err(|_| Error::new(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
+            .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
         let mut handle = std::ptr::null_mut();
         check(unsafe { ffi::rocJpegStreamCreate(&mut handle) })?;
         // From here on `Drop` releases the handle.

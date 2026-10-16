@@ -8,13 +8,9 @@ use ffi::RocJpegStatus;
 
 /// An error returned by rocJPEG.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(RocJpegStatus);
+pub struct Error(pub RocJpegStatus);
 
 impl Error {
-    pub(crate) fn new(status: RocJpegStatus) -> Self {
-        Self(status)
-    }
-
     /// The raw rocJPEG status code.
     pub fn status(&self) -> RocJpegStatus {
         self.0
@@ -51,6 +47,6 @@ pub(crate) fn check(status: RocJpegStatus) -> Result<(), Error> {
     if status == RocJpegStatus::ROCJPEG_STATUS_SUCCESS {
         Ok(())
     } else {
-        Err(Error::new(status))
+        Err(Error(status))
     }
 }

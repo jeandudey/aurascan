@@ -24,7 +24,7 @@ GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PR
     ! "video/x-raw(memory:HIPMemory),format=RGB,width=640,height=640" \
     ! hipdownload \
     ! video/x-raw,format=RGB \
-    ! onnxinference execution-provider=cpu model-file=models/scrfd_500m.onnx \
+    ! onnxinference execution-provider=cpu optimization-level=enable-all model-file=models/scrfd_500m.onnx \
     ! scrfdtensordec \
     ! bytetracker \
     ! faceselector \
@@ -36,6 +36,6 @@ GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PR
     t. ! queue leaky=downstream max-size-buffers=1 \
        ! videocropscale \
        ! video/x-raw,width=224,height=224 \
-       ! onnxinference execution-provider=cpu model-file=models/sixdrepnet360.onnx \
+       ! onnxinference execution-provider=cpu optimization-level=enable-all model-file=models/sixdrepnet360.onnx \
        ! sixdrepnet360tensordec \
        ! fakesink sync=false

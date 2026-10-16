@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "rocjpeg"
+description = "Safe bindings to the rocJPEG hardware JPEG decoder"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ffi = { package = "rocjpeg-sys", path = "../rocjpeg-sys" }

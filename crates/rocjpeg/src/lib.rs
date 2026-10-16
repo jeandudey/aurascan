@@ -1,0 +1,402 @@
+// SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+// SPDX-License-Identifier: MIT
+
+//! Safe bindings to [rocJPEG](https://github.com/ROCm/rocJPEG), the AMD VCN hardware JPEG
+//! decoder.
+//!
+//! Decoded images are written to **device (HIP) memory** provided by the caller through
+//! [`Image`]. [`rocJpegDecode`](Decoder::decode) is synchronous: the output is complete when
+//! it returns.
+//!
+//! Typical usage:
+//!
+//! ```no_run
+//! use rocjpeg::{Backend, DecodeParams, Decoder, Image, OutputFormat, Stream};
+//!
+//! # let jpeg: &[u8] = &[];
+//! let decoder = Decoder::new(Backend::Hardware, 0)?;
+//! let stream = Stream::parse(jpeg)?;
+//! let info = decoder.image_info(&stream)?;
+//! let planes = info.plane_layout(OutputFormat::Rgb).unwrap();
+//! // Allocate `planes[0].size()` bytes of device memory, then:
+//! # let device_ptr = std::ptr::null_mut();
+//! let mut image = Image::new();
+//! image.set_plane(0, device_ptr, planes[0].row_bytes as u32);
+//! unsafe { decoder.decode(&stream, &DecodeParams::new(OutputFormat::Rgb), &mut image)? };
+//! # Ok::<(), rocjpeg::Error>(())
+//! ```
+
+use std::ffi::CStr;
+use std::fmt;
+use std::marker::PhantomData;
+
+pub use ffi;
+use ffi::RocJpegStatus;
+
+/// Maximum number of image planes.
+pub const MAX_COMPONENTS: usize = ffi::ROCJPEG_MAX_COMPONENT as usize;
+
+/// An error returned by rocJPEG.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Error(RocJpegStatus);
+
+impl Error {
+    /// The raw rocJPEG status code.
+    pub fn status(&self) -> RocJpegStatus {
+        self.0
+    }
+
+    /// Whether the JPEG itself is invalid or unsupported by the decoder.
+    pub fn is_bad_jpeg(&self) -> bool {
+        matches!(
+            self.0,
+            RocJpegStatus::ROCJPEG_STATUS_BAD_JPEG
+                | RocJpegStatus::ROCJPEG_STATUS_JPEG_NOT_SUPPORTED
+        )
+    }
+
+    /// Whether the hardware decoder isn't available (try [`Backend::Hybrid`]).
+    pub fn is_hw_decoder_unsupported(&self) -> bool {
+        matches!(
+            self.0,
+            RocJpegStatus::ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED
+        )
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = unsafe { CStr::from_ptr(ffi::rocJpegGetErrorName(self.0)) };
+        write!(f, "{}", name.to_string_lossy())
+    }
+}
+
+impl std::error::Error for Error {}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+fn check(status: RocJpegStatus) -> Result<()> {
+    if status == RocJpegStatus::ROCJPEG_STATUS_SUCCESS {
+        Ok(())
+    } else {
+        Err(Error(status))
+    }
+}
+
+/// Decoder backend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Backend {
+    /// Use the VCN hardware JPEG engine.
+    #[default]
+    Hardware,
+    /// Hybrid CPU/GPU decoding.
+    Hybrid,
+}
+
+impl Backend {
+    fn to_ffi(self) -> ffi::RocJpegBackend {
+        match self {
+            Backend::Hardware => ffi::RocJpegBackend::ROCJPEG_BACKEND_HARDWARE,
+            Backend::Hybrid => ffi::RocJpegBackend::ROCJPEG_BACKEND_HYBRID,
+        }
+    }
+}
+
+/// Chroma subsampling of a JPEG.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChromaSubsampling {
+    Yuv444,
+    Yuv440,
+    Yuv422,
+    Yuv420,
+    Yuv411,
+    Yuv400,
+    Unknown,
+}
+
+impl ChromaSubsampling {
+    fn from_ffi(css: ffi::RocJpegChromaSubsampling) -> Self {
+        use ffi::RocJpegChromaSubsampling as C;
+        match css {
+            C::ROCJPEG_CSS_444 => Self::Yuv444,
+            C::ROCJPEG_CSS_440 => Self::Yuv440,
+            C::ROCJPEG_CSS_422 => Self::Yuv422,
+            C::ROCJPEG_CSS_420 => Self::Yuv420,
+            C::ROCJPEG_CSS_411 => Self::Yuv411,
+            C::ROCJPEG_CSS_400 => Self::Yuv400,
+            C::ROCJPEG_CSS_UNKNOWN => Self::Unknown,
+        }
+    }
+}
+
+/// Output format of the decoded image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    /// The unchanged image of the decoder: planar YUV for 4:4:4 and 4:4:0, packed YUYV for
+    /// 4:2:2, NV12 (Y + interleaved UV) for 4:2:0 and Y for 4:0:0.
+    Native,
+    /// Planar Y, U and V (only Y for 4:0:0).
+    YuvPlanar,
+    /// Luma only.
+    Y,
+    /// Interleaved RGB.
+    Rgb,
+    /// Planar RGB.
+    RgbPlanar,
+}
+
+impl OutputFormat {
+    fn to_ffi(self) -> ffi::RocJpegOutputFormat {
+        use ffi::RocJpegOutputFormat as O;
+        match self {
+            Self::Native => O::ROCJPEG_OUTPUT_NATIVE,
+            Self::YuvPlanar => O::ROCJPEG_OUTPUT_YUV_PLANAR,
+            Self::Y => O::ROCJPEG_OUTPUT_Y,
+            Self::Rgb => O::ROCJPEG_OUTPUT_RGB,
+            Self::RgbPlanar => O::ROCJPEG_OUTPUT_RGB_PLANAR,
+        }
+    }
+}
+
+/// Crop rectangle (region of interest) in pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rect {
+    pub left: i16,
+    pub top: i16,
+    pub right: i16,
+    pub bottom: i16,
+}
+
+/// Parameters of a decode operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DecodeParams {
+    pub output_format: OutputFormat,
+    pub crop: Option<Rect>,
+}
+
+impl DecodeParams {
+    pub fn new(output_format: OutputFormat) -> Self {
+        Self {
+            output_format,
+            crop: None,
+        }
+    }
+
+    fn to_ffi(self) -> ffi::RocJpegDecodeParams {
+        // SAFETY: all fields are integers or enums with a valid zero value.
+        let mut params: ffi::RocJpegDecodeParams = unsafe { std::mem::zeroed() };
+        params.output_format = self.output_format.to_ffi();
+        if let Some(crop) = self.crop {
+            params.crop_rectangle.left = crop.left;
+            params.crop_rectangle.top = crop.top;
+            params.crop_rectangle.right = crop.right;
+            params.crop_rectangle.bottom = crop.bottom;
+        }
+        params
+    }
+}
+
+/// Size of one plane of a decoded image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlaneLayout {
+    /// Bytes per row without padding. The pitch passed to [`Image::set_plane`] must be at
+    /// least this.
+    pub row_bytes: usize,
+    /// Number of rows.
+    pub rows: usize,
+}
+
+impl PlaneLayout {
+    /// Size of the plane in bytes when using `row_bytes` as pitch.
+    pub fn size(&self) -> usize {
+        self.row_bytes * self.rows
+    }
+}
+
+/// Information about a parsed JPEG.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ImageInfo {
+    pub num_components: u8,
+    pub subsampling: ChromaSubsampling,
+    pub widths: [u32; MAX_COMPONENTS],
+    pub heights: [u32; MAX_COMPONENTS],
+}
+
+impl ImageInfo {
+    pub fn width(&self) -> u32 {
+        self.widths[0]
+    }
+
+    pub fn height(&self) -> u32 {
+        self.heights[0]
+    }
+
+    /// The planes the decoder writes for `format`, or `None` if the combination isn't known
+    /// (4:1:1 and unknown subsampling in the YUV formats).
+    ///
+    /// For a crop, use the size of the crop rectangle instead of the image size.
+    pub fn plane_layout(&self, format: OutputFormat) -> Option<Vec<PlaneLayout>> {
+        use ChromaSubsampling as C;
+        let (w, h) = (self.width() as usize, self.height() as usize);
+        let plane = |row_bytes, rows| PlaneLayout { row_bytes, rows };
+        Some(match format {
+            OutputFormat::Rgb => vec![plane(w * 3, h)],
+            OutputFormat::RgbPlanar => vec![plane(w, h); 3],
+            OutputFormat::Y => vec![plane(w, h)],
+            OutputFormat::YuvPlanar => match self.subsampling {
+                C::Yuv400 => vec![plane(w, h)],
+                C::Yuv444 | C::Yuv440 | C::Yuv422 | C::Yuv420 => {
+                    let (cw, ch) = (self.widths[1] as usize, self.heights[1] as usize);
+                    vec![plane(w, h), plane(cw, ch), plane(cw, ch)]
+                }
+                _ => return None,
+            },
+            OutputFormat::Native => match self.subsampling {
+                C::Yuv400 => vec![plane(w, h)],
+                C::Yuv444 => vec![plane(w, h); 3],
+                C::Yuv440 => vec![plane(w, h), plane(w, h / 2), plane(w, h / 2)],
+                C::Yuv422 => vec![plane(w * 2, h)],
+                C::Yuv420 => vec![plane(w, h), plane(w, h / 2)],
+                _ => return None,
+            },
+        })
+    }
+}
+
+/// Destination planes of a decode operation, in device memory.
+#[derive(Debug, Clone, Copy)]
+pub struct Image {
+    channel: [*mut u8; MAX_COMPONENTS],
+    pitch: [u32; MAX_COMPONENTS],
+}
+
+impl Default for Image {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Image {
+    pub fn new() -> Self {
+        Self {
+            channel: [std::ptr::null_mut(); MAX_COMPONENTS],
+            pitch: [0; MAX_COMPONENTS],
+        }
+    }
+
+    /// Sets the device pointer and pitch (bytes per row) of plane `index`.
+    pub fn set_plane(&mut self, index: usize, device_ptr: *mut u8, pitch: u32) {
+        self.channel[index] = device_ptr;
+        self.pitch[index] = pitch;
+    }
+
+    fn to_ffi(self) -> ffi::RocJpegImage {
+        ffi::RocJpegImage {
+            channel: self.channel,
+            pitch: self.pitch,
+        }
+    }
+}
+
+/// A parsed JPEG stream.
+///
+/// rocJPEG keeps pointers into the JPEG data instead of copying it, so the stream borrows it
+/// for as long as it is used.
+pub struct Stream<'a> {
+    handle: ffi::RocJpegStreamHandle,
+    _data: PhantomData<&'a [u8]>,
+}
+
+// SAFETY: the handle is owned and only used through `&self`/`&mut self` methods.
+unsafe impl Send for Stream<'_> {}
+
+impl<'a> Stream<'a> {
+    /// Parses the headers of a JPEG image.
+    pub fn parse(data: &'a [u8]) -> Result<Self> {
+        let length = u32::try_from(data.len())
+            .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
+        let mut handle = std::ptr::null_mut();
+        check(unsafe { ffi::rocJpegStreamCreate(&mut handle) })?;
+        // From here on `Drop` releases the handle.
+        let stream = Self {
+            handle,
+            _data: PhantomData,
+        };
+        check(unsafe { ffi::rocJpegStreamParse(data.as_ptr(), length as usize, stream.handle) })?;
+        Ok(stream)
+    }
+}
+
+impl Drop for Stream<'_> {
+    fn drop(&mut self) {
+        unsafe { ffi::rocJpegStreamDestroy(self.handle) };
+    }
+}
+
+/// A rocJPEG decoder bound to a GPU.
+///
+/// The HIP current device is thread local and rocJPEG only selects it when the decoder is
+/// created, so decode on the thread that created the decoder or make the device current
+/// (`hipSetDevice`) first.
+pub struct Decoder {
+    handle: ffi::RocJpegHandle,
+}
+
+// SAFETY: rocJPEG serializes calls on a handle with an internal mutex.
+unsafe impl Send for Decoder {}
+
+impl Decoder {
+    pub fn new(backend: Backend, device_id: i32) -> Result<Self> {
+        let mut handle = std::ptr::null_mut();
+        check(unsafe { ffi::rocJpegCreate(backend.to_ffi(), device_id, &mut handle) })?;
+        Ok(Self { handle })
+    }
+
+    /// Dimensions and format of a parsed JPEG.
+    pub fn image_info(&self, stream: &Stream<'_>) -> Result<ImageInfo> {
+        let mut num_components = 0u8;
+        let mut subsampling = ffi::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
+        let mut widths = [0u32; MAX_COMPONENTS];
+        let mut heights = [0u32; MAX_COMPONENTS];
+        check(unsafe {
+            ffi::rocJpegGetImageInfo(
+                self.handle,
+                stream.handle,
+                &mut num_components,
+                &mut subsampling,
+                widths.as_mut_ptr(),
+                heights.as_mut_ptr(),
+            )
+        })?;
+        Ok(ImageInfo {
+            num_components,
+            subsampling: ChromaSubsampling::from_ffi(subsampling),
+            widths,
+            heights,
+        })
+    }
+
+    /// Decodes `stream` into `destination`. Returns when the decoded data is complete.
+    ///
+    /// # Safety
+    ///
+    /// Every plane required by `params.output_format` (see [`ImageInfo::plane_layout`]) must
+    /// be set in `destination`, point to device memory that is valid for writes of
+    /// `pitch * rows` bytes, and not be used by anything else during the call.
+    pub unsafe fn decode(
+        &self,
+        stream: &Stream<'_>,
+        params: &DecodeParams,
+        destination: &mut Image,
+    ) -> Result<()> {
+        let params = params.to_ffi();
+        let mut image = destination.to_ffi();
+        check(unsafe { ffi::rocJpegDecode(self.handle, stream.handle, &params, &mut image) })
+    }
+}
+
+impl Drop for Decoder {
+    fn drop(&mut self) {
+        unsafe { ffi::rocJpegDestroy(self.handle) };
+    }
+}

@@ -65,6 +65,7 @@ bytetrack.path = "crates/bytetrack"
 epoxy-sys.path = "crates/epoxy-sys"
 matio.path = "crates/matio"
 matio-sys.path = "crates/matio-sys"
+rocjpeg.path = "crates/rocjpeg"
 scrfd-burn.path = "crates/scrfd-burn"
 sixdrepnet360-burn.path = "crates/sixdrepnet360-burn"
 

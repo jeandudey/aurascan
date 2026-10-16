@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "gst-plugin-rocm"
+description = "GStreamer plugins using AMD ROCm"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/jeandudey/aurascan"
+
+[lib]
+name = "gstrocm"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+gst-hip = { package = "gstreamer-hip", path = "../gstreamer-hip" }
+gst.workspace = true
+gst-video.workspace = true
+rocjpeg.workspace = true
+
+[build-dependencies]
+gst-plugin-version-helper.workspace = true
+
+[package.metadata.capi]
+min_version = "0.9.21"
+
+[package.metadata.capi.header]
+enabled = false
+
+[package.metadata.capi.library]
+install_subdir = "gstreamer-1.0"
+versioning = false
+import_library = false
+
+[package.metadata.capi.pkg_config]
+requires_private = "gstreamer-1.0, gstreamer-video-1.0, gstreamer-hip-1.0, gobject-2.0, glib-2.0, gmodule-2.0"
+
+[dev-dependencies]
+gst-app.workspace = true

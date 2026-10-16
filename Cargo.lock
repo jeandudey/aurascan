@@ -4737,7 +4737,7 @@ dependencies = [
  "gstreamer-video-sys",
  "libc",
  "shell-words",
- "system-deps 7.0.8",
+ "system-deps 9.0.0",
  "tempfile",
 ]
 

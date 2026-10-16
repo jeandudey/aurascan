@@ -4,15 +4,12 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-#![allow(unused_imports)]
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(clippy::approx_constant, clippy::type_complexity, clippy::unreadable_literal, clippy::upper_case_acronyms)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use glib_sys as glib;
-use gobject_sys as gobject;
 use gst_sys as gst;
-use gst_base_sys as gst_base;
 use gst_video_sys as gst_video;
 
 #[allow(unused_imports)]
@@ -42,8 +39,6 @@ pub const GST_CAPS_FEATURE_MEMORY_HIP_MEMORY: &[u8] = b"memory:HIPMemory\0";
 pub const GST_HIP_DEVICE_CONTEXT_TYPE: &[u8] = b"gst.hip.device\0";
 pub const GST_HIP_MEMORY_NAME: &[u8] = b"HIPMemory\0";
 pub const GST_MAP_HIP: gst::GstMapFlags = 131072;
-pub const GST_MAP_READ_HIP: gst::GstMapFlags = gst::GST_MAP_READ | GST_MAP_HIP;
-pub const GST_MAP_WRITE_HIP: gst::GstMapFlags = gst::GST_MAP_WRITE | GST_MAP_HIP;
 
 // Flags
 pub type GstHipMemoryTransfer = c_uint;

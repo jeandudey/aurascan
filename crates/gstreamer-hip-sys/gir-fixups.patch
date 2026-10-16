@@ -1,56 +1,6 @@
---- a/Cargo.toml
-+++ b/Cargo.toml
-@@ -8,10 +8,6 @@
- name = "gstreamer-hip-1.0"
- version = "1.28"
- 
--[package.metadata.docs.rs]
--rustdoc-args = ["--generate-link-to-definition"]
--all-features = true
--
- [lib]
- name = "gstreamer_hip_sys"
- 
-@@ -19,24 +15,13 @@
- libc = "0.2"
- glib-sys = "0.22"
- gobject-sys = "0.22"
--
--[dependencies.gst_sys]
--package = "gstreamer-sys"
--version = "0.25"
--
--[dependencies.gst_base_sys]
--package = "gstreamer-base-sys"
--version = "0.25"
--
--[dependencies.gst_video_sys]
--package = "gstreamer-video-sys"
--version = "0.25"
-+gst_sys = { package = "gstreamer-sys", version = "0.25" }
-+gst_base_sys = { package = "gstreamer-base-sys", version = "0.25" }
-+gst_video_sys = { package = "gstreamer-video-sys", version = "0.25" }
- 
- [build-dependencies]
--system-deps = "9"
-+system-deps = "7"
- 
- [dev-dependencies]
- shell-words = "1.0.0"
- tempfile = "3"
--
--[features]
 --- a/src/lib.rs
 +++ b/src/lib.rs
-@@ -4,6 +4,7 @@
- // from ../../gst-gir-files
- // DO NOT EDIT
- 
-+#![allow(unused_imports)]
- #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
- #![allow(clippy::approx_constant, clippy::type_complexity, clippy::unreadable_literal, clippy::upper_case_acronyms)]
- #![cfg_attr(docsrs, feature(doc_cfg))]
-@@ -26,6 +27,10 @@
+@@ -26,6 +26,10 @@
  #[allow(unused_imports)]
  use glib::{gboolean, gconstpointer, gpointer, GType};
  
@@ -61,27 +11,3 @@
  // Enums
  pub type GstHipVendor = c_int;
  pub const GST_HIP_VENDOR_UNKNOWN: GstHipVendor = 0;
-@@ -37,8 +42,8 @@
- pub const GST_HIP_DEVICE_CONTEXT_TYPE: &[u8] = b"gst.hip.device\0";
- pub const GST_HIP_MEMORY_NAME: &[u8] = b"HIPMemory\0";
- pub const GST_MAP_HIP: gst::GstMapFlags = 131072;
--pub const GST_MAP_READ_HIP: gst::GstMapFlags = 1;
--pub const GST_MAP_WRITE_HIP: gst::GstMapFlags = 2;
-+pub const GST_MAP_READ_HIP: gst::GstMapFlags = gst::GST_MAP_READ | GST_MAP_HIP;
-+pub const GST_MAP_WRITE_HIP: gst::GstMapFlags = gst::GST_MAP_WRITE | GST_MAP_HIP;
- 
- // Flags
- pub type GstHipMemoryTransfer = c_uint;
---- a/tests/abi.rs
-+++ b/tests/abi.rs
-@@ -233,8 +233,8 @@
-     ("(gint) GST_HIP_VENDOR_NVIDIA", "2"),
-     ("(gint) GST_HIP_VENDOR_UNKNOWN", "0"),
-     ("GST_MAP_HIP", "131072"),
--    ("GST_MAP_READ_HIP", "1"),
--    ("GST_MAP_WRITE_HIP", "2"),
-+    ("GST_MAP_READ_HIP", "131073"),
-+    ("GST_MAP_WRITE_HIP", "131074"),
- ];
- 
- 

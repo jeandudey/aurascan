@@ -558,7 +558,7 @@ impl RocJpegDec {
             gst::ffi::gst_memory_map(
                 memory.as_mut_ptr(),
                 map_info.as_mut_ptr(),
-                gst_hip::ffi::GST_MAP_WRITE_HIP,
+                gst::ffi::GST_MAP_WRITE | gst_hip::ffi::GST_MAP_HIP,
             )
         };
         if mapped == 0 {

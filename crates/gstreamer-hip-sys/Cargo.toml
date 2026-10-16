@@ -8,6 +8,10 @@ build = "build.rs"
 name = "gstreamer-hip-1.0"
 version = "1.28"
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--generate-link-to-definition"]
+all-features = true
+
 [lib]
 name = "gstreamer_hip_sys"
 
@@ -15,13 +19,24 @@ name = "gstreamer_hip_sys"
 libc = "0.2"
 glib-sys = "0.22"
 gobject-sys = "0.22"
-gst_sys = { package = "gstreamer-sys", version = "0.25" }
-gst_base_sys = { package = "gstreamer-base-sys", version = "0.25" }
-gst_video_sys = { package = "gstreamer-video-sys", version = "0.25" }
+
+[dependencies.gst_sys]
+package = "gstreamer-sys"
+version = "0.25"
+
+[dependencies.gst_base_sys]
+package = "gstreamer-base-sys"
+version = "0.25"
+
+[dependencies.gst_video_sys]
+package = "gstreamer-video-sys"
+version = "0.25"
 
 [build-dependencies]
-system-deps = "7"
+system-deps = "9"
 
 [dev-dependencies]
 shell-words = "1.0.0"
 tempfile = "3"
+
+[features]

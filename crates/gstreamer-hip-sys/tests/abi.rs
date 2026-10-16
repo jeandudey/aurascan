@@ -233,8 +233,6 @@ const RUST_CONSTANTS: &[(&str, &str)] = &[
     ("(gint) GST_HIP_VENDOR_NVIDIA", "2"),
     ("(gint) GST_HIP_VENDOR_UNKNOWN", "0"),
     ("GST_MAP_HIP", "131072"),
-    ("GST_MAP_READ_HIP", "131073"),
-    ("GST_MAP_WRITE_HIP", "131074"),
 ];
 
 

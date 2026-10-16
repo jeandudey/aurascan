@@ -6,4 +6,12 @@ target_path = "."
 work_mode = "sys"
 girs_directories = ["../../girs", "../../gir-files", "../../gst-gir-files"]
 single_version_file = true
-external_libraries = ["GLib", "GObject", "Gst", "GstBase", "GstVideo"]
+external_libraries = ["GLib", "Gst", "GstVideo"]
+
+[[object]]
+name = "GstHip.MAP_READ_HIP"
+status = "ignore"
+
+[[object]]
+name = "GstHip.MAP_WRITE_HIP"
+status = "ignore"

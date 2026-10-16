@@ -18,7 +18,8 @@ description = "Copy GstHip-1.0.gir (not in the gir-files submodules) from the pi
 cmd = [
     "mkdir", "-p", "girs", "&&",
     "cp", "$CONDA_PREFIX/share/gir-1.0/GstHip-1.0.gir", "girs/", "&&",
-    "pixi", "exec", "-s", "xmlstarlet", "bash", "girs/fix.sh",
+    "pixi", "exec", "-s", "xmlstarlet", "bash", "-c",
+    "xmlstarlet() { xml \"$@\"; }; export -f xmlstarlet; cd girs && ./fix.sh",
 ]
 
 [tasks.generate-gstreamer-hip-sys]

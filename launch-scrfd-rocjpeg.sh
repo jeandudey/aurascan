@@ -15,7 +15,7 @@ PROFILE=${2:-debug}
 
 cargo build $([ "$PROFILE" = release ] && echo --release) -p gst-plugin-rocm -p gst-plugin-aurascan
 
-GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
+GST_PLUGIN_PATH=$PWD/target/$PROFILE exec gst-launch-1.0 \
     v4l2src device="$DEVICE" \
     ! image/jpeg,width=1920,height=1080,framerate=60/1 \
     ! jpegparse \
@@ -30,12 +30,11 @@ GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PR
     ! faceselector \
     ! tee name=t \
     t. ! queue \
-       ! objectdetectionoverlay \
        ! videoconvert \
-       ! fpsdisplaysink sync=false \
+       ! fakesink sync=false \
     t. ! queue leaky=downstream max-size-buffers=1 \
        ! videocropscale \
        ! video/x-raw,width=224,height=224 \
        ! onnxinference execution-provider=cpu optimization-level=enable-all model-file=models/sixdrepnet360.onnx \
        ! sixdrepnet360tensordec \
-       ! fakesink sync=false
+       ! fpsdisplaysink sync=false

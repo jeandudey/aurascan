@@ -26,62 +26,17 @@
 //! # Ok::<(), rocjpeg::Error>(())
 //! ```
 
-use std::ffi::CStr;
-use std::fmt;
 use std::marker::PhantomData;
 
+mod error;
+
+pub use error::Error;
+use error::check;
 pub use ffi;
 use ffi::RocJpegStatus;
 
 /// Maximum number of image planes.
 pub const MAX_COMPONENTS: usize = ffi::ROCJPEG_MAX_COMPONENT as usize;
-
-/// An error returned by rocJPEG.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(RocJpegStatus);
-
-impl Error {
-    /// The raw rocJPEG status code.
-    pub fn status(&self) -> RocJpegStatus {
-        self.0
-    }
-
-    /// Whether the JPEG itself is invalid or unsupported by the decoder.
-    pub fn is_bad_jpeg(&self) -> bool {
-        matches!(
-            self.0,
-            RocJpegStatus::ROCJPEG_STATUS_BAD_JPEG
-                | RocJpegStatus::ROCJPEG_STATUS_JPEG_NOT_SUPPORTED
-        )
-    }
-
-    /// Whether the hardware decoder isn't available (try [`Backend::Hybrid`]).
-    pub fn is_hw_decoder_unsupported(&self) -> bool {
-        matches!(
-            self.0,
-            RocJpegStatus::ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED
-        )
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = unsafe { CStr::from_ptr(ffi::rocJpegGetErrorName(self.0)) };
-        write!(f, "{}", name.to_string_lossy())
-    }
-}
-
-impl std::error::Error for Error {}
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-fn check(status: RocJpegStatus) -> Result<()> {
-    if status == RocJpegStatus::ROCJPEG_STATUS_SUCCESS {
-        Ok(())
-    } else {
-        Err(Error(status))
-    }
-}
 
 /// Decoder backend.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -315,9 +270,9 @@ unsafe impl Send for Stream<'_> {}
 
 impl<'a> Stream<'a> {
     /// Parses the headers of a JPEG image.
-    pub fn parse(data: &'a [u8]) -> Result<Self> {
+    pub fn parse(data: &'a [u8]) -> Result<Self, Error> {
         let length = u32::try_from(data.len())
-            .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
+            .map_err(|_| Error::new(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
         let mut handle = std::ptr::null_mut();
         check(unsafe { ffi::rocJpegStreamCreate(&mut handle) })?;
         // From here on `Drop` releases the handle.
@@ -349,14 +304,14 @@ pub struct Decoder {
 unsafe impl Send for Decoder {}
 
 impl Decoder {
-    pub fn new(backend: Backend, device_id: i32) -> Result<Self> {
+    pub fn new(backend: Backend, device_id: i32) -> Result<Self, Error> {
         let mut handle = std::ptr::null_mut();
         check(unsafe { ffi::rocJpegCreate(backend.into(), device_id, &mut handle) })?;
         Ok(Self { handle })
     }
 
     /// Dimensions and format of a parsed JPEG.
-    pub fn image_info(&self, stream: &Stream<'_>) -> Result<ImageInfo> {
+    pub fn image_info(&self, stream: &Stream<'_>) -> Result<ImageInfo, Error> {
         let mut num_components = 0u8;
         let mut subsampling = ffi::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
         let mut widths = [0u32; MAX_COMPONENTS];
@@ -391,7 +346,7 @@ impl Decoder {
         stream: &Stream<'_>,
         params: &DecodeParams,
         destination: &mut Image,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let params = (*params).into();
         let mut image = (*destination).into();
         check(unsafe { ffi::rocJpegDecode(self.handle, stream.handle, &params, &mut image) })

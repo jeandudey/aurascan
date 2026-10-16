@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 // SPDX-License-Identifier: MIT
 
-//! Safe bindings to [rocJPEG](https://github.com/ROCm/rocJPEG), the AMD VCN hardware JPEG
-//! decoder.
+//! Safe bindings to
+//! [rocJPEG](https://github.com/ROCm/rocm-systems/tree/develop/projects/rocjpeg), the AMD VCN
+//! hardware JPEG decoder.
 //!
 //! Decoded images are written to **device (HIP) memory** provided by the caller through
 //! [`Image`]. [`rocJpegDecode`](Decoder::decode) is synchronous: the output is complete when

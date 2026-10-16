@@ -66,12 +66,12 @@ tests:
         - rocjpeg
 
 about:
-  homepage: https://github.com/ROCm/rocJPEG
+  homepage: https://github.com/ROCm/rocm-systems/tree/develop/projects/rocjpeg
   license: MIT
   license_file: LICENSE
   summary: AMD ROCm JPEG decode library.
   description: |
     rocJPEG is a high performance JPEG decode SDK for AMD GPUs using the
     VCN hardware engines through VA-API and HIP.
-  repository: https://github.com/ROCm/rocJPEG
+  repository: https://github.com/ROCm/rocm-systems
   documentation: https://rocm.docs.amd.com/projects/rocJPEG/

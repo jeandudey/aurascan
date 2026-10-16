@@ -12,7 +12,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=CONDA_PREFIX");
     let prefix = ["ROCJPEG_PATH", "ROCM_PATH", "CONDA_PREFIX"]
         .iter()
-        .find_map(|name| env::var_os(name))
+        .find_map(env::var_os)
         .map(PathBuf::from)
         .expect("set ROCJPEG_PATH, ROCM_PATH or CONDA_PREFIX to the rocJPEG prefix");
 

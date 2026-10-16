@@ -12,8 +12,14 @@ mod tests {
     fn stream_create_destroy() {
         unsafe {
             let mut stream: RocJpegStreamHandle = std::ptr::null_mut();
-            assert_eq!(rocJpegStreamCreate(&mut stream), RocJpegStatus::ROCJPEG_STATUS_SUCCESS);
-            assert_eq!(rocJpegStreamDestroy(stream), RocJpegStatus::ROCJPEG_STATUS_SUCCESS);
+            assert_eq!(
+                rocJpegStreamCreate(&mut stream),
+                RocJpegStatus::ROCJPEG_STATUS_SUCCESS
+            );
+            assert_eq!(
+                rocJpegStreamDestroy(stream),
+                RocJpegStatus::ROCJPEG_STATUS_SUCCESS
+            );
         }
     }
 }

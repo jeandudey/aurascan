@@ -140,8 +140,7 @@ impl DecodeParams {
 
 impl From<DecodeParams> for rocjpeg_sys::RocJpegDecodeParams {
     fn from(params: DecodeParams) -> Self {
-        // SAFETY: all fields are integers or enums with a valid zero value.
-        let mut ffi_params: Self = unsafe { std::mem::zeroed() };
+        let mut ffi_params = Self::default();
         ffi_params.output_format = params.output_format.into();
         if let Some(crop) = params.crop {
             ffi_params.crop_rectangle.left = crop.left;

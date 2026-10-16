@@ -30,6 +30,7 @@ fn main() {
         .allowlist_function("rocJpeg.*")
         .allowlist_type("(RocJpeg|rocJpeg|RocJPEG).*")
         .allowlist_var("ROCJPEG_.*")
+        .derive_default(true)
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: false,
         })

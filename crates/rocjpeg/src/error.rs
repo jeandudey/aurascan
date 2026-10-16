@@ -4,7 +4,7 @@
 use std::ffi::CStr;
 use std::fmt;
 
-use ffi::RocJpegStatus;
+use rocjpeg_sys::RocJpegStatus;
 
 /// An error returned by rocJPEG.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,7 +36,7 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = unsafe { CStr::from_ptr(ffi::rocJpegGetErrorName(self.0)) };
+        let name = unsafe { CStr::from_ptr(rocjpeg_sys::rocJpegGetErrorName(self.0)) };
         write!(f, "{}", name.to_string_lossy())
     }
 }

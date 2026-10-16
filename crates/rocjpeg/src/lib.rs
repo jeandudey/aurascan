@@ -32,11 +32,11 @@ mod error;
 
 pub use error::Error;
 use error::check;
-pub use ffi;
-use ffi::RocJpegStatus;
+pub use rocjpeg_sys;
+use rocjpeg_sys::RocJpegStatus;
 
 /// Maximum number of image planes.
-pub const MAX_COMPONENTS: usize = ffi::ROCJPEG_MAX_COMPONENT as usize;
+pub const MAX_COMPONENTS: usize = rocjpeg_sys::ROCJPEG_MAX_COMPONENT as usize;
 
 /// Decoder backend.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -48,7 +48,7 @@ pub enum Backend {
     Hybrid,
 }
 
-impl From<Backend> for ffi::RocJpegBackend {
+impl From<Backend> for rocjpeg_sys::RocJpegBackend {
     fn from(backend: Backend) -> Self {
         match backend {
             Backend::Hardware => Self::ROCJPEG_BACKEND_HARDWARE,
@@ -70,8 +70,8 @@ pub enum ChromaSubsampling {
 }
 
 impl ChromaSubsampling {
-    fn from_ffi(css: ffi::RocJpegChromaSubsampling) -> Self {
-        use ffi::RocJpegChromaSubsampling as C;
+    fn from_ffi(css: rocjpeg_sys::RocJpegChromaSubsampling) -> Self {
+        use rocjpeg_sys::RocJpegChromaSubsampling as C;
         match css {
             C::ROCJPEG_CSS_444 => Self::Yuv444,
             C::ROCJPEG_CSS_440 => Self::Yuv440,
@@ -100,7 +100,7 @@ pub enum OutputFormat {
     RgbPlanar,
 }
 
-impl From<OutputFormat> for ffi::RocJpegOutputFormat {
+impl From<OutputFormat> for rocjpeg_sys::RocJpegOutputFormat {
     fn from(format: OutputFormat) -> Self {
         match format {
             OutputFormat::Native => Self::ROCJPEG_OUTPUT_NATIVE,
@@ -137,7 +137,7 @@ impl DecodeParams {
     }
 }
 
-impl From<DecodeParams> for ffi::RocJpegDecodeParams {
+impl From<DecodeParams> for rocjpeg_sys::RocJpegDecodeParams {
     fn from(params: DecodeParams) -> Self {
         // SAFETY: all fields are integers or enums with a valid zero value.
         let mut ffi_params: Self = unsafe { std::mem::zeroed() };
@@ -247,7 +247,7 @@ impl Image {
     }
 }
 
-impl From<Image> for ffi::RocJpegImage {
+impl From<Image> for rocjpeg_sys::RocJpegImage {
     fn from(image: Image) -> Self {
         Self {
             channel: image.channel,
@@ -261,7 +261,7 @@ impl From<Image> for ffi::RocJpegImage {
 /// rocJPEG keeps pointers into the JPEG data instead of copying it, so the stream borrows it
 /// for as long as it is used.
 pub struct Stream<'a> {
-    handle: ffi::RocJpegStreamHandle,
+    handle: rocjpeg_sys::RocJpegStreamHandle,
     _data: PhantomData<&'a [u8]>,
 }
 
@@ -274,20 +274,22 @@ impl<'a> Stream<'a> {
         let length = u32::try_from(data.len())
             .map_err(|_| Error(RocJpegStatus::ROCJPEG_STATUS_INVALID_PARAMETER))?;
         let mut handle = std::ptr::null_mut();
-        check(unsafe { ffi::rocJpegStreamCreate(&mut handle) })?;
+        check(unsafe { rocjpeg_sys::rocJpegStreamCreate(&mut handle) })?;
         // From here on `Drop` releases the handle.
         let stream = Self {
             handle,
             _data: PhantomData,
         };
-        check(unsafe { ffi::rocJpegStreamParse(data.as_ptr(), length as usize, stream.handle) })?;
+        check(unsafe {
+            rocjpeg_sys::rocJpegStreamParse(data.as_ptr(), length as usize, stream.handle)
+        })?;
         Ok(stream)
     }
 }
 
 impl Drop for Stream<'_> {
     fn drop(&mut self) {
-        unsafe { ffi::rocJpegStreamDestroy(self.handle) };
+        unsafe { rocjpeg_sys::rocJpegStreamDestroy(self.handle) };
     }
 }
 
@@ -297,7 +299,7 @@ impl Drop for Stream<'_> {
 /// created, so decode on the thread that created the decoder or make the device current
 /// (`hipSetDevice`) first.
 pub struct Decoder {
-    handle: ffi::RocJpegHandle,
+    handle: rocjpeg_sys::RocJpegHandle,
 }
 
 // SAFETY: rocJPEG serializes calls on a handle with an internal mutex.
@@ -306,18 +308,18 @@ unsafe impl Send for Decoder {}
 impl Decoder {
     pub fn new(backend: Backend, device_id: i32) -> Result<Self, Error> {
         let mut handle = std::ptr::null_mut();
-        check(unsafe { ffi::rocJpegCreate(backend.into(), device_id, &mut handle) })?;
+        check(unsafe { rocjpeg_sys::rocJpegCreate(backend.into(), device_id, &mut handle) })?;
         Ok(Self { handle })
     }
 
     /// Dimensions and format of a parsed JPEG.
     pub fn image_info(&self, stream: &Stream<'_>) -> Result<ImageInfo, Error> {
         let mut num_components = 0u8;
-        let mut subsampling = ffi::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
+        let mut subsampling = rocjpeg_sys::RocJpegChromaSubsampling::ROCJPEG_CSS_UNKNOWN;
         let mut widths = [0u32; MAX_COMPONENTS];
         let mut heights = [0u32; MAX_COMPONENTS];
         check(unsafe {
-            ffi::rocJpegGetImageInfo(
+            rocjpeg_sys::rocJpegGetImageInfo(
                 self.handle,
                 stream.handle,
                 &mut num_components,
@@ -349,12 +351,14 @@ impl Decoder {
     ) -> Result<(), Error> {
         let params = (*params).into();
         let mut image = (*destination).into();
-        check(unsafe { ffi::rocJpegDecode(self.handle, stream.handle, &params, &mut image) })
+        check(unsafe {
+            rocjpeg_sys::rocJpegDecode(self.handle, stream.handle, &params, &mut image)
+        })
     }
 }
 
 impl Drop for Decoder {
     fn drop(&mut self) {
-        unsafe { ffi::rocJpegDestroy(self.handle) };
+        unsafe { rocjpeg_sys::rocJpegDestroy(self.handle) };
     }
 }

@@ -27,6 +27,7 @@ mod functions;
 pub use functions::*;
 
 mod hip_stream;
+mod hip_video_frame;
 
 // GstObject based types are thread safe.
 unsafe impl Send for HipDevice {}
@@ -40,12 +41,16 @@ unsafe impl Sync for HipPoolAllocator {}
 unsafe impl Send for HipStream {}
 unsafe impl Sync for HipStream {}
 pub use hip_stream::HipStream;
+pub use hip_video_frame::{
+    HipVideoFrame, HipVideoFrameExt, HipVideoFrameRef, IsHipVideoFrame, Readable, Writable,
+};
 
 pub mod prelude {
     pub use glib::prelude::*;
     pub use gst::prelude::*;
 
     pub use crate::auto::traits::*;
+    pub use crate::hip_video_frame::{HipVideoFrameExt, IsHipVideoFrame};
 }
 
 #[cfg(test)]

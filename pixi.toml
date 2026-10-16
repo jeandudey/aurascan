@@ -60,6 +60,7 @@ cmd = [
 [dependencies]
 expat = ">=2.8.5,<3"
 gtk4 = ">=4.24.1,<5"
+gir = { path = "packages/gir" }
 glib = ">=2.90.0,<3"
 gstreamer = ">=1.28.7,<2"
 gst-plugins-base = ">=1.28.7,<2"

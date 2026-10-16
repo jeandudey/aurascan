@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ
+#
+# SPDX-License-Identifier: MIT
+
+schema_version: 1
+
+package:
+  name: gir
+  version: "2026.9.19"
+
+source:
+  # A git checkout is needed (not a tarball) because the build script of gir
+  # reads the repository HEAD to embed its version.
+  git: https://github.com/gtk-rs/gir
+  rev: "ececdfdf7154dc77d5d3e2a9aa19690b47161641"
+
+build:
+  number: 0
+  script: |
+    # The build directory lives inside the aurascan workspace, so cargo would
+    # otherwise try to treat gir as one of its members.
+    printf '\n[workspace]\n' >> Cargo.toml
+    cargo install --locked --no-track --root $PREFIX --path .
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('rust') }}
+    - git
+
+tests:
+  - script:
+      - gir --help
+
+about:
+  homepage: https://github.com/gtk-rs/gir
+  license: MIT
+  license_file: LICENSE
+  summary: Tool to generate Rust bindings from GObject Introspection files.
+  description: |
+    gir generates the -sys and safe Rust bindings of GObject based
+    libraries from their GIR files, as used by gtk-rs and gstreamer-rs.
+  repository: https://github.com/gtk-rs/gir
+  documentation: https://gtk-rs.org/gir/book/

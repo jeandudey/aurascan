@@ -29,6 +29,8 @@ source:
     - patches/disable_d3d11_in_nvcodec.patch
     # Adds an intra-op-threads property to onnxinference (not upstream)
     - patches/add_onnxinference_intra_op_threads.patch
+    # Makes hipconvertscale crop to the GstVideoCropMeta of each buffer, like cudaconvertscale (not upstream)
+    - patches/hipconvertscale_crop_meta.patch
 
 build:
   # Higher than conda-forge's builds so this is preferred over them.

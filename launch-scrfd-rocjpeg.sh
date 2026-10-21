@@ -4,7 +4,9 @@
 #
 # MJPEG webcam -> rocJPEG (VCN) -> HIP scale to 640x640 -> SCRFD -> ByteTrack -> face selector,
 # then two branches: the frame with the tracked bbox overlay, and the face crop going through
-# 6DRepNet360 (head pose). The angles are logged with GST_DEBUG=sixdrepnet360tensordec:5.
+# 6DRepNet360 (head pose). The face crop is done on the GPU by hipconvertscale, which needs the
+# patched gst-plugins-bad (packages/gst-plugins-bad/patches/hipconvertscale_crop_meta.patch).
+# The angles are logged with GST_DEBUG=sixdrepnet360tensordec:5.
 #
 # Usage: pixi run ./launch-scrfd-rocjpeg.sh [device] [profile: debug|release]
 set -e
@@ -33,8 +35,11 @@ GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PR
        ! videoconvert \
        ! fpsdisplaysink sync=false \
     t. ! queue leaky=downstream max-size-buffers=1 \
-       ! videocropscale \
-       ! video/x-raw,width=224,height=224 \
+       ! hipupload \
+       ! hipconvertscale add-borders=false \
+       ! "video/x-raw(memory:HIPMemory),format=RGB,width=224,height=224" \
+       ! hipdownload \
+       ! video/x-raw,format=RGB \
        ! onnxinference execution-provider=cpu optimization-level=enable-all intra-op-threads=8 model-file=models/sixdrepnet360.onnx \
        ! sixdrepnet360tensordec \
        ! autovideosink sync=false

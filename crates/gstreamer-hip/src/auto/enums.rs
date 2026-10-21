@@ -4,11 +4,10 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-use crate::{ffi};
-use glib::{prelude::*,translate::*};
+use crate::ffi;
+use glib::{prelude::*, translate::*};
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 #[non_exhaustive]
 #[doc(alias = "GstHipVendor")]
 pub enum HipVendor {
@@ -18,7 +17,7 @@ pub enum HipVendor {
     Amd,
     #[doc(alias = "GST_HIP_VENDOR_NVIDIA")]
     Nvidia,
-#[doc(hidden)]
+    #[doc(hidden)]
     __Unknown(i32),
 }
 
@@ -27,47 +26,47 @@ impl IntoGlib for HipVendor {
     type GlibType = ffi::GstHipVendor;
 
     #[inline]
-fn into_glib(self) -> ffi::GstHipVendor {
-match self {
+    fn into_glib(self) -> ffi::GstHipVendor {
+        match self {
             Self::Unknown => ffi::GST_HIP_VENDOR_UNKNOWN,
             Self::Amd => ffi::GST_HIP_VENDOR_AMD,
             Self::Nvidia => ffi::GST_HIP_VENDOR_NVIDIA,
             Self::__Unknown(value) => value,
-}
-}
+        }
+    }
 }
 
 #[doc(hidden)]
 impl FromGlib<ffi::GstHipVendor> for HipVendor {
     #[inline]
-unsafe fn from_glib(value: ffi::GstHipVendor) -> Self {
+    unsafe fn from_glib(value: ffi::GstHipVendor) -> Self {
         skip_assert_initialized!();
-        
-match value {
+
+        match value {
             ffi::GST_HIP_VENDOR_UNKNOWN => Self::Unknown,
             ffi::GST_HIP_VENDOR_AMD => Self::Amd,
             ffi::GST_HIP_VENDOR_NVIDIA => Self::Nvidia,
             value => Self::__Unknown(value),
-}
-}
+        }
+    }
 }
 
 impl StaticType for HipVendor {
-                #[inline]
+    #[inline]
     #[doc(alias = "gst_hip_vendor_get_type")]
-   fn static_type() -> glib::Type {
-                    unsafe { from_glib(ffi::gst_hip_vendor_get_type()) }
-                }
-            }
+    fn static_type() -> glib::Type {
+        unsafe { from_glib(ffi::gst_hip_vendor_get_type()) }
+    }
+}
 
 impl glib::HasParamSpec for HipVendor {
-                type ParamSpec = glib::ParamSpecEnum;
-                type SetValue = Self;
-                type BuilderFn = fn(&str, Self) -> glib::ParamSpecEnumBuilder<Self>;
+    type ParamSpec = glib::ParamSpecEnum;
+    type SetValue = Self;
+    type BuilderFn = fn(&str, Self) -> glib::ParamSpecEnumBuilder<Self>;
 
-                fn param_spec_builder() -> Self::BuilderFn {
-                    Self::ParamSpec::builder_with_default
-                }
+    fn param_spec_builder() -> Self::BuilderFn {
+        Self::ParamSpec::builder_with_default
+    }
 }
 
 impl glib::value::ValueType for HipVendor {
@@ -107,4 +106,3 @@ impl From<HipVendor> for glib::Value {
         ToValue::to_value(&v)
     }
 }
-

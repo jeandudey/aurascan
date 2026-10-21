@@ -1,23 +1,38 @@
 [options]
+girs_directories = ["../../girs", "../../gir-files", "../../gst-gir-files"]
 library = "GstHip"
 version = "1.0"
 min_cfg_version = "1.28"
-target_path = "."
-girs_directories = ["../../girs", "../../gir-files", "../../gst-gir-files"]
 work_mode = "normal"
+concurrency = "send+sync"
 generate_safety_asserts = true
 single_version_file = true
 generate_display_trait = false
-external_libraries = ["GLib", "GObject", "Gst", "GstBase", "GstVideo"]
+trust_return_value_nullability = true
+target_path = "."
 
-generate = ["GstHip.HipVendor", "GstHip.HipDevice", "GstHip.HipBufferPool", "GstHip.HipAllocator", "GstHip.HipPoolAllocator"]
+external_libraries = [
+    "GLib",
+    "GObject",
+    "Gst",
+    "GstBase",
+    "GstVideo",
+]
+
+generate = [
+    "GstHip.HipVendor",
+    "GstHip.HipDevice",
+    "GstHip.HipBufferPool",
+    "GstHip.HipAllocator",
+    "GstHip.HipPoolAllocator",
+]
+
 manual = [
     "GLib.Error",
     "GObject.Object",
     "Gst.Allocator",
     "Gst.BufferPool",
     "Gst.Object",
-    "GstHip.HipEvent",
     "GstHip.HipMemory",
     "GstHip.HipStream",
 ]

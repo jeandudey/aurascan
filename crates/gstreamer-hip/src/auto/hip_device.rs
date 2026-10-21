@@ -4,9 +4,13 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-use crate::{ffi,HipStream,HipVendor};
-use glib::{prelude::*,signal::{connect_raw, SignalHandlerId},translate::*};
-use std::{boxed::Box as Box_};
+use crate::{ffi, HipStream, HipVendor};
+use glib::{
+    prelude::*,
+    signal::{connect_raw, SignalHandlerId},
+    translate::*,
+};
+use std::boxed::Box as Box_;
 
 glib::wrapper! {
     #[doc(alias = "GstHipDevice")]
@@ -18,17 +22,17 @@ glib::wrapper! {
 }
 
 impl HipDevice {
-        pub const NONE: Option<&'static HipDevice> = None;
-    
+    pub const NONE: Option<&'static HipDevice> = None;
 
     #[doc(alias = "gst_hip_device_new")]
     pub fn new(vendor: HipVendor, device_id: u32) -> Option<HipDevice> {
         assert_initialized_main_thread!();
-        unsafe {
-            from_glib_full(ffi::gst_hip_device_new(vendor.into_glib(), device_id))
-        }
+        unsafe { from_glib_full(ffi::gst_hip_device_new(vendor.into_glib(), device_id)) }
     }
 }
+
+unsafe impl Send for HipDevice {}
+unsafe impl Sync for HipDevice {}
 
 pub trait HipDeviceExt: IsA<HipDevice> + 'static {
     #[doc(alias = "gst_hip_device_get_attribute")]
@@ -36,7 +40,11 @@ pub trait HipDeviceExt: IsA<HipDevice> + 'static {
     fn attribute(&self, attr: i32) -> (i32, i32) {
         unsafe {
             let mut value = std::mem::MaybeUninit::uninit();
-            let ret = ffi::gst_hip_device_get_attribute(self.as_ref().to_glib_none().0, attr, value.as_mut_ptr());
+            let ret = ffi::gst_hip_device_get_attribute(
+                self.as_ref().to_glib_none().0,
+                attr,
+                value.as_mut_ptr(),
+            );
             (ret, value.assume_init())
         }
     }
@@ -45,16 +53,16 @@ pub trait HipDeviceExt: IsA<HipDevice> + 'static {
     #[doc(alias = "get_device_id")]
     #[doc(alias = "device-id")]
     fn device_id(&self) -> u32 {
-        unsafe {
-            ffi::gst_hip_device_get_device_id(self.as_ref().to_glib_none().0)
-        }
+        unsafe { ffi::gst_hip_device_get_device_id(self.as_ref().to_glib_none().0) }
     }
 
     #[doc(alias = "gst_hip_device_get_stream")]
     #[doc(alias = "get_stream")]
-    fn stream(&self) -> Option<HipStream> {
+    fn stream(&self) -> HipStream {
         unsafe {
-            from_glib_full(ffi::gst_hip_device_get_stream(self.as_ref().to_glib_none().0))
+            from_glib_full(ffi::gst_hip_device_get_stream(
+                self.as_ref().to_glib_none().0,
+            ))
         }
     }
 
@@ -62,21 +70,28 @@ pub trait HipDeviceExt: IsA<HipDevice> + 'static {
     #[doc(alias = "get_vendor")]
     fn vendor(&self) -> HipVendor {
         unsafe {
-            from_glib(ffi::gst_hip_device_get_vendor(self.as_ref().to_glib_none().0))
+            from_glib(ffi::gst_hip_device_get_vendor(
+                self.as_ref().to_glib_none().0,
+            ))
         }
     }
 
     #[doc(alias = "gst_hip_device_is_equal")]
     fn is_equal(&self, device2: &impl IsA<HipDevice>) -> bool {
         unsafe {
-            from_glib(ffi::gst_hip_device_is_equal(self.as_ref().to_glib_none().0, device2.as_ref().to_glib_none().0))
+            from_glib(ffi::gst_hip_device_is_equal(
+                self.as_ref().to_glib_none().0,
+                device2.as_ref().to_glib_none().0,
+            ))
         }
     }
 
     #[doc(alias = "gst_hip_device_set_current")]
     fn set_current(&self) -> bool {
         unsafe {
-            from_glib(ffi::gst_hip_device_set_current(self.as_ref().to_glib_none().0))
+            from_glib(ffi::gst_hip_device_set_current(
+                self.as_ref().to_glib_none().0,
+            ))
         }
     }
 
@@ -86,41 +101,92 @@ pub trait HipDeviceExt: IsA<HipDevice> + 'static {
     }
 
     #[doc(alias = "device-id")]
-    fn connect_device_id_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe extern "C" fn notify_device_id_trampoline<P: IsA<HipDevice>, F: Fn(&P) + 'static>(this: *mut ffi::GstHipDevice, _param_spec: glib::ffi::gpointer, f: glib::ffi::gpointer) { unsafe {
-            let f: &F = &*(f as *const F);
-            f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
-        }}
+    fn connect_device_id_notify<F: Fn(&Self) + Send + Sync + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn notify_device_id_trampoline<
+            P: IsA<HipDevice>,
+            F: Fn(&P) + Send + Sync + 'static,
+        >(
+            this: *mut ffi::GstHipDevice,
+            _param_spec: glib::ffi::gpointer,
+            f: glib::ffi::gpointer,
+        ) {
+            unsafe {
+                let f: &F = &*(f as *const F);
+                f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
+            }
+        }
         unsafe {
             let f: Box_<F> = Box_::new(f);
-            connect_raw(self.as_ptr() as *mut _, c"notify::device-id".as_ptr(),
-                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(notify_device_id_trampoline::<Self, F> as *const ())), Box_::into_raw(f))
+            connect_raw(
+                self.as_ptr() as *mut _,
+                c"notify::device-id".as_ptr(),
+                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(
+                    notify_device_id_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
         }
     }
 
     #[doc(alias = "texture2d-support")]
-    fn connect_texture2d_support_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe extern "C" fn notify_texture2d_support_trampoline<P: IsA<HipDevice>, F: Fn(&P) + 'static>(this: *mut ffi::GstHipDevice, _param_spec: glib::ffi::gpointer, f: glib::ffi::gpointer) { unsafe {
-            let f: &F = &*(f as *const F);
-            f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
-        }}
+    fn connect_texture2d_support_notify<F: Fn(&Self) + Send + Sync + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn notify_texture2d_support_trampoline<
+            P: IsA<HipDevice>,
+            F: Fn(&P) + Send + Sync + 'static,
+        >(
+            this: *mut ffi::GstHipDevice,
+            _param_spec: glib::ffi::gpointer,
+            f: glib::ffi::gpointer,
+        ) {
+            unsafe {
+                let f: &F = &*(f as *const F);
+                f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
+            }
+        }
         unsafe {
             let f: Box_<F> = Box_::new(f);
-            connect_raw(self.as_ptr() as *mut _, c"notify::texture2d-support".as_ptr(),
-                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(notify_texture2d_support_trampoline::<Self, F> as *const ())), Box_::into_raw(f))
+            connect_raw(
+                self.as_ptr() as *mut _,
+                c"notify::texture2d-support".as_ptr(),
+                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(
+                    notify_texture2d_support_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
         }
     }
 
     #[doc(alias = "vendor")]
-    fn connect_vendor_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe extern "C" fn notify_vendor_trampoline<P: IsA<HipDevice>, F: Fn(&P) + 'static>(this: *mut ffi::GstHipDevice, _param_spec: glib::ffi::gpointer, f: glib::ffi::gpointer) { unsafe {
-            let f: &F = &*(f as *const F);
-            f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
-        }}
+    fn connect_vendor_notify<F: Fn(&Self) + Send + Sync + 'static>(&self, f: F) -> SignalHandlerId {
+        unsafe extern "C" fn notify_vendor_trampoline<
+            P: IsA<HipDevice>,
+            F: Fn(&P) + Send + Sync + 'static,
+        >(
+            this: *mut ffi::GstHipDevice,
+            _param_spec: glib::ffi::gpointer,
+            f: glib::ffi::gpointer,
+        ) {
+            unsafe {
+                let f: &F = &*(f as *const F);
+                f(HipDevice::from_glib_borrow(this).unsafe_cast_ref())
+            }
+        }
         unsafe {
             let f: Box_<F> = Box_::new(f);
-            connect_raw(self.as_ptr() as *mut _, c"notify::vendor".as_ptr(),
-                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(notify_vendor_trampoline::<Self, F> as *const ())), Box_::into_raw(f))
+            connect_raw(
+                self.as_ptr() as *mut _,
+                c"notify::vendor".as_ptr(),
+                Some(std::mem::transmute::<*const (), unsafe extern "C" fn()>(
+                    notify_vendor_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
         }
     }
 }

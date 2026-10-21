@@ -4,8 +4,8 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-use crate::{ffi};
-use glib::{prelude::*,translate::*};
+use crate::ffi;
+use glib::{prelude::*, translate::*};
 
 glib::wrapper! {
     #[doc(alias = "GstHipAllocator")]
@@ -17,9 +17,11 @@ glib::wrapper! {
 }
 
 impl HipAllocator {
-        pub const NONE: Option<&'static HipAllocator> = None;
-    
+    pub const NONE: Option<&'static HipAllocator> = None;
 }
+
+unsafe impl Send for HipAllocator {}
+unsafe impl Sync for HipAllocator {}
 
 pub trait HipAllocatorExt: IsA<HipAllocator> + 'static {
     //#[doc(alias = "gst_hip_allocator_alloc")]
@@ -30,7 +32,10 @@ pub trait HipAllocatorExt: IsA<HipAllocator> + 'static {
     #[doc(alias = "gst_hip_allocator_set_active")]
     fn set_active(&self, active: bool) -> bool {
         unsafe {
-            from_glib(ffi::gst_hip_allocator_set_active(self.as_ref().to_glib_none().0, active.into_glib()))
+            from_glib(ffi::gst_hip_allocator_set_active(
+                self.as_ref().to_glib_none().0,
+                active.into_glib(),
+            ))
         }
     }
 }

@@ -1,51 +1,45 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
 // SPDX-License-Identifier: MIT
 
-//! Video frames of `GstHipMemory` mapped as device memory, modelled after `GLVideoFrame` of
-//! `gstreamer-gl`.
-//!
-//! The plane pointers of a mapped frame are **HIP device pointers**: they can be passed to HIP
-//! calls but must not be dereferenced on the CPU.
+use std::{fmt::Debug, marker::PhantomData, mem, ptr};
 
-use std::{fmt::Debug, marker::PhantomData, mem};
-
+use crate::{ffi, HipMemoryRef};
 use glib::translate::*;
 use gst_video::{video_frame::IsVideoFrame, VideoFrameExt};
-
-use crate::{ffi, is_hip_memory};
 
 pub enum Readable {}
 pub enum Writable {}
 
-/// A mapped video frame whose memories are `GstHipMemory`.
-///
-/// # Safety
-///
-/// The frame must have been mapped with `GST_MAP_HIP`, so that its plane pointers are device
-/// pointers, and all its memories must be `GstHipMemory`.
 pub unsafe trait IsHipVideoFrame: IsVideoFrame {}
 
 pub trait HipVideoFrameExt: IsHipVideoFrame + VideoFrameExt {
-    /// The HIP memory backing `plane`.
     #[inline]
-    fn memory(&self, plane: u32) -> Result<&gst::MemoryRef, glib::BoolError> {
-        if plane >= self.info().n_planes() {
+    fn memory(&self, idx: u32) -> Result<&HipMemoryRef, glib::BoolError> {
+        if idx >= self.info().n_planes() {
             return Err(glib::bool_error!(
-                "Plane index higher than number of planes"
+                "Memory index higher than number of memories"
+            ));
+        }
+
+        // All the planes live in a single memory unless the buffer has one memory per plane.
+        let buffer = self.buffer();
+        let idx = if buffer.n_memory() == 1 { 0 } else { idx };
+        if idx as usize >= buffer.n_memory() {
+            return Err(glib::bool_error!(
+                "Memory index higher than number of memories"
             ));
         }
 
         unsafe {
-            let mem = gst::MemoryRef::from_ptr(self.as_raw().map[plane as usize].memory);
-            if is_hip_memory(mem) {
-                Ok(mem)
+            let ptr = gst::ffi::gst_buffer_peek_memory(buffer.as_mut_ptr(), idx);
+            if ffi::gst_is_hip_memory(ptr) == glib::ffi::GTRUE {
+                Ok(HipMemoryRef::from_ptr(ptr as _))
             } else {
-                Err(glib::bool_error!("Memory is not a GstHipMemory"))
+                Err(glib::bool_error!("Memory is not a HipMemory"))
             }
         }
     }
 
-    /// The device pointer to the first byte of `plane`.
     #[inline]
     fn plane_device_ptr(&self, plane: u32) -> Result<*const u8, glib::BoolError> {
         if plane >= self.info().n_planes() {
@@ -60,39 +54,6 @@ pub trait HipVideoFrameExt: IsHipVideoFrame + VideoFrameExt {
 
 impl<O: IsHipVideoFrame> HipVideoFrameExt for O {}
 
-/// Whether all memories of `buffer` are `GstHipMemory`.
-fn buffer_is_hip(buffer: &gst::BufferRef) -> bool {
-    skip_assert_initialized!();
-    buffer.n_memory() > 0 && buffer.iter_memories().all(is_hip_memory)
-}
-
-/// Maps `buffer` with the HIP flag and `flags`.
-fn map_frame(
-    buffer: *mut gst::ffi::GstBuffer,
-    info: &gst_video::VideoInfo,
-    flags: u32,
-) -> Result<gst_video::ffi::GstVideoFrame, glib::BoolError> {
-    skip_assert_initialized!();
-    unsafe {
-        let mut frame = mem::MaybeUninit::uninit();
-        let res: bool = from_glib(gst_video::ffi::gst_video_frame_map(
-            frame.as_mut_ptr(),
-            info.to_glib_none().0 as *mut _,
-            buffer,
-            flags | ffi::GST_MAP_HIP,
-        ));
-
-        if res {
-            Ok(frame.assume_init())
-        } else {
-            Err(glib::bool_error!(
-                "Failed to fill in the values of GstVideoFrame"
-            ))
-        }
-    }
-}
-
-/// An owned video frame of `GstHipMemory`, unmapped when dropped.
 pub struct HipVideoFrame<T> {
     frame: gst_video::ffi::GstVideoFrame,
     phantom: PhantomData<T>,
@@ -131,6 +92,30 @@ impl<T> HipVideoFrame<T> {
             buffer
         }
     }
+
+    #[inline]
+    pub unsafe fn from_glib_full(frame: gst_video::ffi::GstVideoFrame) -> Self {
+        Self {
+            frame,
+            phantom: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn into_raw(self) -> gst_video::ffi::GstVideoFrame {
+        let s = mem::ManuallyDrop::new(self);
+        s.frame
+    }
+
+    #[inline]
+    pub fn as_video_frame_hip_ref(&self) -> HipVideoFrameRef<&gst::BufferRef> {
+        let frame = unsafe { ptr::read(&self.frame) };
+        HipVideoFrameRef {
+            frame,
+            unmap: false,
+            phantom: PhantomData,
+        }
+    }
 }
 
 impl<T> Drop for HipVideoFrame<T> {
@@ -154,12 +139,23 @@ impl HipVideoFrame<Readable> {
             return Err(buffer);
         }
 
-        match map_frame(buffer.to_glib_none().0, info, gst::ffi::GST_MAP_READ) {
-            Ok(frame) => Ok(Self {
-                frame,
-                phantom: PhantomData,
-            }),
-            Err(_) => Err(buffer),
+        unsafe {
+            let mut frame = mem::MaybeUninit::uninit();
+            let res: bool = from_glib(gst_video::ffi::gst_video_frame_map(
+                frame.as_mut_ptr(),
+                info.to_glib_none().0 as *mut _,
+                buffer.to_glib_none().0,
+                gst::ffi::GST_MAP_READ | ffi::GST_MAP_HIP,
+            ));
+
+            if !res {
+                Err(buffer)
+            } else {
+                Ok(Self {
+                    frame: frame.assume_init(),
+                    phantom: PhantomData,
+                })
+            }
         }
     }
 }
@@ -176,20 +172,26 @@ impl HipVideoFrame<Writable> {
             return Err(buffer);
         }
 
-        match map_frame(
-            buffer.to_glib_none().0,
-            info,
-            gst::ffi::GST_MAP_READ | gst::ffi::GST_MAP_WRITE,
-        ) {
-            Ok(frame) => Ok(Self {
-                frame,
-                phantom: PhantomData,
-            }),
-            Err(_) => Err(buffer),
+        unsafe {
+            let mut frame = mem::MaybeUninit::uninit();
+            let res: bool = from_glib(gst_video::ffi::gst_video_frame_map(
+                frame.as_mut_ptr(),
+                info.to_glib_none().0 as *mut _,
+                buffer.to_glib_none().0,
+                gst::ffi::GST_MAP_READ | gst::ffi::GST_MAP_WRITE | ffi::GST_MAP_HIP,
+            ));
+
+            if !res {
+                Err(buffer)
+            } else {
+                Ok(Self {
+                    frame: frame.assume_init(),
+                    phantom: PhantomData,
+                })
+            }
         }
     }
 
-    /// The device pointer to the first byte of `plane`, for writing.
     #[inline]
     pub fn plane_device_ptr_mut(&mut self, plane: u32) -> Result<*mut u8, glib::BoolError> {
         Ok(self.plane_device_ptr(plane)? as *mut u8)
@@ -201,9 +203,9 @@ impl HipVideoFrame<Writable> {
     }
 }
 
-/// A video frame of `GstHipMemory` that borrows its buffer, unmapped when dropped.
 pub struct HipVideoFrameRef<T> {
     frame: gst_video::ffi::GstVideoFrame,
+    unmap: bool,
     phantom: PhantomData<T>,
 }
 
@@ -234,54 +236,80 @@ impl<T> Debug for HipVideoFrameRef<T> {
 
 impl<'a> HipVideoFrameRef<&'a gst::BufferRef> {
     #[inline]
-    pub fn from_buffer_ref_readable(
+    pub fn from_buffer_ref_readable<'b>(
         buffer: &'a gst::BufferRef,
-        info: &gst_video::VideoInfo,
-    ) -> Result<Self, glib::BoolError> {
+        info: &'b gst_video::VideoInfo,
+    ) -> Result<HipVideoFrameRef<&'a gst::BufferRef>, glib::error::BoolError> {
         skip_assert_initialized!();
 
         if !buffer_is_hip(buffer) {
             return Err(glib::bool_error!("Memory is not a GstHipMemory"));
         }
 
-        let frame = map_frame(
-            buffer.as_mut_ptr(),
-            info,
-            gst_video::ffi::GST_VIDEO_FRAME_MAP_FLAG_NO_REF | gst::ffi::GST_MAP_READ,
-        )?;
-        Ok(Self {
-            frame,
-            phantom: PhantomData,
-        })
+        unsafe {
+            let mut frame = mem::MaybeUninit::uninit();
+            let res: bool = from_glib(gst_video::ffi::gst_video_frame_map(
+                frame.as_mut_ptr(),
+                info.to_glib_none().0 as *mut _,
+                buffer.as_mut_ptr(),
+                gst_video::ffi::GST_VIDEO_FRAME_MAP_FLAG_NO_REF
+                    | gst::ffi::GST_MAP_READ
+                    | ffi::GST_MAP_HIP,
+            ));
+
+            if !res {
+                Err(glib::bool_error!(
+                    "Failed to fill in the values of GstVideoFrame"
+                ))
+            } else {
+                Ok(Self {
+                    frame: frame.assume_init(),
+                    unmap: true,
+                    phantom: PhantomData,
+                })
+            }
+        }
     }
 }
 
 impl<'a> HipVideoFrameRef<&'a mut gst::BufferRef> {
     #[inline]
-    pub fn from_buffer_ref_writable(
+    pub fn from_buffer_ref_writable<'b>(
         buffer: &'a mut gst::BufferRef,
-        info: &gst_video::VideoInfo,
-    ) -> Result<Self, glib::BoolError> {
+        info: &'b gst_video::VideoInfo,
+    ) -> Result<HipVideoFrameRef<&'a mut gst::BufferRef>, glib::error::BoolError> {
         skip_assert_initialized!();
 
         if !buffer_is_hip(buffer) {
             return Err(glib::bool_error!("Memory is not a GstHipMemory"));
         }
 
-        let frame = map_frame(
-            buffer.as_mut_ptr(),
-            info,
-            gst_video::ffi::GST_VIDEO_FRAME_MAP_FLAG_NO_REF
-                | gst::ffi::GST_MAP_READ
-                | gst::ffi::GST_MAP_WRITE,
-        )?;
-        Ok(Self {
-            frame,
-            phantom: PhantomData,
-        })
+        unsafe {
+            let mut frame = mem::MaybeUninit::uninit();
+            let res: bool = from_glib(gst_video::ffi::gst_video_frame_map(
+                frame.as_mut_ptr(),
+                info.to_glib_none().0 as *mut _,
+                buffer.as_mut_ptr(),
+                gst_video::ffi::GST_VIDEO_FRAME_MAP_FLAG_NO_REF
+                    | gst::ffi::GST_MAP_READ
+                    | gst::ffi::GST_MAP_WRITE
+                    | ffi::GST_MAP_HIP,
+            ));
+
+            if !res {
+                Err(glib::bool_error!(
+                    "Failed to fill in the values of GstVideoFrame"
+                ))
+            } else {
+                Ok(Self {
+                    frame: frame.assume_init(),
+                    unmap: true,
+                    phantom: PhantomData,
+                })
+            }
+        }
     }
 
-    /// The device pointer to the first byte of `plane`, for writing.
     #[inline]
     pub fn plane_device_ptr_mut(&mut self, plane: u32) -> Result<*mut u8, glib::BoolError> {
         Ok(self.plane_device_ptr(plane)? as *mut u8)
@@ -306,7 +334,17 @@ impl<T> Drop for HipVideoFrameRef<T> {
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            gst_video::ffi::gst_video_frame_unmap(&mut self.frame);
+            if self.unmap {
+                gst_video::ffi::gst_video_frame_unmap(&mut self.frame);
+            }
         }
     }
+}
+
+fn buffer_is_hip(buffer: &gst::BufferRef) -> bool {
+    skip_assert_initialized!();
+    buffer.n_memory() > 0
+        && buffer
+            .iter_memories()
+            .all(|mem| unsafe { ffi::gst_is_hip_memory(mem.as_mut_ptr()) == glib::ffi::GTRUE })
 }

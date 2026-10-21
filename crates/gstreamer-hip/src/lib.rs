@@ -19,31 +19,22 @@ macro_rules! skip_assert_initialized {
     () => {};
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity, clippy::missing_safety_doc)]
+#[allow(
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::missing_safety_doc
+)]
 mod auto;
-pub use auto::*;
+pub use crate::auto::*;
 
 mod functions;
-pub use functions::*;
-
+pub use crate::functions::*;
 mod hip_stream;
+pub use crate::hip_stream::*;
 mod hip_video_frame;
-
-// GstObject based types are thread safe.
-unsafe impl Send for HipDevice {}
-unsafe impl Sync for HipDevice {}
-unsafe impl Send for HipBufferPool {}
-unsafe impl Sync for HipBufferPool {}
-unsafe impl Send for HipAllocator {}
-unsafe impl Sync for HipAllocator {}
-unsafe impl Send for HipPoolAllocator {}
-unsafe impl Sync for HipPoolAllocator {}
-unsafe impl Send for HipStream {}
-unsafe impl Sync for HipStream {}
-pub use hip_stream::HipStream;
-pub use hip_video_frame::{
-    HipVideoFrame, HipVideoFrameExt, HipVideoFrameRef, IsHipVideoFrame, Readable, Writable,
-};
+pub use crate::hip_video_frame::*;
+mod hip_memory;
+pub use crate::hip_memory::*;
 
 pub mod prelude {
     pub use glib::prelude::*;

@@ -271,15 +271,14 @@ impl ElementImpl for RocJpegDec {
 
     fn set_context(&self, context: &gst::Context) {
         let settings = self.settings();
-        let mut device = self.device.lock().unwrap().take();
-        gst_hip::hip_handle_set_context(
+        if let Some(device) = gst_hip::hip_handle_set_context(
             &*self.obj(),
             context,
             gst_hip::HipVendor::Amd,
             settings.device_id,
-            &mut device,
-        );
-        *self.device.lock().unwrap() = device;
+        ) {
+            *self.device.lock().unwrap() = Some(device);
+        }
         self.parent_set_context(context);
     }
 }
@@ -287,17 +286,12 @@ impl ElementImpl for RocJpegDec {
 impl VideoDecoderImpl for RocJpegDec {
     fn open(&self) -> Result<(), gst::ErrorMessage> {
         let settings = self.settings();
-        // Don't hold the lock: looking for a device queries and sets contexts on this element,
-        // which lock it as well.
-        let mut device = self.device.lock().unwrap().take();
-        let found = gst_hip::hip_ensure_element_data(
+        let device = gst_hip::hip_ensure_element_data(
             &*self.obj(),
             gst_hip::HipVendor::Amd,
             settings.device_id,
-            &mut device,
         );
-        *self.device.lock().unwrap() = device;
-        if !found {
+        if device.is_none() {
             return Err(gst::error_msg!(
                 gst::ResourceError::OpenRead,
                 [
@@ -306,6 +300,11 @@ impl VideoDecoderImpl for RocJpegDec {
                 ]
             ));
         }
+
+        // Don't hold the lock: looking for a device queries and sets contexts on this element,
+        // which lock it as well.
+        *self.device.lock().unwrap() = device;
+
         Ok(())
     }
 
@@ -338,23 +337,23 @@ impl VideoDecoderImpl for RocJpegDec {
     }
 
     fn sink_query(&self, query: &mut gst::QueryRef) -> bool {
-        if let gst::QueryViewMut::Context(_) = query.view_mut() {
+        if let gst::QueryViewMut::Context(ctxquery) = query.view_mut() {
             let device = self.device();
-            if gst_hip::hip_handle_context_query(&*self.obj(), query, device.as_ref()) {
+            if gst_hip::hip_handle_context_query(&*self.obj(), ctxquery, device.as_ref()) {
                 return true;
             }
         }
-        VideoDecoderImplExt::parent_sink_query(self, query)
+        self.parent_sink_query(query)
     }
 
     fn src_query(&self, query: &mut gst::QueryRef) -> bool {
-        if let gst::QueryViewMut::Context(_) = query.view_mut() {
+        if let gst::QueryViewMut::Context(ctxquery) = query.view_mut() {
             let device = self.device();
-            if gst_hip::hip_handle_context_query(&*self.obj(), query, device.as_ref()) {
+            if gst_hip::hip_handle_context_query(&*self.obj(), ctxquery, device.as_ref()) {
                 return true;
             }
         }
-        VideoDecoderImplExt::parent_src_query(self, query)
+        self.parent_src_query(query)
     }
 
     fn decide_allocation(
@@ -541,15 +540,15 @@ impl RocJpegDec {
         obj.allocate_output_frame(frame, None)?;
         let buffer = frame.output_buffer_mut().ok_or(gst::FlowError::Error)?;
         let memory = buffer.peek_memory(0);
-        if !gst_hip::is_hip_memory(memory) {
+        let Some(hip_memory) = memory.downcast_memory_ref::<gst_hip::HipMemory>() else {
             gst::element_imp_error!(
                 self,
                 gst::CoreError::Negotiation,
                 ["The output buffer is not HIP memory"]
             );
             return Err(gst::FlowError::Error.into());
-        }
-        let layout = gst_hip::hip_memory_video_info(memory);
+        };
+        let layout = hip_memory.video_info();
         debug_assert_eq!(layout.format(), format);
 
         // Map the frame as device memory for writing.

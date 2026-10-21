@@ -4,8 +4,8 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-use crate::{ffi,HipDevice};
-use glib::{prelude::*,translate::*};
+use crate::{ffi, HipDevice};
+use glib::{prelude::*, translate::*};
 
 glib::wrapper! {
     #[doc(alias = "GstHipBufferPool")]
@@ -17,14 +17,19 @@ glib::wrapper! {
 }
 
 impl HipBufferPool {
-        pub const NONE: Option<&'static HipBufferPool> = None;
-    
+    pub const NONE: Option<&'static HipBufferPool> = None;
 
     #[doc(alias = "gst_hip_buffer_pool_new")]
     pub fn new(device: &impl IsA<HipDevice>) -> HipBufferPool {
         skip_assert_initialized!();
         unsafe {
-            gst::BufferPool::from_glib_full(ffi::gst_hip_buffer_pool_new(device.as_ref().to_glib_none().0)).unsafe_cast()
+            gst::BufferPool::from_glib_full(ffi::gst_hip_buffer_pool_new(
+                device.as_ref().to_glib_none().0,
+            ))
+            .unsafe_cast()
         }
     }
 }
+
+unsafe impl Send for HipBufferPool {}
+unsafe impl Sync for HipBufferPool {}

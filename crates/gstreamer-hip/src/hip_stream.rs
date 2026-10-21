@@ -1,3 +1,5 @@
+use glib::translate::*;
+
 use crate::ffi;
 
 glib::wrapper! {
@@ -11,6 +13,9 @@ glib::wrapper! {
     }
 }
 
+unsafe impl Send for HipStream {}
+unsafe impl Sync for HipStream {}
+
 impl HipStream {
     #[doc(alias = "gst_hip_stream_get_device_id")]
     #[doc(alias = "get_device_id")]
@@ -21,8 +26,6 @@ impl HipStream {
     #[doc(alias = "gst_hip_stream_get_vendor")]
     #[doc(alias = "get_vendor")]
     pub fn vendor(&self) -> crate::HipVendor {
-        unsafe { glib::translate::from_glib(ffi::gst_hip_stream_get_vendor(self.to_glib_none().0)) }
+        unsafe { from_glib(ffi::gst_hip_stream_get_vendor(self.to_glib_none().0)) }
     }
 }
-
-use glib::translate::*;

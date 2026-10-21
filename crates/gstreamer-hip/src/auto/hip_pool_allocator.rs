@@ -4,8 +4,8 @@
 // from ../../gst-gir-files
 // DO NOT EDIT
 
-use crate::{ffi,HipAllocator};
-use glib::{prelude::*};
+use crate::{ffi, HipAllocator};
+use glib::prelude::*;
 
 glib::wrapper! {
     #[doc(alias = "GstHipPoolAllocator")]
@@ -17,14 +17,16 @@ glib::wrapper! {
 }
 
 impl HipPoolAllocator {
-        pub const NONE: Option<&'static HipPoolAllocator> = None;
-    
+    pub const NONE: Option<&'static HipPoolAllocator> = None;
 
     //#[doc(alias = "gst_hip_pool_allocator_new")]
     //pub fn new(device: &impl IsA<HipDevice>, info: /*Ignored*/&gst_video::VideoInfo) -> HipPoolAllocator {
     //    unsafe { TODO: call ffi:gst_hip_pool_allocator_new() }
     //}
 }
+
+unsafe impl Send for HipPoolAllocator {}
+unsafe impl Sync for HipPoolAllocator {}
 
 pub trait HipPoolAllocatorExt: IsA<HipPoolAllocator> + 'static {
     //#[doc(alias = "gst_hip_pool_allocator_acquire_memory")]

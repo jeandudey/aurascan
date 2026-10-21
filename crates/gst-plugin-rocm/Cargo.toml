@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: MPL-2.0
 
 [package]
 name = "gst-plugin-rocm"
 description = "GStreamer plugins using AMD ROCm"
+license = "MPL-2.0"
 version = "0.1.0"
 edition = "2024"
 repository = "https://github.com/jeandudey/aurascan"

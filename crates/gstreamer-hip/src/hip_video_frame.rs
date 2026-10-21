@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT OR Apache-2.0
 
 use std::{fmt::Debug, marker::PhantomData, mem, ptr};
 

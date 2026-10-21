@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MPL-2.0
 
 //! These tests need an AMD GPU with a VCN JPEG engine, the `hip` GStreamer plugin and the
 //! sample images shipped by the rocjpeg package (`$CONDA_PREFIX/share/rocjpeg/images`). Run

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Jean-Pierre De Jesus DIAZ <me@jeandudey.tech>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MPL-2.0
 
 //! Emulates a live MJPEG webcam with an `appsrc` so that display problems seen with
 //! `v4l2src ! jpegparse ! rocjpegdec ! hipdownload name=dl ! videoconvert ! autovideosink` can be

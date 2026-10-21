@@ -1,6 +1,7 @@
 [package]
 name = "gstreamer-hip"
 description = "Safe bindings for GstHip (generated from GIR)"
+license = "MIT OR Apache-2.0"
 version = "0.1.0"
 edition = "2021"
 

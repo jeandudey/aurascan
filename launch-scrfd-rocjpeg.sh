@@ -31,10 +31,10 @@ GST_DEBUG=${GST_DEBUG:-sixdrepnet360tensordec:5} GST_PLUGIN_PATH=$PWD/target/$PR
     ! tee name=t \
     t. ! queue \
        ! videoconvert \
-       ! fakesink sync=false \
+       ! fpsdisplaysink sync=false \
     t. ! queue leaky=downstream max-size-buffers=1 \
        ! videocropscale \
        ! video/x-raw,width=224,height=224 \
        ! onnxinference execution-provider=cpu optimization-level=enable-all intra-op-threads=8 model-file=models/sixdrepnet360.onnx \
        ! sixdrepnet360tensordec \
-       ! fpsdisplaysink sync=false
+       ! autovideosink sync=false
